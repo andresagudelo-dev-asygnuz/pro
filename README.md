@@ -2,7 +2,10 @@
 
 Plataforma deportiva **PRO** (deportistas amateur/semipro + organizadores). Este repo sigue la estructura del template de la fábrica.
 
-**Repositorio remoto:** [github.com/andresagudelo-dev-asygnuz/pro](https://github.com/andresagudelo-dev-asygnuz/pro)
+**Repositorio remoto:** [github.com/andresagudelo-dev-asygnuz/pro](https://github.com/andresagudelo-dev-asygnuz/pro) (remoto Git: `git@github.com:andresagudelo-dev-asygnuz/pro.git`)
+
+**Git / SSH:** si en esta máquina otra cuenta de GitHub es la predeterminada y el push falla por permisos, en este clon se puede fijar la identidad de la org:  
+`git config core.sshCommand "ssh -i ~/.ssh/id_ed25519_asygnuz_github -o IdentitiesOnly=yes"`
 
 ## Documentación de producto
 
