@@ -1,0 +1,10 @@
+---
+description: Template producto — gates, memoria y fábrica
+alwaysApply: true
+---
+
+# Repo de producto (desde template)
+
+1. Estado: `tasks/gate-status.md`, `tasks/current-gate.txt`, `CLAUDE.md`.
+2. Skills del stack: `./scripts/install-skills.sh` y `docs/skills-profiles.md`.
+3. Perfiles/prompts de la fábrica: definir `FACTORY_ROOT` al clon del repo wrapper → `factory/agents/profiles/`, `factory/agents/prompts/`, `factory/agents/handoff-contracts.md`.

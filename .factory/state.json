@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "product": "PRO",
+  "current_gate": 1,
+  "updated_at": null,
+  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt"
+}

@@ -1,0 +1,18 @@
+name: Gate Check
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar artefactos del gate actual
+        run: |
+          chmod +x scripts/check-gate.sh
+          GATE="$(tr -d '[:space:]' < tasks/current-gate.txt)"
+          echo "Gate activo: $GATE"
+          ./scripts/check-gate.sh "$GATE"
