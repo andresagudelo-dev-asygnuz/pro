@@ -2,6 +2,7 @@
 
 | Script | Uso |
 |--------|-----|
+| `session-hint.sh` | Rol(es) y prompt(s) sugeridos según `tasks/current-gate.txt` (mapa: `factory/agents/gate-role-map.md` en la fábrica). |
 | `check-gate.sh` | Validación **mínima** de archivos por gate (`./scripts/check-gate.sh` o `./scripts/check-gate.sh 3`). |
 | `install-skills.sh` | Instala skills del stack desde [skills.sh](https://skills.sh/) para Cursor, Claude Code y Antigravity. |
 

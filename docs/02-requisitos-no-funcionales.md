@@ -1,26 +1,42 @@
-# Requisitos No Funcionales
+# Requisitos No Funcionales — PRO (borrador)
+
+Derivado de `PRO-gestion.documental.md` (RNF1–RNF7). Cuantificar umbrales al cerrar MVP y arquitectura.
 
 ## Seguridad
-- Autenticación/Autorización:
-- Gestión de secretos:
-- Auditoría/logs:
+
+- **Autenticación/Autorización:** roles jugador vs promotor; datos sensibles y documento de identidad solo donde aplique verificación de edad (RF informe).
+- **Gestión de secretos:** fuera del repo; Vercel/Neon según `devops/deployment.md`.
+- **Auditoría/logs:** acciones sensibles (resultados torneo, validación comprobantes) trazables en diseño técnico.
 
 ## Rendimiento
-- Tiempo de respuesta objetivo:
-- Throughput esperado:
+
+- **Tiempo de respuesta:** plataforma rápida y responsiva; cargas mínimas perfiles, feeds y resultados (RNF1). *[Añadir p95 LCP u objetivo similar para MVP.]*
+- **Throughput:** *[definir tras volumen esperado]*
 
 ## Escalabilidad
-- Estrategia horizontal/vertical:
-- Límites esperados:
+
+- **Estrategia:** crecimiento usuarios, torneos y funcionalidades (RNF2).
+- **Límites esperados:** *[placeholder]*
 
 ## Disponibilidad
-- SLA objetivo:
-- Estrategia de recuperación:
+
+- **SLA objetivo:** disponibilidad mayoritaria; minimizar inactividad (RNF5). *[Cuantificar si aplica.]*
+- **Estrategia de recuperación:** rollback Vercel, backups Neon.
 
 ## Mantenibilidad
-- Convenciones de código:
-- Cobertura mínima:
+
+- **Convenciones:** template fábrica, PRs pequeños.
+- **Cobertura mínima:** 90 % objetivo fábrica salvo excepción en `tasks/gate-status.md`.
+
+## Usabilidad
+
+- UI intuitiva y atractiva, inspirada en videojuegos deportivos FIFA/NBA (RNF4 informe).
+
+## Compatibilidad
+
+- Navegadores modernos y diseño responsivo móvil (RNF7). Si MVP es app nativa, actualizar con ADR.
 
 ## Observabilidad
-- Métricas:
-- Alertas:
+
+- **Métricas:** errores, latencia, uso de features (alineado a KPI en intake/03).
+- **Alertas:** *[definir post despliegue]*

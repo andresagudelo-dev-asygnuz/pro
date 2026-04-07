@@ -12,6 +12,6 @@ Bitácora **del producto** (negocio, alcance, gates y hitos de entrega). Mantene
 
 ## Unreleased
 
-- `[Definición]` Intake en `docs/intake/`; contexto histórico en `PRO-gestion.documental.md` (migración progresiva a `01–08` según `docs/intake/00-indice-y-alcance.md`).
+- `[Definición]` Intake `01`–`03` con síntesis desde monolito; PRD y RNF borrador; RF prioritarios (candidatos Opción A); **decisión MVP única pendiente**. Monolito `PRO-gestion.documental.md` en migración a `01–08`. G1 en curso (`tasks/gate-status.md`).
 - `[Construcción]` Repositorio remoto: https://github.com/andresagudelo-dev-asygnuz/pro
 - Estado de gates: `tasks/gate-status.md`, `tasks/current-gate.txt`.
