@@ -2,6 +2,7 @@
   "version": 1,
   "product": "PRO",
   "current_gate": 1,
-  "updated_at": null,
+  "updated_at": "2026-04-16",
+  "gate_status": "Listo para revisión",
   "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt"
 }
