@@ -6,9 +6,30 @@ on:
     branches: [ main ]
 
 jobs:
-  placeholder:
+  # ── Secret scanning ────────────────────────────────────────
+  secret-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Placeholder
-        run: echo "Configurar tests/lint/build según stack del proyecto"
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks — detect hardcoded secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Placeholder for app tests (enable when code lands) ─────
+  # app-tests:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         cache: 'pnpm'
+  #     - run: pnpm install --frozen-lockfile
+  #     - run: pnpm lint
+  #     - run: pnpm typecheck
+  #     - run: pnpm test -- --coverage
+  #     - run: npx audit-ci --moderate
