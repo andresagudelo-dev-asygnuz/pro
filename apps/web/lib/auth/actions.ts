@@ -48,11 +48,7 @@ export async function signUpWithPassword(
   }
 
   const supabase = await createClient();
-  const hdrs = await headers();
-  const origin = hdrs.get("origin") ?? hdrs.get("host") ?? "";
-  const emailRedirectTo = origin.startsWith("http")
-    ? `${origin}/auth/confirm`
-    : `https://${origin}/auth/confirm`;
+  const emailRedirectTo = `${await resolveOrigin()}/auth/confirm`;
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -84,6 +80,22 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");
+}
+
+// Resuelve el origin del request en runtime para que el email de confirmación
+// siempre vuelva al dominio en el que el usuario está (localhost, preview o
+// producción) — sin depender de una env var fija tipo NEXT_PUBLIC_SITE_URL.
+// Requiere que el dominio esté whitelisted en Supabase → Auth → URL Configuration.
+async function resolveOrigin(): Promise<string> {
+  const hdrs = await headers();
+  const origin = hdrs.get("origin");
+  if (origin && origin.startsWith("http")) return origin;
+
+  const forwardedHost = hdrs.get("x-forwarded-host");
+  const host = forwardedHost ?? hdrs.get("host") ?? "localhost:3000";
+  const proto =
+    hdrs.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
 }
 
 function traducirError(msg: string): string {
