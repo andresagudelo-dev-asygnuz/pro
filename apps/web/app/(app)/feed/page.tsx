@@ -23,7 +23,7 @@ export default async function FeedPage() {
   const { data: matchesRaw } = await supabase
     .from("matches")
     .select("*, match_participants(user_id)")
-    .in("status", ["open", "full", "in_progress"])
+    .in("status", ["open", "full"])
     .gte("starts_at", nowIso)
     .order("starts_at", { ascending: true })
     .limit(50);
