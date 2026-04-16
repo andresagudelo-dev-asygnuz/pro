@@ -14,9 +14,19 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     if (!error) {
-      return NextResponse.redirect(new URL(next, request.url));
+      // Prevenir open redirect: solo aceptamos paths same-origin.
+      const target = safeRelativePath(next) ?? "/onboarding";
+      return NextResponse.redirect(new URL(target, request.url));
     }
   }
 
   return NextResponse.redirect(new URL("/login?error=invalid_link", request.url));
+}
+
+function safeRelativePath(input: string): string | null {
+  // Solo paths que empiecen con "/" y no con "//" (evita protocol-relative).
+  if (!input.startsWith("/")) return null;
+  if (input.startsWith("//")) return null;
+  if (input.startsWith("/\\")) return null;
+  return input;
 }

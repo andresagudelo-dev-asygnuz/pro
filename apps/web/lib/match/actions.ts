@@ -106,12 +106,33 @@ export async function createMatch(
   redirect(`/matches/${data.id}`);
 }
 
-export async function joinMatch(matchId: string) {
+export type JoinResult = { ok: true } | { ok: false; error: string };
+
+export async function joinMatch(matchId: string): Promise<JoinResult> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // Defense-in-depth check previo al insert (el trigger es la garantía real).
+  const { data: match, error: matchErr } = await supabase
+    .from("matches")
+    .select("id, max_players, status")
+    .eq("id", matchId)
+    .single();
+  if (matchErr || !match) return { ok: false, error: "Partido no encontrado." };
+  if (match.status !== "open") {
+    return { ok: false, error: "El partido ya no admite nuevos jugadores." };
+  }
+  const { count, error: countErr } = await supabase
+    .from("match_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("match_id", matchId);
+  if (countErr) return { ok: false, error: countErr.message };
+  if ((count ?? 0) >= match.max_players) {
+    return { ok: false, error: "El partido ya está completo." };
+  }
 
   const { error } = await supabase.from("match_participants").insert({
     match_id: matchId,
@@ -119,15 +140,24 @@ export async function joinMatch(matchId: string) {
     status: "joined",
   });
 
-  if (error && error.code !== "23505") {
+  if (error) {
     // 23505 = unique violation (ya estaba unido → no-op)
-    throw error;
+    if (error.code === "23505") {
+      revalidatePath(`/matches/${matchId}`);
+      return { ok: true };
+    }
+    // P0001 → raise del trigger de capacidad (condición de carrera resuelta).
+    if (error.code === "P0001" && error.message.includes("match_full")) {
+      return { ok: false, error: "El partido ya está completo." };
+    }
+    return { ok: false, error: error.message };
   }
   revalidatePath(`/matches/${matchId}`);
   revalidatePath("/feed");
+  return { ok: true };
 }
 
-export async function leaveMatch(matchId: string) {
+export async function leaveMatch(matchId: string): Promise<JoinResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -140,9 +170,10 @@ export async function leaveMatch(matchId: string) {
     .eq("match_id", matchId)
     .eq("user_id", user.id);
 
-  if (error) throw error;
+  if (error) return { ok: false, error: error.message };
   revalidatePath(`/matches/${matchId}`);
   revalidatePath("/feed");
+  return { ok: true };
 }
 
 export async function sendMessage(matchId: string, content: string) {
