@@ -29,7 +29,7 @@ El contenido detallado vive hoy en el monolito **[`../../PRO-gestion.documental.
 **Fuera del MVP actual:**
 
 - Live streaming (RF7) — mayor complejidad, no necesario para validar hipótesis centrales.
-- Feed social completo + chat (RF5–RF6) — reemplazado por notificaciones simples (inscripción confirmada, resultado publicado).
+- Feed social completo + chat (RF5) — reemplazado por notificaciones simples (inscripción confirmada, resultado publicado).
 - Pagos in-app de inscripciones — post-MVP según informe.
 - Módulo árbitros y resolución de disputas — post-MVP.
 - Mapa de recintos / discovery de usuarios (Opción B) — candidato para MVP2 una vez validado el loop de torneos.

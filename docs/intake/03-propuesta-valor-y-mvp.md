@@ -44,7 +44,7 @@ Se elige el **núcleo de Opción A** (perfil tipo ficha + torneos) recortando la
 **Fuera del MVP actual:**
 
 - Live streaming (RF7)
-- Feed social completo + chat (RF5–RF6); se reemplaza por notificaciones simples
+- Feed social completo + chat (RF5); se reemplaza por notificaciones simples
 - Pagos in-app de inscripciones
 - Módulo árbitros y resolución de disputas
 - Mapa de recintos / discovery de usuarios (candidato MVP2)

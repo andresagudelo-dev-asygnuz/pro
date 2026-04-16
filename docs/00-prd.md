@@ -38,7 +38,7 @@
 ### Fuera de alcance (MVP1)
 
 - Live streaming (RF7)
-- Feed social completo + chat (RF5–RF6)
+- Feed social completo + chat (RF5)
 - Pagos in-app de inscripciones
 - Módulo árbitros y resolución de disputas
 - Mapa de recintos / discovery de usuarios (candidato MVP2)
