@@ -3,7 +3,7 @@
 ## Estado de migración
 
 - **Inventario completo:** RF1.x–RF8.x en `PRO-gestion.documental.md` (módulos perfiles, equipos, torneos, inscripción, social, visualización, live, soporte).
-- **Migración completada:** todos los RF del monolito (RF1.1–RF8.2) migrados a formato estándar (RF-001 a RF-004, RF-006 a RF-017). Ver tabla de trazabilidad al final del documento.
+- **Migración completada:** todos los RF del monolito (RF1.1–RF8.2) migrados a formato estándar (RF-001 a RF-004, RF-006 a RF-018). Ver tabla de trazabilidad al final del documento.
 - **Intake borrador:** `docs/intake/04-requisitos-funcionales-borrador.md` disponible como plantilla para RFs futuros.
 - **MVP decidido:** Opción A Acotada — RF-001 a RF-005 conforman el MVP1. RF-005 (Resultados y tabla de posiciones) es un RF nuevo para cerrar el loop de valor del MVP. Ver decisión en `docs/intake/03-propuesta-valor-y-mvp.md`.
 
@@ -62,7 +62,7 @@ Los siguientes 5 RF conforman el alcance del MVP1. Decisión documentada en `doc
 - **Criterios de aceptación (GIVEN/WHEN/THEN):**
   - GIVEN un torneo con partidos WHEN el promotor registra el marcador de un partido THEN el sistema actualiza la tabla de posiciones y las estadísticas individuales de los jugadores participantes.
   - GIVEN tabla de posiciones actualizada WHEN un jugador consulta su perfil THEN ve reflejados partidos jugados, goles y victorias del torneo.
-- **Nota:** Este RF es una versión acotada para MVP1 del ciclo resultados/tablas. La versión expandida (goleadores, tarjetas, tiempo real, comprobantes de pago) está en RF-009 y RF-014 del catálogo completo.
+- **Nota:** Este RF es una versión acotada para MVP1 del ciclo resultados/tablas. La versión expandida (goleadores, tarjetas, tiempo real, comprobantes de pago) está en RF-010 y RF-015 del catálogo completo.
 
 ## Catálogo completo de RF (migración desde monolito)
 
