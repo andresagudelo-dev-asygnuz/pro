@@ -1,6 +1,6 @@
 # PRD — PRO (borrador definición)
 
-**Estado:** en definición (Gate 1). **Bloqueante:** elegir **un** MVP (ver `docs/intake/03-propuesta-valor-y-mvp.md`: Opción A torneos+social vs Opción B hiperlocal móvil).
+**Estado:** en definición (Gate 1). **MVP decidido:** Opción A Acotada (torneos + perfil tipo ficha, 5 RF). Ver justificación completa en `docs/intake/03-propuesta-valor-y-mvp.md`.
 
 ---
 
@@ -12,45 +12,56 @@
 
 ## 2. Objetivo del producto
 
-- **Resultado esperado en 1–4 semanas (post arranque desarrollo):** *[completar según MVP elegido — ej. “primer flujo registro + perfil + 1 torneo demo” vs “mapa + grupos fútbol en ciudad X”]*.
-- **KPI principal (borrador):** registros con perfil completo; o torneos activos; o grupos/mapa (alinear con `intake/03`).
-- **KPI secundarios:** retención semanal, organizadores con al menos un evento publicado, NPS o encuesta piloto.
+- **Resultado esperado en 1–4 semanas (post arranque desarrollo):** primer flujo completo registro → perfil tipo ficha → creación de torneo → inscripción de equipo → resultados y tabla de posiciones, desplegado en Vercel y disponible para validación con usuarios reales en Eje Cafetero.
+- **KPI principal:** 50 registros con perfil completo y 5 torneos activos creados por promotores en las primeras 4 semanas post-lanzamiento.
+- **KPI secundarios:** retención semanal (WAU/MAU ≥ 30 %), al menos 3 organizadores con torneo publicado.
 
 ## 3. Usuario objetivo
 
 - **Segmento principal:** futbolistas **mayores de edad** amateur/semipro + organizadores de torneos/eventos (detalle en `docs/intake/02-usuarios-y-mercado.md`).
 - **Dolor principal:** poca visibilidad del mérito deportivo; fricción para armar equipos y seguir competencias.
-- **Escenario de uso:** *[pendiente MVP — “crear torneo e inscribir equipos” vs “encontrar compañeros y cancha en mapa local”]*.
+- **Escenario de uso:** Un promotor crea un torneo de fútbol con reglas básicas, equipos se inscriben, se registran resultados y la tabla de posiciones se actualiza automáticamente; jugadores ven sus estadísticas reflejadas en su perfil tipo ficha.
 
 ## 4. Alcance
 
-### En alcance (placeholder hasta decidir MVP)
+### En alcance (MVP1 — Opción A Acotada)
 
-- *[Lista corta tras cerrar Opción A, B o híbrido en `intake/03`]*
+- **RF-001** Registro con rol (jugador / promotor)
+- **RF-002** Perfil de jugador tipo ficha (foto, posición, stats básicas)
+- **RF-003** Crear y configurar torneo (promotor)
+- **RF-004** Inscripción de equipo o jugador a torneo
+- **RF-005** Resultados y tabla de posiciones
+- Notificaciones simples (inscripción confirmada, resultado publicado)
+- Solo fútbol, mayores de edad
+- Lanzamiento geográfico: Eje Cafetero (Pereira / Manizales)
 
-### Fuera de alcance (ejemplos del informe, confirmar por MVP)
+### Fuera de alcance (MVP1)
 
-- Pagos in-app de inscripciones (post-MVP en informe).
-- Módulo árbitros y resolución de disputas (post-MVP).
-- Transmisiones en vivo (RF7): **candidato fuerte a sacar del MVP1** si se elige Opción A acotada.
+- Live streaming (RF7)
+- Feed social completo + chat (RF5–RF6)
+- Pagos in-app de inscripciones
+- Módulo árbitros y resolución de disputas
+- Mapa de recintos / discovery de usuarios (candidato MVP2)
+- Multi-deporte
+- Tracking de actividad física
 
 ## 5. Hipótesis a validar
 
 1. El perfil tipo “FIFA” + equipos/torneos genera **adopción** si el valor social es claro el primer día.
 2. Organizadores migran desde Excel/WhatsApp si **ahorran tiempo** en inscripciones y tablas.
-3. (Si hiperlocal) La densidad en **una ciudad** evita red vacía.
+3. La focalización geográfica (Eje Cafetero) genera suficiente densidad para masa crítica sin efecto red vacío.
 
 ## 6. Criterios de éxito
 
-- **Criterio 1:** *[métrica cuantitativa acordada en intake/03]*.
+- **Criterio 1:** ≥50 registros con perfil completo y ≥5 torneos activos en 4 semanas post-lanzamiento (ver KPIs en `intake/03`).
 - **Criterio 2:** go/no-go de negocio tras UAT en ambiente QA (proceso en `uat/uat-checklist.md`).
 
 ## 7. Riesgos y supuestos
 
-- **Riesgo:** dos MVPs en documentación sin decisión → **scope creep** o estimaciones imposibles.
-- **Mitigación:** cerrar elección en `00-indice` y `03`; recortar RF en `01-requisitos-funcionales.md` a un set **prioritario** (5–10).
-- **Riesgo:** complejidad social + live + chat en un solo release.
-- **Mitigación:** fases MVP1 / MVP2 explícitas en PRD tras decisión.
+- **Riesgo:** scope creep si se re-introducen features sociales o live antes de validar el loop básico.
+- **Mitigación:** MVP decidido (Opción A Acotada, 5 RF); todo lo demás queda en backlog explícito; cualquier adición requiere aprobación en PRD.
+- **Riesgo:** baja adopción si la densidad local no alcanza masa crítica.
+- **Mitigación:** lanzamiento focalizado en Eje Cafetero con onboarding asistido a promotores clave.
 
 ## 8. Dependencias
 

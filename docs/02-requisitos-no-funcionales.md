@@ -10,8 +10,8 @@ Derivado de `PRO-gestion.documental.md` (RNF1–RNF7). Cuantificar umbrales al c
 
 ## Rendimiento
 
-- **Tiempo de respuesta:** plataforma rápida y responsiva; cargas mínimas perfiles, feeds y resultados (RNF1). *[Añadir p95 LCP u objetivo similar para MVP.]*
-- **Throughput:** *[definir tras volumen esperado]*
+- **Tiempo de respuesta:** p95 LCP < 2 s para páginas de perfil y tabla de posiciones en conexión 4G (objetivo MVP1). Páginas SSR con Next.js + Vercel edge deben servir HTML en < 500 ms TTFB.
+- **Throughput:** volumen esperado MVP1 bajo (~50–200 usuarios concurrentes); escalar según validación post-lanzamiento.
 
 ## Escalabilidad
 

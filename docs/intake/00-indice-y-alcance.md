@@ -22,22 +22,29 @@ El contenido detallado vive hoy en el monolito **[`../../PRO-gestion.documental.
 | `07-modelo-negocio-y-roadmap.md` | Business plan, monetización, 3/5/10 años |
 | `08-anexos.md` | Metodologías Design Thinking / FODA / SCAMPER (si no van a 01) |
 
-## Decisión de MVP (pendiente — bloqueante G1)
+## Decisión de MVP
 
-**MVP elegido para la siguiente iteración:** [COMPLETAR tras acuerdo — ver opciones en `03-propuesta-valor-y-mvp.md`]
+**MVP elegido para la siguiente iteración:** **Híbrido — "Opción A Acotada"**: núcleo de torneos + perfil tipo ficha (RF-001 a RF-005) con lanzamiento geográfico focalizado en Eje Cafetero (Pereira/Manizales). Solo fútbol, mayores de edad. Plataforma web responsiva (Next.js / Vercel). Ver detalle y justificación en `03-propuesta-valor-y-mvp.md`.
 
-**Fuera del MVP actual:** [LISTA explícita tras elegir — ej. live RF7, chat completo, multi-deporte]
+**Fuera del MVP actual:**
 
-**Riesgo / ambigüedad:** Conviven **Opción A** (plataforma torneos + social amplia, RF1–RF8) y **Opción B** (app hiperlocal Manizales, mapa + grupos). Sin elección no se puede cerrar alcance ni estimar.
+- Live streaming (RF7) — mayor complejidad, no necesario para validar hipótesis centrales.
+- Feed social completo + chat (RF5–RF6) — reemplazado por notificaciones simples (inscripción confirmada, resultado publicado).
+- Pagos in-app de inscripciones — post-MVP según informe.
+- Módulo árbitros y resolución de disputas — post-MVP.
+- Mapa de recintos / discovery de usuarios (Opción B) — candidato para MVP2 una vez validado el loop de torneos.
+- Multi-deporte — solo fútbol en MVP1 según validación encuesta.
+
+**Riesgo / ambigüedad (resuelta):** Se descartó Opción B pura (app móvil hiperlocal) porque requiere stack nativo diferente al acordado (Next.js/Vercel) y el enfoque multi-deporte contradice la validación de encuesta (solo fútbol +18). Se conserva de Opción B la restricción geográfica (Eje Cafetero) como decisión de go-to-market.
 
 ## Revisión definición — qué hay y qué falta
 
 | Insumo | Estado |
 |--------|--------|
-| Contexto, usuarios, MVP en intake | `01`, `02`, `03` con síntesis desde monolito; falta **decisión MVP** escrita |
-| PRD formal | `docs/00-prd.md` borrador alineado; completar alcance/KPI al elegir MVP |
-| RF formales | `docs/01-requisitos-funcionales.md` con 4 RF núcleo **candidatos** (Opción A); revisar si MVP = B |
-| RNF formales | `docs/02-requisitos-no-funcionales.md` borrador desde informe; cuantificar umbrales |
+| Contexto, usuarios, MVP en intake | `01`, `02`, `03` con síntesis desde monolito; **decisión MVP cerrada** (Opción A Acotada) |
+| PRD formal | `docs/00-prd.md` alineado con MVP elegido; alcance y KPI definidos |
+| RF formales | `docs/01-requisitos-funcionales.md` con 5 RF núcleo (RF-001 a RF-005) confirmados para MVP |
+| RNF formales | `docs/02-requisitos-no-funcionales.md` borrador con umbral de rendimiento (p95 LCP < 2 s) |
 | Migración RF/RNF completos | `intake/04`, `intake/05` + resto de monolito |
 | Perfil negocio / pre-factibilidad | Monolito: secciones aún "Pendiente" — completar o enlazar |
 | Encuestas ejecutadas + resultados | Diseño en monolito; falta consolidar hallazgos en `intake/06` |
@@ -50,7 +57,7 @@ El contenido detallado vive hoy en el monolito **[`../../PRO-gestion.documental.
 |---|---------|--------|
 | 01 | contexto-y-vision | síntesis cargada |
 | 02 | usuarios-y-mercado | síntesis cargada |
-| 03 | propuesta-valor-y-mvp | síntesis + opciones A/B; falta decisión |
+| 03 | propuesta-valor-y-mvp | **decisión MVP cerrada** — Opción A Acotada (torneos + perfil, 5 RF) |
 | 04 | RF borrador | pendiente migración desde monolito |
 | 05 | RNF borrador | pendiente (RNF ya reflejados en parte en `docs/02-requisitos-no-funcionales.md`) |
 | 06 | validacion | pendiente migración encuestas |
