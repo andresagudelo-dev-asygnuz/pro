@@ -6,6 +6,21 @@ on:
     branches: [main]
 
 jobs:
+  # ── Secret scanning ────────────────────────────────────────
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks — detect hardcoded secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── apps/web lint + build ──────────────────────────────────
   web:
     name: apps/web — lint + build
     runs-on: ubuntu-latest
