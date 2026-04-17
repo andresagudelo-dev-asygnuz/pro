@@ -122,13 +122,55 @@ Campos fuera de alcance MVP1 que quedan en backlog explícito: envergadura, soma
 
 Ver RF-002 en `docs/01-requisitos-funcionales.md` para la versión formal con criterios GIVEN/WHEN/THEN del subconjunto MVP1.
 
-## Módulo / área: [OTRO MÓDULO]
+## Módulo / área: Interacción social y gamificación (visión post-MVP)
 
-*No aplica por ahora; usar plantilla abajo cuando surjan nuevos RF en intake.*
+Módulo bajo consideración por el fundador (no entra a MVP1). Agrupa tres ideas complementarias orientadas a fidelizar jugadores y aumentar la densidad de relaciones entre usuarios. Cualquier promoción a MVP1.1 / MVP2 requiere resolución explícita y queda fuera del alcance actual.
 
-```
-- RF borrador N: [DESCRIPCIÓN]
-```
+### RF-borrador-IS-01 — Solicitud y gestión de amistad entre usuarios
+
+- **Descripción:** Un usuario puede enviar solicitud de amistad a otro; el receptor acepta, rechaza o ignora. Los amigos conforman la red personal del usuario.
+- **Actor:** Jugador autenticado (emisor y receptor).
+- **Dependencias:** RF-001 (registro), RF-002 (perfil). Alimenta el público "amigos" del selector de visibilidad (principio transversal) como nivel adicional post-MVP.
+- **Alcance de la solicitud:**
+  - Solicitud pendiente / aceptada / rechazada / bloqueada.
+  - Límite configurable por usuario a número de solicitudes entrantes por día (anti-spam).
+  - Tras aceptar, ambos usuarios se ven entre sí en el nivel `amigos` del perfil.
+- **Criterios iniciales (borrador GWT):**
+  - GIVEN un jugador autenticado WHEN envía solicitud a otro jugador THEN el receptor la ve en su bandeja y el estado queda `pendiente`.
+  - GIVEN una solicitud `pendiente` WHEN el receptor acepta THEN ambos usuarios pasan a ser amigos y el estado queda `aceptada`.
+
+### RF-borrador-IS-02 — Calificación y validación entre pares (extensión de RF-006)
+
+- **Descripción:** Extiende RF-006 (Validación y calificación entre jugadores) para admitir dos fuentes distintas de calificación, con peso/etiqueta diferenciable:
+  1. **Calificación de amigos** — otros jugadores de la red personal (relación establecida vía RF-borrador-IS-01).
+  2. **Calificación de participantes** — otros jugadores que compartieron un torneo, partido o equipo con el calificado (relación derivada de RF-004 / RF-005 / RF-008).
+- **Actor:** Jugador autenticado con vínculo de amistad o de co-participación.
+- **Dependencias:** RF-006 (base), RF-borrador-IS-01 (amistad), RF-004 / RF-005 / RF-008 (co-participación).
+- **Visibilidad:** el jugador calificado puede configurar si publica el detalle de calificaciones en su ficha o sólo un agregado; siguiendo el principio transversal de configurabilidad.
+- **Criterios iniciales (borrador GWT):**
+  - GIVEN dos jugadores amigos WHEN uno califica al otro THEN la calificación se registra con etiqueta `amigo` y se refleja en el agregado.
+  - GIVEN dos jugadores que compartieron un torneo (RF-005) WHEN uno califica al otro THEN la calificación se registra con etiqueta `participante` y se refleja en el agregado.
+
+### RF-borrador-IS-03 — Experiencia (XP) por participación
+
+- **Descripción:** Sistema de progresión en el que el jugador acumula puntos de experiencia (XP) por actividad verificada dentro de la plataforma (jugar torneos, completar perfil, recibir calificaciones, invitar amigos que se registran, etc.). La XP determina un `nivel` visible en la ficha.
+- **Actor:** Jugador autenticado (acumulación automática del sistema).
+- **Reglas iniciales (a calibrar):**
+  - XP por participación confirmada en torneo (RF-004 + RF-005): ej. 50 XP por partido jugado, 100 XP por torneo completado.
+  - XP por calificaciones positivas recibidas (RF-borrador-IS-02).
+  - XP por completitud del perfil (bloques 1–4 completados): evento único, no repetible.
+  - Nivel calculado por tabla de umbrales (ej. nivel 1 = 0–99 XP, nivel 2 = 100–299 XP, …). Tabla configurable por admin.
+- **Visibilidad:** nivel siempre `público` en la ficha; detalle de XP acumulada configurable por el usuario (`público` / `promotores` / `privado`).
+- **Criterios iniciales (borrador GWT):**
+  - GIVEN un jugador inscrito y verificado en un torneo WHEN el torneo registra un partido con su participación THEN el sistema suma la XP correspondiente a su acumulado.
+  - GIVEN un jugador que alcanza un umbral de nivel WHEN se registra el evento que activa el umbral THEN el sistema actualiza el `nivel` en su ficha y notifica al usuario.
+
+### Consideraciones transversales del módulo
+
+- **Integridad / anti-abuso:** prevenir farming de XP y calificaciones (ventanas de tiempo, cooldowns, detección de cuentas colusivas). A definir antes de promover a MVP1.x.
+- **Consentimiento:** todo envío de solicitud de amistad y toda calificación recibida deben ser reversibles (bloquear usuario, ocultar calificación) — alineado con principio de configurabilidad del perfil.
+- **Dependencia con el modelo de visibilidad:** la amistad habilita un nuevo nivel (`amigos`) para el selector de visibilidad por campo, que hoy está pospuesto a post-MVP.
+- **Estado actual:** los 3 RF borradores **no están en MVP1**; quedan en backlog como candidatos a MVP1.1 / MVP2 y su prioridad se reevalúa tras G2 (diseño) y validación del loop básico.
 
 ## Dependencias o integraciones conocidas
 
@@ -137,6 +179,8 @@ Ver RF-002 en `docs/01-requisitos-funcionales.md` para la versión formal con cr
 - **Esquema por deporte del Bloque 4:** confirmado como estructura por disciplina; elegir entre JSONB validado por schema vs tablas satélite en Gate 3 (arquitectura).
 - **Catálogo de tags curados** (habilidades blandas, capacidades condicionales): tabla de catálogo administrable post-MVP.
 - **Sistema de privacidad por campo:** requiere modelo de `visibility_level` persistido por (usuario, campo) — decisión de schema en Gate 3.
+- **Grafo de relaciones sociales** (amistad / co-participación): requerido para RF-borrador-IS-01 e IS-02; habilita el nivel de visibilidad `amigos` post-MVP.
+- **Motor de XP y reglas configurables:** tabla de eventos XP y umbrales de nivel; administrable por admin. Requerido para RF-borrador-IS-03.
 
 ## Resoluciones (decisiones del fundador)
 
@@ -152,3 +196,5 @@ Las siguientes dudas fueron resueltas y quedan documentadas para trazabilidad:
 - Post-MVP: ¿capacidades condicionales se registran por auto-reporte, evaluador acreditado, o test físico integrado (wearables)? Decidir en roadmap (`07-modelo-negocio-y-roadmap.md`).
 - ¿El catálogo de tags (habilidades blandas, capacidades condicionales) admite sugerencias de usuarios con moderación, o es cerrado por admin? Definir en diseño (Gate 2).
 - ¿Un deportista puede tener **múltiples disciplinas principales** activas simultáneamente en su perfil, o debe elegir una y el resto son secundarias? Relevante para multi-deporte post-MVP.
+- Módulo "Interacción social y gamificación": ¿en qué fase se promueve cada RF borrador (IS-01 amistad, IS-02 calificación por pares, IS-03 XP)? Default propuesto: post-MVP; re-evaluar tras G2.
+- XP (IS-03): ¿qué eventos otorgan XP y qué tabla de umbrales de nivel usar? Requiere calibración con datos reales de torneos una vez esté el MVP1 en producción.

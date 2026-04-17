@@ -82,6 +82,7 @@ Los siguientes RF representan la migración completa del monolito. **Solo RF-001
 - **Criterios de aceptación (GIVEN/WHEN/THEN):**
   - GIVEN un jugador autenticado WHEN accede al perfil de otro jugador y envía una calificación válida THEN el sistema registra la calificación y la refleja en el perfil evaluado.
   - GIVEN un visitante sin autenticar WHEN intenta calificar THEN el sistema redirige a inicio de sesión.
+- **Extensión post-MVP (visión):** la calificación distingue dos fuentes — `amigo` (red personal vía solicitud de amistad) y `participante` (co-participación verificada en torneo/equipo). Detalle en `docs/intake/04-requisitos-funcionales-borrador.md` módulo "Interacción social y gamificación" → RF-borrador-IS-02. Depende de amistad (RF-borrador-IS-01).
 
 ### RF-007 — Verificación de edad con documento de identidad
 
@@ -236,6 +237,10 @@ Los siguientes RF representan la migración completa del monolito. **Solo RF-001
 - **Mapa de recintos / discovery:** candidato MVP2 (de Opción B).
 - **Pagos in-app de inscripciones:** post-MVP según informe.
 - **Módulo árbitros:** post-MVP.
+- **Interacción social y gamificación (módulo en intake):** tres RF borradores bajo consideración del fundador, **post-MVP** por defecto — detalle en `docs/intake/04-requisitos-funcionales-borrador.md`:
+  - **RF-borrador-IS-01 Solicitud y gestión de amistad entre usuarios** — base de red personal; habilita nivel de visibilidad `amigos` en el perfil.
+  - **RF-borrador-IS-02 Calificación y validación entre pares** — extiende RF-006 con fuentes `amigo` y `participante`.
+  - **RF-borrador-IS-03 Experiencia (XP) por participación** — sistema de progresión con niveles calculados por tabla de umbrales.
 
 ## Trazabilidad monolito → RF formal
 

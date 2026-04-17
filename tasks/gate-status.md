@@ -4,7 +4,7 @@
 
 | Gate | Nombre | Estado | Fecha | Aprobado por | Notas |
 |------|--------|--------|-------|--------------|-------|
-| G1 | Producto | Listo para revisión | — | — | MVP decidido (Opción A Acotada); PRD, RF-001–RF-005 y RNF con umbral actualizados; pendiente aprobación fundador |
+| G1 | Producto | Listo para revisión | — | — | MVP decidido (Opción A Acotada, **6 RF** = RF-001 a RF-005 + RF-007); PRD, RF y RNF con umbral actualizados; modelo de perfil del deportista en 4 bloques + principio de configurabilidad por usuario documentados; pendiente aprobación fundador |
 | G2 | Diseño | Pendiente | — | — | Flujos + wireframes |
 | G3 | Arquitectura + DB | Pendiente | — | — | Solución + modelo + migraciones |
 | G4 | Desarrollo | Pendiente | — | — | HU + PRs |
