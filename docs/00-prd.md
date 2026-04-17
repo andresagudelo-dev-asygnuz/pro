@@ -60,7 +60,7 @@
 ## 7. Riesgos y supuestos
 
 - **Riesgo:** scope creep si se re-introducen features sociales o live antes de validar el loop básico.
-- **Mitigación:** MVP decidido (Opción A Acotada, 5 RF); todo lo demás queda en backlog explícito; cualquier adición requiere aprobación en PRD.
+- **Mitigación:** MVP decidido (Opción A Acotada, **6 RF** — RF-001 a RF-005 + RF-007); todo lo demás queda en backlog explícito; cualquier adición requiere aprobación en PRD.
 - **Riesgo:** baja adopción si la densidad local no alcanza masa crítica.
 - **Mitigación:** lanzamiento focalizado en Eje Cafetero con onboarding asistido a promotores clave.
 

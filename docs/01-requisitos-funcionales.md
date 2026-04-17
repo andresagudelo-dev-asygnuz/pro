@@ -70,7 +70,7 @@ Los siguientes **6 RF** conforman el alcance del MVP1: RF-001 a RF-005 (decisió
 
 ## Catálogo completo de RF (migración desde monolito)
 
-Los siguientes RF representan la migración completa del monolito. **Solo RF-001 a RF-005 están en alcance de MVP1**; el resto es backlog priorizable en fases posteriores.
+Los siguientes RF representan la migración completa del monolito. **Solo RF-001 a RF-005 y RF-007 están en alcance de MVP1**; el resto es backlog priorizable en fases posteriores.
 
 ### RF-006 — Validación y calificación entre jugadores
 
