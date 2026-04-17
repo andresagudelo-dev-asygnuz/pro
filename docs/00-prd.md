@@ -1,6 +1,6 @@
 # PRD — PRO (borrador definición)
 
-**Estado:** en definición (Gate 1). **MVP decidido:** Opción A Acotada (torneos + perfil tipo ficha). Alcance actualizado a **6 RF** (RF-001 a RF-005 + RF-007). Ver justificación original en `docs/intake/03-propuesta-valor-y-mvp.md` y la resolución que incorpora RF-007 (verificación de edad) en `docs/intake/04-requisitos-funcionales-borrador.md` (sección Resoluciones).
+**Estado:** G1 aprobado; G2 (Diseño) en curso (ver `tasks/gate-status.md` y `tasks/current-gate.txt`). **MVP decidido:** Opción A Acotada (torneos + perfil tipo ficha). Alcance **6 RF** (RF-001 a RF-005 + RF-007). Ver justificación original en `docs/intake/03-propuesta-valor-y-mvp.md` y la resolución que incorpora RF-007 (verificación de edad) en `docs/intake/04-requisitos-funcionales-borrador.md` (sección Resoluciones).
 
 ---
 

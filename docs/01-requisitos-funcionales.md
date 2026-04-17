@@ -222,7 +222,7 @@ Los siguientes RF representan la migración completa del monolito. **Solo RF-001
 ## Backlog (fuera de MVP1 — referencia)
 
 - **RF-006 Validación y calificación entre jugadores:** post-MVP; depende de masa crítica de perfiles.
-- **RF-007 Verificación de edad con documento:** candidato MVP1.1 si regulación lo exige antes del lanzamiento.
+- ~~**RF-007 Verificación de edad con documento**~~ — **promovido a MVP1** tras resolución del fundador (ver RF-007 arriba y `docs/intake/04-requisitos-funcionales-borrador.md` § Resoluciones). Se mantiene aquí como referencia histórica.
 - **RF-008 Creación y gestión de equipos:** candidato MVP1.1; complementa RF-004 (inscripción).
 - **RF-009 Sorteo de grupos y enfrentamientos:** candidato MVP2; expande RF-003 con automatización de brackets.
 - **RF-010 Registro expandido de resultados (tarjetas, goleadores, comprobantes):** expande RF-005 MVP; candidato MVP2.
