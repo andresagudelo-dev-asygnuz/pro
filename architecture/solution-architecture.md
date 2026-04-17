@@ -121,7 +121,7 @@ Estrategia adoptada:
 
 1. **No borrar** las tablas v0 en la primera migración de G4; marcarlas en deprecated a nivel de documentación y no consumirlas desde el frontend MVP1.
 2. **Nuevo conjunto de tablas** para MVP1 conviviendo con el v0: `user_roles`, `profiles_core`, `profiles_morpho`, `profiles_conditional`, `profiles_technical_football`, `profile_field_visibility`, `age_verifications`, `tournaments`, `teams`, `team_members`, `tournament_registrations`, `tournament_matches`, `match_events`.
-3. **Reutilización** donde aplica: `public.profiles` se extiende con columnas núcleo (full_name, city, primary_sport_id = 'futbol') en lugar de crear una tabla paralela; las capacidades condicionales / morfológicas / técnicas se modelan en tablas hijas (ver ADR-001 para fundamento).
+3. **Separación de dominios**: el Bloque 1 del perfil MVP1 vive en `public.profiles_core` (tabla nueva), **no en `profiles` v0**. `profiles` v0 queda deprecada junto con `matches`, `match_participants`, `ratings`, `messages`; las capacidades condicionales / morfológicas / técnicas se modelan en tablas hijas a `profiles_core` (ver ADR-001 para fundamento). Si existieran datos a migrar de `profiles` v0 a `profiles_core`, se hace con un script idempotente en G4 Sprint 2.
 4. **Corte final** (post-UAT G6): una vez MVP1 estable, los objetos v0 no usados se remueven en una migración explícita; las tablas v0 con datos de pruebas se exportan antes de dropear.
 
 El plan granular de migraciones (timestamps + up/down) se entrega en G4 (Sprint 1 + 2) siguiendo el patrón de `apps/web/supabase/migrations/`.

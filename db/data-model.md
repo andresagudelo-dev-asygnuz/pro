@@ -277,13 +277,11 @@ erDiagram
 
 ## 7. Compatibilidad con esquema v0
 
-El esquema v0 (`profiles`, `matches`, `match_participants`, `ratings`, `messages`) **convive** con este modelo durante la transición del MVP1:
+El esquema v0 (`profiles`, `matches`, `match_participants`, `ratings`, `messages`) **convive** con este modelo durante la transición del MVP1 y luego se retira:
 
-- `profiles` v0 se **conserva** como destino del Bloque 1 núcleo; las columnas nuevas (`full_name`, `city`, `primary_sport_id`) ya existen. Campos que añadiremos a `profiles` v0 (no nuevas tablas) durante G4:
-  - `birth_date date` + check +18.
-  - `interests text[]`, `soft_skills_text text`, `soft_skills_tags text[]`, `slug text unique`.
+- `profiles` v0 **queda deprecada**: el Bloque 1 del perfil MVP1 vive en la nueva tabla `public.profiles_core` (ver §3.3), no en `profiles`. La tabla v0 se mantiene sin consumo desde el frontend durante G4–G5 por si hay datos de pruebas y se dropea en G6 (post-UAT) con migración explícita.
 - `matches`, `match_participants`, `ratings`, `messages` **no se usan** desde el frontend MVP1; se marcan como deprecadas en comentarios de migración y se dropean en G6 (post-UAT) con migración explícita.
-- **Importante:** las nuevas entidades del MVP1 (`tournaments`, `tournament_matches`, etc.) **no reutilizan** las tablas `matches` v0 para evitar confusión de dominio.
+- **Importante:** las nuevas entidades del MVP1 (`profiles_core`, `tournaments`, `tournament_matches`, etc.) **no reutilizan** las tablas v0 para evitar confusión de dominio. Si existieran datos a migrar de `profiles` v0 hacia `profiles_core`, se hace con un script idempotente en G4 Sprint 2.
 
 ## 8. Pendientes para cerrar G3
 

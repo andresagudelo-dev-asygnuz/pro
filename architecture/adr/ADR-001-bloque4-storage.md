@@ -20,7 +20,7 @@ create table public.profiles_technical (
   user_id uuid pk references auth.users,
   sport_id text not null references public.sports,
   data jsonb not null default '{}'::jsonb,
-  check (jsonb_matches_schema((select schema from public.sport_technical_schemas where sport_id = sport_id), data))
+  check (jsonb_matches_schema((select schema from public.sport_technical_schemas s where s.sport_id = profiles_technical.sport_id), data))
 );
 ```
 
