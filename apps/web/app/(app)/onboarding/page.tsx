@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { OnboardingForm } from "@/components/profile/onboarding-form";
 import { getProfile, isProfileComplete, requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -11,7 +10,7 @@ export const metadata = {
 export default async function OnboardingPage() {
   const user = await requireUser();
   const profile = await getProfile();
-  if (isProfileComplete(profile)) redirect("/feed");
+  const isEditing = isProfileComplete(profile);
 
   const supabase = await createClient();
   const { data: sportsRaw } = await supabase
@@ -24,10 +23,12 @@ export default async function OnboardingPage() {
     <div className="mx-auto max-w-2xl rounded-xl border bg-background p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Armá tu perfil deportivo
+          {isEditing ? "Editá tu perfil deportivo" : "Armá tu perfil deportivo"}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Esto ayuda a que otros deportistas te encuentren y te inviten a jugar.
+          {isEditing
+            ? "Actualizá tu información — así otros deportistas saben con quién están jugando."
+            : "Esto ayuda a que otros deportistas te encuentren y te inviten a jugar."}
         </p>
       </div>
       <OnboardingForm
