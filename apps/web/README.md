@@ -38,8 +38,8 @@ lib/
   supabase/
     client.ts        # Cliente para Client Components
     server.ts        # Cliente para RSC / Route Handlers / Server Actions
-    middleware.ts    # Refresh de sesión (llamado desde middleware.ts)
-middleware.ts        # Entry point del middleware Next
+    middleware.ts    # Refresh de sesión (llamado desde proxy.ts)
+proxy.ts             # Entry point del proxy de Next 16 (ex-middleware.ts)
 supabase/
   migrations/        # Migraciones SQL gestionadas con Supabase CLI
 ```
