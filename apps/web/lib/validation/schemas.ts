@@ -35,15 +35,35 @@ export const signInSchema = z.object({
   password: z.string().min(1, "Ingresá tu contraseña."),
 });
 
-export const signUpSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-  full_name: z
-    .string()
-    .trim()
-    .min(2, "Ingresá tu nombre completo.")
-    .max(80, "Nombre demasiado largo."),
-});
+// Checkbox de HTML: si va marcado llega como "on" (o el value del input), si
+// va desmarcado no llega. Convertimos cualquier presencia no-vacía a `true`.
+const checkboxToBoolean = z
+  .union([z.string(), z.undefined(), z.boolean()])
+  .transform((v) => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") {
+      const s = v.trim().toLowerCase();
+      return s === "on" || s === "true" || s === "1" || s === "yes";
+    }
+    return false;
+  });
+
+export const signUpSchema = z
+  .object({
+    email: emailSchema,
+    password: passwordSchema,
+    full_name: z
+      .string()
+      .trim()
+      .min(2, "Ingresá tu nombre completo.")
+      .max(80, "Nombre demasiado largo."),
+    is_player: checkboxToBoolean,
+    is_promoter: checkboxToBoolean,
+  })
+  .refine((d) => d.is_player || d.is_promoter, {
+    message: "Elegí al menos un rol (jugador o promotor).",
+    path: ["is_player"],
+  });
 
 export const onboardingSchema = z.object({
   username: z

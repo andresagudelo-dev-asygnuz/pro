@@ -27,10 +27,11 @@ Sprint 1 se entrega en PRs pequeños y revisables, en este orden:
    - Tabla `public.age_verifications` (RF-007) con índices + RLS + constraint de tamaño/mime.
    - Bucket privado `age-verifications` (policy sólo `service_role`).
    - **No toca UI ni `apps/web/lib`.** Backend puro + docs.
-2. **PR B — Registro con rol (HU-001).** Extender `app/(auth)/signup/page.tsx`:
-   - Toggle `is_player` / `is_promoter` en el form.
-   - Server Action que crea `auth.users` + setea `user_roles`.
-   - Tests de validación Zod.
+2. **PR B — Registro con rol (HU-001) [este PR].** Extender `app/(auth)/signup/page.tsx`:
+   - Toggle `is_player` / `is_promoter` en `components/auth/signup-form.tsx` (jugador marcado por default; refine "al menos un rol").
+   - Server Action `signUpWithPassword` pasa ambos flags en `options.data` del `supabase.auth.signUp`; el trigger `on_auth_user_created_roles` (PR A) crea la fila en `public.user_roles`.
+   - Validación Zod centralizada en `lib/validation/schemas.ts` con `checkboxToBoolean` tolerante a `on` / ausente.
+   - Tests en `tests/lib/schemas.test.ts` (6 cases de schema, incluyendo "al menos un rol" y "sólo promotor").
 3. **PR C — Verificación de edad (HU-002).** Ruta nueva `app/(app)/verificacion/page.tsx`:
    - Upload de documento con validación client+server (max 5 MB, mime permitidos).
    - Server Action que inserta `age_verifications` `pendiente` + sube a bucket privado.

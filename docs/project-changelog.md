@@ -13,7 +13,8 @@ Bitácora **del producto** (negocio, alcance, gates y hitos de entrega). Mantene
 ## Unreleased
 
 - `[Gate]` **G3 aprobado** vía merge de PR #9 (arquitectura + modelo de datos + 4 ADRs, con correcciones de Devin Review incluidas). `tasks/current-gate.txt` = `4`.
-- `[Construcción]` **G4 Sprint 1 iniciado**: HU-001 (registro con rol) + HU-002 (verificación de edad). Plan en `tasks/sprint-week-01.md`. PR A (este) entrega DB foundation: migración `20260417130000_g4_sprint1_auth_age.sql` con `user_roles`, `age_verifications`, RLS, trigger de seed de roles, helper `ensure_verification_aprobada` y bucket privado Storage `age-verifications`.
+- `[Construcción]` **G4 Sprint 1 iniciado**: HU-001 (registro con rol) + HU-002 (verificación de edad). Plan en `tasks/sprint-week-01.md`. PR A entregó DB foundation: migración `20260417130000_g4_sprint1_auth_age.sql` con `user_roles`, `age_verifications`, RLS, trigger de seed de roles, helper `ensure_verification_aprobada` y bucket privado Storage `age-verifications` (PR #10 mergeado). Confirmación del fundador: default `is_player = true`; principio "info básica pública / detalle logueado" aplica a torneos en HU-004/005.
+- `[Construcción]` **G4 Sprint 1 PR B (HU-001 registro con rol):** toggle jugador/promotor en `components/auth/signup-form.tsx`, `signUpSchema` Zod con `is_player`/`is_promoter` + refine "al menos un rol", `supabase.auth.signUp` pasa ambos flags en `options.data` (el trigger DB los consume). Tests unitarios de schema (`tests/lib/schemas.test.ts`) verde.
 - `[Definición]` Intake `01`–`03` con síntesis desde monolito; PRD y RNF borrador; RF prioritarios (candidatos Opción A); **decisión MVP única pendiente**. Monolito `PRO-gestion.documental.md` en migración a `01–08`. G1 en curso (`tasks/gate-status.md`).
 - `[Construcción]` Repositorio remoto: https://github.com/andresagudelo-dev-asygnuz/pro
 - Estado de gates: `tasks/gate-status.md`, `tasks/current-gate.txt`.
