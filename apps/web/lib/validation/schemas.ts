@@ -48,22 +48,21 @@ const checkboxToBoolean = z
     return false;
   });
 
-export const signUpSchema = z
-  .object({
-    email: emailSchema,
-    password: passwordSchema,
-    full_name: z
-      .string()
-      .trim()
-      .min(2, "Ingresá tu nombre completo.")
-      .max(80, "Nombre demasiado largo."),
-    is_player: checkboxToBoolean,
-    is_promoter: checkboxToBoolean,
-  })
-  .refine((d) => d.is_player || d.is_promoter, {
-    message: "Elegí al menos un rol (jugador o promotor).",
-    path: ["is_player"],
-  });
+// Nota: no hay refine "al menos un rol". La UI permite desmarcar ambos y en
+// ese caso el trigger DB `on_auth_user_created_roles` (migración
+// 20260417130000) asigna `is_player = true` por defecto (RF-001). Validar
+// client-side rompería la promesa UX "si no marcás ninguno te damos jugador".
+export const signUpSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  full_name: z
+    .string()
+    .trim()
+    .min(2, "Ingresá tu nombre completo.")
+    .max(80, "Nombre demasiado largo."),
+  is_player: checkboxToBoolean,
+  is_promoter: checkboxToBoolean,
+});
 
 export const onboardingSchema = z.object({
   username: z

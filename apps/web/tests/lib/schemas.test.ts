@@ -65,17 +65,17 @@ describe("signUpSchema", () => {
     }
   });
 
-  it("exige al menos un rol (jugador o promotor)", () => {
+  it("ambos desmarcados => schema OK (el trigger DB aplica default is_player=true)", () => {
     const r = signUpSchema.safeParse({
       email: "a@b.com",
       password: "12345678",
       full_name: "Nombre",
-      // ambos ausentes
+      // is_player / is_promoter ausentes
     });
-    expect(r.success).toBe(false);
-    if (!r.success) {
-      const issue = r.error.issues.find((i) => i.path.includes("is_player"));
-      expect(issue?.message).toMatch(/al menos un rol/i);
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.is_player).toBe(false);
+      expect(r.data.is_promoter).toBe(false);
     }
   });
 
