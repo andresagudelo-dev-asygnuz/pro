@@ -1,6 +1,6 @@
 # PRD — PRO (borrador definición)
 
-**Estado:** en definición (Gate 1). **MVP decidido:** Opción A Acotada (torneos + perfil tipo ficha, 5 RF). Ver justificación completa en `docs/intake/03-propuesta-valor-y-mvp.md`.
+**Estado:** G1 aprobado; G2 (Diseño) en curso (ver `tasks/gate-status.md` y `tasks/current-gate.txt`). **MVP decidido:** Opción A Acotada (torneos + perfil tipo ficha). Alcance **6 RF** (RF-001 a RF-005 + RF-007). Ver justificación original en `docs/intake/03-propuesta-valor-y-mvp.md` y la resolución que incorpora RF-007 (verificación de edad) en `docs/intake/04-requisitos-funcionales-borrador.md` (sección Resoluciones).
 
 ---
 
@@ -27,10 +27,11 @@
 ### En alcance (MVP1 — Opción A Acotada)
 
 - **RF-001** Registro con rol (jugador / promotor)
-- **RF-002** Perfil de jugador tipo ficha (foto, posición, stats básicas)
+- **RF-002** Perfil de jugador tipo ficha (foto, posición, stats básicas, sección social con texto libre + tags curados). Cada campo tiene **selector de visibilidad** `público` / `promotores` / `privado` configurable por el usuario (principio transversal de configurabilidad).
 - **RF-003** Crear y configurar torneo (promotor)
 - **RF-004** Inscripción de equipo o jugador a torneo
 - **RF-005** Resultados y tabla de posiciones
+- **RF-007** Verificación de edad con documento de identidad (obligatoria en onboarding; MVP sólo mayores de edad)
 - Notificaciones simples (inscripción confirmada, resultado publicado)
 - Solo fútbol, mayores de edad
 - Lanzamiento geográfico: Eje Cafetero (Pereira / Manizales)
@@ -59,7 +60,7 @@
 ## 7. Riesgos y supuestos
 
 - **Riesgo:** scope creep si se re-introducen features sociales o live antes de validar el loop básico.
-- **Mitigación:** MVP decidido (Opción A Acotada, 5 RF); todo lo demás queda en backlog explícito; cualquier adición requiere aprobación en PRD.
+- **Mitigación:** MVP decidido (Opción A Acotada, **6 RF** — RF-001 a RF-005 + RF-007); todo lo demás queda en backlog explícito; cualquier adición requiere aprobación en PRD.
 - **Riesgo:** baja adopción si la densidad local no alcanza masa crítica.
 - **Mitigación:** lanzamiento focalizado en Eje Cafetero con onboarding asistido a promotores clave.
 

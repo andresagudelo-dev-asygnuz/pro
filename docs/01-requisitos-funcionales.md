@@ -5,11 +5,11 @@
 - **Inventario completo:** RF1.x–RF8.x en `PRO-gestion.documental.md` (módulos perfiles, equipos, torneos, inscripción, social, visualización, live, soporte).
 - **Migración completada:** todos los RF del monolito (RF1.1–RF8.2) migrados a formato estándar (RF-001 a RF-004, RF-006 a RF-018). Ver tabla de trazabilidad al final del documento.
 - **Intake borrador:** `docs/intake/04-requisitos-funcionales-borrador.md` disponible como plantilla para RFs futuros.
-- **MVP decidido:** Opción A Acotada — RF-001 a RF-005 conforman el MVP1. RF-005 (Resultados y tabla de posiciones) es un RF nuevo para cerrar el loop de valor del MVP. Ver decisión en `docs/intake/03-propuesta-valor-y-mvp.md`.
+- **MVP decidido:** Opción A Acotada — **RF-001 a RF-005 + RF-007** conforman el MVP1 (6 RF). RF-005 (Resultados y tabla de posiciones) es un RF nuevo para cerrar el loop de valor del MVP. RF-007 (Verificación de edad) se incorpora al MVP1 tras resolución del fundador (ver `docs/intake/04-requisitos-funcionales-borrador.md`, sección Resoluciones). Decisión original en `docs/intake/03-propuesta-valor-y-mvp.md`.
 
 ## RF prioritarios — MVP1 (Opción A Acotada)
 
-Los siguientes 5 RF conforman el alcance del MVP1. Decisión documentada en `docs/intake/03-propuesta-valor-y-mvp.md`.
+Los siguientes **6 RF** conforman el alcance del MVP1: RF-001 a RF-005 (decisión original en `docs/intake/03-propuesta-valor-y-mvp.md`) **más RF-007 (verificación de edad)**, incorporado a MVP1 tras decisión del fundador documentada en `docs/intake/04-requisitos-funcionales-borrador.md` (sección Resoluciones).
 
 ### RF-001 — Registro y rol (jugador / promotor)
 
@@ -20,7 +20,7 @@ Los siguientes 5 RF conforman el alcance del MVP1. Decisión documentada en `doc
 - **Flujo alterno:** Rechazo validación edad / datos incompletos.
 - **Criterios de aceptación (GIVEN/WHEN/THEN):**
   - GIVEN un visitante sin cuenta WHEN completa registro válido THEN el sistema crea cuenta y asigna rol solicitado.
-  - GIVEN registro jugador WHEN falta documento para verificación de edad THEN el sistema indica el paso pendiente (si RF de verificación aplica en MVP).
+  - GIVEN registro jugador WHEN falta documento para verificación de edad THEN el sistema indica el paso pendiente y enlaza al flujo de RF-007 (verificación obligatoria en MVP1).
 
 ### RF-002 — Perfil de jugador tipo ficha
 
@@ -31,6 +31,10 @@ Los siguientes 5 RF conforman el alcance del MVP1. Decisión documentada en `doc
 - **Flujo alterno:** Campos opcionales omitidos.
 - **Criterios de aceptación (GIVEN/WHEN/THEN):**
   - GIVEN jugador autenticado WHEN guarda perfil con datos mínimos THEN el sistema persiste y muestra ficha pública o privada según reglas.
+  - GIVEN jugador autenticado WHEN modifica el nivel de visibilidad (`público` / `promotores` / `privado`) de un campo del perfil THEN el sistema persiste el cambio y ese campo deja de ser visible para audiencias fuera del nivel seleccionado.
+  - GIVEN un visitante (público / promotor / propietario) WHEN consulta la ficha de otro jugador THEN el sistema muestra únicamente los campos cuyo nivel de visibilidad coincide con la audiencia.
+- **Modelo extendido (visión post-MVP):** el modelo de “perfil tipo ficha” está descrito en detalle en `docs/intake/04-requisitos-funcionales-borrador.md` con 4 bloques (Identidad, Morfológico/Biométrico, Capacidades Condicionales, Destrezas Técnicas) y es deporte-agnóstico. En MVP1 se implementa sólo el subconjunto para fútbol (nombre, edad + verificación RF-007, ubicación, estatura, peso, lateralidad, posición, pie hábil, sección social con texto libre + tags curados, stats derivadas de RF-005); el resto queda en backlog. Ejemplo de llenado en `docs/intake/08-anexos.md`.
+- **Configurabilidad por el usuario (MVP1):** cada campo del perfil expone un selector de visibilidad (`público` / `promotores` / `privado`) con defaults sensibles documentados en `intake/04`. El llenado es opcional salvo el núcleo mínimo (nombre, edad, ubicación, disciplina, lateralidad, posición, pie hábil).
 
 ### RF-003 — Crear y configurar torneo (promotor)
 
@@ -66,7 +70,7 @@ Los siguientes 5 RF conforman el alcance del MVP1. Decisión documentada en `doc
 
 ## Catálogo completo de RF (migración desde monolito)
 
-Los siguientes RF representan la migración completa del monolito. **Solo RF-001 a RF-005 están en alcance de MVP1**; el resto es backlog priorizable en fases posteriores.
+Los siguientes RF representan la migración completa del monolito. **Solo RF-001 a RF-005 y RF-007 están en alcance de MVP1**; el resto es backlog priorizable en fases posteriores.
 
 ### RF-006 — Validación y calificación entre jugadores
 
@@ -78,10 +82,11 @@ Los siguientes RF representan la migración completa del monolito. **Solo RF-001
 - **Criterios de aceptación (GIVEN/WHEN/THEN):**
   - GIVEN un jugador autenticado WHEN accede al perfil de otro jugador y envía una calificación válida THEN el sistema registra la calificación y la refleja en el perfil evaluado.
   - GIVEN un visitante sin autenticar WHEN intenta calificar THEN el sistema redirige a inicio de sesión.
+- **Extensión post-MVP (visión):** la calificación distingue dos fuentes — `amigo` (red personal vía solicitud de amistad) y `participante` (co-participación verificada en torneo/equipo). Detalle en `docs/intake/04-requisitos-funcionales-borrador.md` módulo "Interacción social y gamificación" → RF-borrador-IS-02. Depende de amistad (RF-borrador-IS-01).
 
 ### RF-007 — Verificación de edad con documento de identidad
 
-- **Descripción:** El sistema requiere la carga de un documento de identidad para verificar la edad del jugador al crear el perfil (RF1.7 monolito).
+- **Descripción:** El sistema requiere la carga de un documento de identidad para verificar la edad del jugador al crear el perfil (RF1.7 monolito). **En alcance MVP1** — el MVP solo admite mayores de edad, por lo que la verificación es parte del onboarding obligatorio (decisión documentada en `docs/intake/04-requisitos-funcionales-borrador.md`, sección Resoluciones).
 - **Actor:** Jugador nuevo.
 - **Precondiciones:** Cuenta de jugador en proceso de creación o edición de perfil.
 - **Flujo principal:** Jugador sube imagen/PDF del documento → sistema valida formato → estado de verificación asignado.
@@ -89,6 +94,8 @@ Los siguientes RF representan la migración completa del monolito. **Solo RF-001
 - **Criterios de aceptación (GIVEN/WHEN/THEN):**
   - GIVEN un jugador en registro WHEN sube documento de identidad en formato válido THEN el sistema almacena el documento y marca la verificación como pendiente de revisión.
   - GIVEN un jugador WHEN sube un archivo en formato no soportado THEN el sistema rechaza la carga e indica los formatos aceptados.
+  - GIVEN un jugador con verificación pendiente o rechazada WHEN intenta inscribirse a un torneo (RF-004) THEN el sistema bloquea la inscripción y muestra el paso faltante.
+- **Privacidad:** el documento de identidad se almacena cifrado y su visibilidad por defecto es `privado` (sólo el propio usuario y administradores del sistema). No se expone a promotores ni público.
 
 ### RF-008 — Creación y gestión de equipos
 
@@ -215,7 +222,7 @@ Los siguientes RF representan la migración completa del monolito. **Solo RF-001
 ## Backlog (fuera de MVP1 — referencia)
 
 - **RF-006 Validación y calificación entre jugadores:** post-MVP; depende de masa crítica de perfiles.
-- **RF-007 Verificación de edad con documento:** candidato MVP1.1 si regulación lo exige antes del lanzamiento.
+- ~~**RF-007 Verificación de edad con documento**~~ — **promovido a MVP1** tras resolución del fundador (ver RF-007 arriba y `docs/intake/04-requisitos-funcionales-borrador.md` § Resoluciones). Se mantiene aquí como referencia histórica.
 - **RF-008 Creación y gestión de equipos:** candidato MVP1.1; complementa RF-004 (inscripción).
 - **RF-009 Sorteo de grupos y enfrentamientos:** candidato MVP2; expande RF-003 con automatización de brackets.
 - **RF-010 Registro expandido de resultados (tarjetas, goleadores, comprobantes):** expande RF-005 MVP; candidato MVP2.
@@ -230,6 +237,10 @@ Los siguientes RF representan la migración completa del monolito. **Solo RF-001
 - **Mapa de recintos / discovery:** candidato MVP2 (de Opción B).
 - **Pagos in-app de inscripciones:** post-MVP según informe.
 - **Módulo árbitros:** post-MVP.
+- **Interacción social y gamificación (módulo en intake):** tres RF borradores bajo consideración del fundador, **post-MVP** por defecto — detalle en `docs/intake/04-requisitos-funcionales-borrador.md`:
+  - **RF-borrador-IS-01 Solicitud y gestión de amistad entre usuarios** — base de red personal; habilita nivel de visibilidad `amigos` en el perfil.
+  - **RF-borrador-IS-02 Calificación y validación entre pares** — extiende RF-006 con fuentes `amigo` y `participante`.
+  - **RF-borrador-IS-03 Experiencia (XP) por participación** — sistema de progresión con niveles calculados por tabla de umbrales.
 
 ## Trazabilidad monolito → RF formal
 
