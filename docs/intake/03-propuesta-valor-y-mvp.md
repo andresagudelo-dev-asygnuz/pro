@@ -12,9 +12,9 @@
 - Combinación **perfil deportivo gamificado + torneos + comunidad** frente a solo reserva de cancha o solo redes sociales genéricas.
 - Enfoque en **pasión y competencia amateur** elevada a experiencia “pro” (nombre de marca alineado).
 
-## Alcance del MVP — ⚠️ decisión pendiente (dos narrativas)
+## Alcance del MVP — decisión cerrada
 
-Conviven **dos MVPs posibles** en la documentación; **hay que elegir uno** para `docs/00-prd.md` y priorizar RF.
+Convivían dos MVPs posibles en la documentación. Tras análisis de trade-offs se eligió un **híbrido acotado** ("Opción A Acotada"). Abajo se conservan las opciones originales como referencia y se documenta la decisión.
 
 ### Opción A — Plataforma torneos + social (informe Juan Pablo, RF1–RF8)
 
@@ -27,31 +27,44 @@ Conviven **dos MVPs posibles** en la documentación; **hay que elegir uno** para
 - **MVP descrito:** registro, **perfiles** con deportes y nivel, **tracking básico** (correr, ciclismo, fútbol), **mapa** de recintos/usuarios, **grupos por deporte**, **agenda simple** de partidos informales.
 - **Riesgo:** narrativa **móvil-first** y **multi-deporte** choca con acotación **solo fútbol +18** de encuesta; alinear explícitamente.
 
-### Camino recomendado para definición
+### Decisión: Híbrido — Opción A Acotada
 
-1. **Elegir A, B o un híbrido acotado** (ej. “A pero sin live ni chat en MVP1”).
-2. Volcar la elección en `docs/intake/00-indice-y-alcance.md` y en `docs/00-prd.md`.
-3. Priorizar **5–10 RF** en `docs/01-requisitos-funcionales.md` y dejar el resto como backlog en `intake/04` o monolito.
+Se elige el **núcleo de Opción A** (perfil tipo ficha + torneos) recortando las features sociales y de media pesadas, y se aplica la **restricción geográfica de Opción B** (lanzamiento en Eje Cafetero) como decisión de go-to-market.
 
-**MVP elegido para la siguiente iteración:** *[COMPLETAR — bloqueante para cerrar G1]*  
+**Justificación:**
 
-**Fuera del MVP actual (lista inicial):** *[COMPLETAR según opción]*  
+1. **Alineación con marca** — "PRO" promete experiencia profesional; el loop perfil → equipo → torneo → resultados entrega esa promesa con superficie mínima.
+2. **RF ya especificados** — RF-001 a RF-004 tienen criterios GWT escritos; se agrega RF-005 (resultados y tabla de posiciones) para cerrar el ciclo de valor.
+3. **Stack fit** — Next.js + Neon + Vercel (stack acordado) es ideal para plataforma web con perfiles SSR y páginas de torneo. Opción B pura requeriría stack nativo diferente.
+4. **Validación bilateral** — Un MVP prueba las dos hipótesis centrales: jugadores adoptan por perfil + valor social, y organizadores adoptan si ahorran tiempo vs. WhatsApp/Excel.
+5. **Scope realista** — 5 RF vs ~40 del informe completo. Diseñable en 1 semana, construible en 2–3.
+
+**MVP elegido para la siguiente iteración:** **Opción A Acotada** — registro con roles, perfil tipo ficha, creación de torneos, inscripción de equipos, resultados y tabla de posiciones. Solo fútbol, +18, lanzamiento Eje Cafetero. Plataforma web responsiva.
+
+**Fuera del MVP actual:**
+
+- Live streaming (RF7)
+- Feed social completo + chat (RF5); se reemplaza por notificaciones simples
+- Pagos in-app de inscripciones
+- Módulo árbitros y resolución de disputas
+- Mapa de recintos / discovery de usuarios (candidato MVP2)
+- Multi-deporte (solo fútbol en MVP1)
+- Tracking de actividad física (correr, ciclismo) de Opción B
 
 ## Hipótesis a validar
 
 1. Los deportistas **valoran y usarán** un perfil con estadísticas comparables si el onboarding y el valor social (equipo/torneo) están claros.
 2. Los organizadores **adoptan** la plataforma si reduce fricción en inscripciones y visibilidad de resultados.
-3. (Si Opción B) La **densidad local** en una ciudad es suficiente para red mapa/grupos sin efecto red vacío.
+3. La **focalización geográfica** (Eje Cafetero) genera suficiente densidad para que torneos y equipos tengan masa crítica sin efecto red vacío.
 
-## KPI de validación (borrador — afinar al elegir MVP)
+## KPI de validación
 
-| KPI | Objetivo inicial | Cómo medir |
+| KPI | Objetivo inicial (primeras 4 semanas post-lanzamiento) | Cómo medir |
 |-----|------------------|------------|
-| Registros / perfiles completos | *[definir número o %]* | Analytics producto |
-| Equipos o torneos creados | *[definir]* | Eventos en backend |
-| Retención semanal (WAU/MAU) | *[definir]* | Product analytics |
-| Organizadores activos | *[definir]* | Cuentas promotor con torneo vivo |
-| (Opción B) Grupos activos / eventos en mapa | *[definir]* | Métricas in-app |
+| Registros con perfil completo | 50 | Analytics producto |
+| Torneos creados por promotores | 5 activos | Eventos en backend |
+| Retención semanal (WAU/MAU) | 30 % semana a semana | Product analytics |
+| Organizadores con ≥1 torneo publicado | 3 | Cuentas promotor con torneo vivo |
 
 ## Fuentes
 

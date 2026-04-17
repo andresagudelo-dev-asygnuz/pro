@@ -3,13 +3,13 @@
 ## Estado de migración
 
 - **Inventario completo:** RF1.x–RF8.x en `PRO-gestion.documental.md` (módulos perfiles, equipos, torneos, inscripción, social, visualización, live, soporte).
-- **Migración completada:** todos los RF del monolito (RF1.1–RF8.2) migrados a formato estándar (RF-001 a RF-017). Ver tabla de trazabilidad al final del documento.
+- **Migración completada:** todos los RF del monolito (RF1.1–RF8.2) migrados a formato estándar (RF-001 a RF-004, RF-006 a RF-018). Ver tabla de trazabilidad al final del documento.
 - **Intake borrador:** `docs/intake/04-requisitos-funcionales-borrador.md` disponible como plantilla para RFs futuros.
-- **Prioridad MVP:** RF-001 a RF-004 son candidatos núcleo (Opción A: torneos + perfiles). RF-005 en adelante requieren decisión explícita en PRD.
+- **MVP decidido:** Opción A Acotada — RF-001 a RF-005 conforman el MVP1. RF-005 (Resultados y tabla de posiciones) es un RF nuevo para cerrar el loop de valor del MVP. Ver decisión en `docs/intake/03-propuesta-valor-y-mvp.md`.
 
-## RF prioritarios propuestos (pre-decisión MVP)
+## RF prioritarios — MVP1 (Opción A Acotada)
 
-Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)**; revisar si el MVP es **Opción B** (mapa/grupos).
+Los siguientes 5 RF conforman el alcance del MVP1. Decisión documentada en `docs/intake/03-propuesta-valor-y-mvp.md`.
 
 ### RF-001 — Registro y rol (jugador / promotor)
 
@@ -52,7 +52,23 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
 - **Criterios de aceptación (GIVEN/WHEN/THEN):**
   - GIVEN torneo abierto WHEN equipo válido se inscribe THEN el sistema registra participación y notifica al promotor.
 
-### RF-005 — Validación y calificación entre jugadores
+### RF-005 — Resultados y tabla de posiciones
+
+- **Descripción:** Promotor registra resultados de partidos de un torneo; el sistema calcula y muestra la tabla de posiciones actualizada. Las estadísticas básicas (partidos jugados, goles, victorias) se reflejan en el perfil del jugador (RF-002).
+- **Actor:** Promotor (registra resultados); Jugador / Público (consulta tabla y perfil).
+- **Precondiciones:** Torneo con equipos inscritos (RF-004); al menos un partido programado o finalizado.
+- **Flujo principal:** Promotor selecciona partido → ingresa marcador → sistema actualiza tabla de posiciones y estadísticas de jugadores.
+- **Flujo alterno:** Corrección de resultado ya registrado (edición con log de auditoría).
+- **Criterios de aceptación (GIVEN/WHEN/THEN):**
+  - GIVEN un torneo con partidos WHEN el promotor registra el marcador de un partido THEN el sistema actualiza la tabla de posiciones y las estadísticas individuales de los jugadores participantes.
+  - GIVEN tabla de posiciones actualizada WHEN un jugador consulta su perfil THEN ve reflejados partidos jugados, goles y victorias del torneo.
+- **Nota:** Este RF es una versión acotada para MVP1 del ciclo resultados/tablas. La versión expandida (goleadores, tarjetas, tiempo real, comprobantes de pago) está en RF-010 y RF-015 del catálogo completo.
+
+## Catálogo completo de RF (migración desde monolito)
+
+Los siguientes RF representan la migración completa del monolito. **Solo RF-001 a RF-005 están en alcance de MVP1**; el resto es backlog priorizable en fases posteriores.
+
+### RF-006 — Validación y calificación entre jugadores
 
 - **Descripción:** Otros usuarios (jugadores, entrenadores) pueden validar o calificar la calidad de juego de un deportista en su perfil (RF1.5 monolito).
 - **Actor:** Jugador / Entrenador.
@@ -63,7 +79,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un jugador autenticado WHEN accede al perfil de otro jugador y envía una calificación válida THEN el sistema registra la calificación y la refleja en el perfil evaluado.
   - GIVEN un visitante sin autenticar WHEN intenta calificar THEN el sistema redirige a inicio de sesión.
 
-### RF-006 — Verificación de edad con documento de identidad
+### RF-007 — Verificación de edad con documento de identidad
 
 - **Descripción:** El sistema requiere la carga de un documento de identidad para verificar la edad del jugador al crear el perfil (RF1.7 monolito).
 - **Actor:** Jugador nuevo.
@@ -74,7 +90,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un jugador en registro WHEN sube documento de identidad en formato válido THEN el sistema almacena el documento y marca la verificación como pendiente de revisión.
   - GIVEN un jugador WHEN sube un archivo en formato no soportado THEN el sistema rechaza la carga e indica los formatos aceptados.
 
-### RF-007 — Creación y gestión de equipos
+### RF-008 — Creación y gestión de equipos
 
 - **Descripción:** Los jugadores pueden crear equipos, nombrarlos y gestionar la pertenencia de otros jugadores, así como consultar información y estadísticas de los miembros (RF2.1, RF2.2, RF2.3 monolito).
 - **Actor:** Jugador (capitán/creador del equipo).
@@ -86,7 +102,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un capitán WHEN agrega o elimina un jugador del equipo THEN el sistema actualiza la plantilla y notifica al jugador afectado.
   - GIVEN un miembro del equipo WHEN accede al panel del equipo THEN el sistema muestra la lista de miembros con sus estadísticas básicas.
 
-### RF-008 — Sorteo de grupos y enfrentamientos del torneo
+### RF-009 — Sorteo de grupos y enfrentamientos del torneo
 
 - **Descripción:** El sistema genera y sortea grupos y enfrentamientos de forma aleatoria según la configuración del promotor, y permite invitar equipos existentes a participar (RF3.10, RF3.11 monolito).
 - **Actor:** Promotor.
@@ -97,7 +113,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un torneo con equipos inscritos suficientes WHEN el promotor solicita el sorteo THEN el sistema genera grupos y enfrentamientos aleatorios según el formato configurado.
   - GIVEN un promotor WHEN invita a un equipo existente al torneo THEN el equipo recibe notificación de invitación y puede aceptar o rechazar.
 
-### RF-009 — Registro de resultados y actualización de tablas
+### RF-010 — Registro de resultados y actualización de tablas
 
 - **Descripción:** El promotor registra resultados de cada partido (goles, tarjetas, ganador/perdedor) y el sistema actualiza automáticamente tablas de posiciones y estadísticas de goleadores; además puede validar comprobantes de pago de inscripción (RF3.12, RF3.13, RF3.14 monolito).
 - **Actor:** Promotor.
@@ -108,7 +124,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un partido programado WHEN el promotor ingresa el resultado con goles y tarjetas THEN el sistema persiste el resultado y actualiza automáticamente la tabla de posiciones y el ranking de goleadores.
   - GIVEN un promotor WHEN valida un comprobante de pago de inscripción THEN el sistema actualiza el estado a "Aprobado", "Rechazado" o "Pendiente" y notifica al equipo inscrito.
 
-### RF-010 — Inscripción individual y armado automático de equipos
+### RF-011 — Inscripción individual y armado automático de equipos
 
 - **Descripción:** Jugadores individuales pueden inscribirse a un torneo y, cuando corresponda, el sistema arma equipos de forma automática y aleatoria; los jugadores también pueden seguir torneos para recibir actualizaciones (RF4.3, RF4.4 monolito).
 - **Actor:** Jugador individual.
@@ -119,7 +135,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un torneo con modalidad individual abierta WHEN se alcanza el cupo mínimo de jugadores individuales THEN el sistema arma equipos de forma aleatoria y notifica a los jugadores asignados.
   - GIVEN un jugador autenticado WHEN sigue un torneo THEN el sistema lo suscribe a actualizaciones de ese torneo.
 
-### RF-011 — Feed social y publicaciones
+### RF-012 — Feed social y publicaciones
 
 - **Descripción:** Feed principal donde se muestran publicaciones (logros, avances, estadísticas) de amigos, equipos y torneos seguidos, con posibilidad de comentar y reaccionar con emojis (RF5.1, RF5.5 monolito).
 - **Actor:** Jugador / Promotor.
@@ -130,7 +146,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un usuario autenticado con conexiones WHEN accede al feed THEN el sistema muestra publicaciones de amigos, equipos y torneos seguidos ordenadas cronológicamente.
   - GIVEN un usuario autenticado WHEN comenta o reacciona con emoji a una publicación THEN el sistema registra la interacción y la muestra a otros usuarios.
 
-### RF-012 — Notificaciones push
+### RF-013 — Notificaciones push
 
 - **Descripción:** El sistema envía notificaciones push sobre actualizaciones de logros, noticias de equipos, avances de torneos e invitaciones a torneos y partidos (RF5.2 monolito).
 - **Actor:** Sistema → Usuario (jugador / promotor).
@@ -141,7 +157,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un usuario con notificaciones habilitadas WHEN ocurre un evento relevante (resultado de partido, invitación, logro de amigo) THEN el sistema envía notificación push al dispositivo del usuario.
   - GIVEN un usuario WHEN desactiva notificaciones push THEN el sistema deja de enviarle notificaciones push pero mantiene el historial accesible en la app.
 
-### RF-013 — Chat y mensajería
+### RF-014 — Chat y mensajería
 
 - **Descripción:** Funcionalidad de chat/mensajería para comunicación entre jugadores y promotores, incluyendo invitación a amigos a partidos específicos con búsqueda por posición (RF5.3, RF5.4 monolito).
 - **Actor:** Jugador / Promotor.
@@ -152,7 +168,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN dos usuarios autenticados WHEN uno envía un mensaje al otro THEN el receptor lo recibe en tiempo real y puede responder.
   - GIVEN un jugador WHEN busca compañeros por posición para un partido THEN el sistema muestra jugadores disponibles que coinciden con la posición buscada y permite enviar invitación.
 
-### RF-014 — Visualización de tablas, resultados y rankings
+### RF-015 — Visualización de tablas, resultados y rankings
 
 - **Descripción:** El sistema muestra tablas de posiciones actualizadas, resultados detallados de partidos (goles, anotadores, tarjetas), seguimiento en tiempo real y ranking de goleadores por torneo (RF6.1, RF6.2, RF6.3, RF6.4 monolito).
 - **Actor:** Usuario (cualquier rol, incluido visitante).
@@ -163,7 +179,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un torneo con resultados registrados WHEN un usuario accede a la vista del torneo THEN el sistema muestra tabla de posiciones actualizada, resultados detallados y ranking de goleadores.
   - GIVEN un partido en curso WHEN el promotor sube información en tiempo real THEN los usuarios que siguen el partido ven las actualizaciones sin recargar la página.
 
-### RF-015 — Búsqueda y filtros
+### RF-016 — Búsqueda y filtros
 
 - **Descripción:** Los usuarios pueden buscar jugadores, equipos y torneos por nombre, y filtrar torneos por nivel de dificultad, categoría de edad, deporte y ciudad (RF6.5, RF6.6 monolito).
 - **Actor:** Usuario (cualquier rol).
@@ -174,7 +190,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un usuario WHEN busca por nombre de jugador, equipo o torneo THEN el sistema retorna resultados coincidentes ordenados por relevancia.
   - GIVEN un usuario WHEN aplica filtros de nivel, categoría de edad, deporte o ciudad a la búsqueda de torneos THEN el sistema muestra solo los torneos que cumplen todos los filtros seleccionados.
 
-### RF-016 — Transmisiones en vivo
+### RF-017 — Transmisiones en vivo
 
 - **Descripción:** El promotor puede realizar transmisiones en vivo de partidos (tipo Instagram Live); durante la transmisión los usuarios pueden enviar comentarios, reacciones con emojis y pronósticos de marcador (RF7.1, RF7.2, RF7.3 monolito).
 - **Actor:** Promotor (emisor) / Jugador y espectadores (receptores).
@@ -185,7 +201,7 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un partido en curso WHEN el promotor inicia una transmisión en vivo THEN los usuarios suscritos al torneo pueden unirse y ver el stream en tiempo real.
   - GIVEN una transmisión activa WHEN un espectador envía comentario, emoji o pronóstico de marcador THEN la interacción se muestra en tiempo real a todos los espectadores.
 
-### RF-017 — Soporte y ayuda
+### RF-018 — Soporte y ayuda
 
 - **Descripción:** Chat de soporte para que los usuarios dejen comentarios y reciban respuestas, disponible durante horas de oficina acordadas (RF8.1, RF8.2 monolito; SLA exacto por definir).
 - **Actor:** Usuario (cualquier rol) / Equipo de soporte.
@@ -196,30 +212,44 @@ Los siguientes son **candidatos** si el MVP es **Opción A (torneos + perfiles)*
   - GIVEN un usuario autenticado WHEN envía un mensaje al chat de soporte THEN el sistema registra el ticket y confirma la recepción al usuario.
   - GIVEN un ticket abierto dentro de horario de atención WHEN el equipo de soporte responde THEN el usuario recibe la respuesta y puede continuar la conversación.
 
+## Backlog (fuera de MVP1 — referencia)
+
+- **RF-006 Validación y calificación entre jugadores:** post-MVP; depende de masa crítica de perfiles.
+- **RF-007 Verificación de edad con documento:** candidato MVP1.1 si regulación lo exige antes del lanzamiento.
+- **RF-008 Creación y gestión de equipos:** candidato MVP1.1; complementa RF-004 (inscripción).
+- **RF-009 Sorteo de grupos y enfrentamientos:** candidato MVP2; expande RF-003 con automatización de brackets.
+- **RF-010 Registro expandido de resultados (tarjetas, goleadores, comprobantes):** expande RF-005 MVP; candidato MVP2.
+- **RF-011 Inscripción individual y armado automático:** candidato MVP2.
+- **RF-012 Feed social y publicaciones:** candidato MVP2; en MVP1 se reemplaza por notificaciones simples.
+- **RF-013 Notificaciones push:** candidato MVP1.1 (versión simple ya implícita en MVP1).
+- **RF-014 Chat y mensajería:** excluido de MVP1.
+- **RF-015 Visualización expandida de tablas y rankings:** expande RF-005 MVP con tiempo real y goleadores; candidato MVP2.
+- **RF-016 Búsqueda y filtros:** candidato MVP2.
+- **RF-017 Transmisiones en vivo:** excluido de MVP1 por alta complejidad.
+- **RF-018 Soporte y ayuda:** candidato MVP2.
+- **Mapa de recintos / discovery:** candidato MVP2 (de Opción B).
+- **Pagos in-app de inscripciones:** post-MVP según informe.
+- **Módulo árbitros:** post-MVP.
+
 ## Trazabilidad monolito → RF formal
 
 | Monolito (PRO-gestion.documental.md) | RF formal |
 |---------------------------------------|-----------|
 | RF1.1 | RF-001 |
 | RF1.2, RF1.3, RF1.4, RF1.6 | RF-002 |
-| RF1.5 | RF-005 |
-| RF1.7 | RF-006 |
-| RF2.1, RF2.2, RF2.3 | RF-007 |
+| RF1.5 | RF-006 |
+| RF1.7 | RF-007 |
+| RF2.1, RF2.2, RF2.3 | RF-008 |
 | RF3.1–RF3.9 | RF-003 |
-| RF3.10, RF3.11 | RF-008 |
-| RF3.12, RF3.13, RF3.14 | RF-009 |
+| RF3.10, RF3.11 | RF-009 |
+| RF3.12, RF3.13, RF3.14 | RF-010 |
 | RF4.1, RF4.2 | RF-004 |
-| RF4.3, RF4.4 | RF-010 |
-| RF5.1, RF5.5 | RF-011 |
-| RF5.2 | RF-012 |
-| RF5.3, RF5.4 | RF-013 |
-| RF6.1, RF6.2, RF6.3, RF6.4 | RF-014 |
-| RF6.5, RF6.6 | RF-015 |
-| RF7.1, RF7.2, RF7.3 | RF-016 |
-| RF8.1, RF8.2 | RF-017 |
-
-## Backlog (referencia)
-
-- Todos los RF del monolito (RF1.x–RF8.x) han sido migrados a formato estándar (RF-001 a RF-017).
-- **Prioridad MVP:** RF-001 a RF-004 son candidatos núcleo si el MVP es Opción A (torneos + perfiles). RF-005 en adelante requieren priorización explícita en PRD sección alcance antes de entrar en sprint.
-- Fase 2+ y detalle de alcance: ver decisión en `docs/00-prd.md`.
+| RF4.3, RF4.4 | RF-011 |
+| RF5.1, RF5.5 | RF-012 |
+| RF5.2 | RF-013 |
+| RF5.3, RF5.4 | RF-014 |
+| RF6.1, RF6.2, RF6.3, RF6.4 | RF-015 |
+| RF6.5, RF6.6 | RF-016 |
+| RF7.1, RF7.2, RF7.3 | RF-017 |
+| RF8.1, RF8.2 | RF-018 |
+| (nuevo MVP) | RF-005 |

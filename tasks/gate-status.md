@@ -4,7 +4,7 @@
 
 | Gate | Nombre | Estado | Fecha | Aprobado por | Notas |
 |------|--------|--------|-------|--------------|-------|
-| G1 | Producto | En curso | — | — | Intake 01–03 síntesis; falta **decisión MVP** y cerrar alcance en PRD + RF prioritarios |
+| G1 | Producto | Listo para revisión | — | — | MVP decidido (Opción A Acotada); PRD, RF-001–RF-005 y RNF con umbral actualizados; pendiente aprobación fundador |
 | G2 | Diseño | Pendiente | — | — | Flujos + wireframes |
 | G3 | Arquitectura + DB | Pendiente | — | — | Solución + modelo + migraciones |
 | G4 | Desarrollo | Pendiente | — | — | HU + PRs |
