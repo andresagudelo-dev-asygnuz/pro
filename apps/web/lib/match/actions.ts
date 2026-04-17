@@ -130,12 +130,15 @@ export async function leaveMatch(matchId: string): Promise<JoinResult> {
 
     // App-level check antes de tocar la DB: organizador no puede salir.
     // El trigger DB `prevent_organizer_leave` es la garantía real.
-    const { data: match } = await supabase
+    const { data: match, error: matchErr } = await supabase
       .from("matches")
       .select("organizer_id")
       .eq("id", matchId)
       .single();
-    if (match?.organizer_id === user.id) {
+    if (matchErr || !match) {
+      return { ok: false, error: "Partido no encontrado." };
+    }
+    if (match.organizer_id === user.id) {
       return {
         ok: false,
         error:
