@@ -160,6 +160,9 @@ export function zFieldErrors(
 export function formDataToObject(formData: FormData): Record<string, string> {
   const obj: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {
+    // Filter Next.js server-action internals ($ACTION_REF_1, $ACTION_1:0, etc.)
+    // which break Zod schemas declared with `.strict()`.
+    if (key.startsWith("$")) continue;
     if (typeof value === "string") obj[key] = value;
   }
   return obj;

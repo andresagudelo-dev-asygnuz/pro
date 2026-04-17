@@ -193,6 +193,15 @@ describe("formDataToObject", () => {
     fd.set("b", "2");
     expect(formDataToObject(fd)).toEqual({ a: "1", b: "2" });
   });
+
+  it("descarta claves internas de Next server actions ($ACTION_*)", () => {
+    const fd = new FormData();
+    fd.set("$ACTION_REF_1", "");
+    fd.set("$ACTION_1:0", '{"id":"abc"}');
+    fd.set("$ACTION_KEY", "k");
+    fd.set("title", "ok");
+    expect(formDataToObject(fd)).toEqual({ title: "ok" });
+  });
 });
 
 describe("zFieldErrors", () => {
