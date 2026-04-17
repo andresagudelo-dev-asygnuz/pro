@@ -70,7 +70,7 @@ La figura muestra los tres bordes de confianza:
 | `profile` | Perfil ficha 4 bloques + selector de visibilidad por campo. | RF-002 | HU-003 | `app/profile/*`, `lib/profile/*`, tablas `profiles_core`, `profiles_morpho`, `profiles_conditional`, `profiles_technical_football`, `profile_field_visibility`. |
 | `tournament` | Creación, edición, listado, detalle y cierre de torneos. | RF-003 | HU-004 | `app/tournaments/*`, `lib/tournament/*` (nuevo), tablas `tournaments`, `tournament_categories`. |
 | `registration` | Inscripción de equipo/jugador con validación cruzada de RF-002 + RF-007. | RF-004 | HU-005 | `app/tournaments/[id]/register`, `lib/registration/*` (nuevo), tablas `teams`, `team_members`, `tournament_registrations`. |
-| `match-results` | Carga de resultados, ventana de edición, recalcular tabla. | RF-005 | HU-006 | `app/tournaments/[id]/matches`, `app/tournaments/[id]/standings`, `lib/match/*`, tablas `matches`, `match_events`, `standings` (vista materializada). |
+| `match-results` | Carga de resultados, ventana de edición, recalcular tabla. | RF-005 | HU-006 | `app/tournaments/[id]/matches`, `app/tournaments/[id]/standings`, `lib/match/*`, tablas `tournament_matches`, `match_events`, `standings` (vista materializada). |
 
 Cada módulo expone:
 
@@ -120,7 +120,7 @@ El esquema actual (`apps/web/supabase/migrations/20260416231945_init_mvp.sql` y 
 Estrategia adoptada:
 
 1. **No borrar** las tablas v0 en la primera migración de G4; marcarlas en deprecated a nivel de documentación y no consumirlas desde el frontend MVP1.
-2. **Nuevo conjunto de tablas** para MVP1 conviviendo con el v0: `users_roles`, `profiles_core`, `profiles_morpho`, `profiles_conditional`, `profiles_technical_football`, `profile_field_visibility`, `age_verifications`, `tournaments`, `teams`, `team_members`, `tournament_registrations`, `tournament_matches`, `match_events`.
+2. **Nuevo conjunto de tablas** para MVP1 conviviendo con el v0: `user_roles`, `profiles_core`, `profiles_morpho`, `profiles_conditional`, `profiles_technical_football`, `profile_field_visibility`, `age_verifications`, `tournaments`, `teams`, `team_members`, `tournament_registrations`, `tournament_matches`, `match_events`.
 3. **Reutilización** donde aplica: `public.profiles` se extiende con columnas núcleo (full_name, city, primary_sport_id = 'futbol') en lugar de crear una tabla paralela; las capacidades condicionales / morfológicas / técnicas se modelan en tablas hijas (ver ADR-001 para fundamento).
 4. **Corte final** (post-UAT G6): una vez MVP1 estable, los objetos v0 no usados se remueven en una migración explícita; las tablas v0 con datos de pruebas se exportan antes de dropear.
 
