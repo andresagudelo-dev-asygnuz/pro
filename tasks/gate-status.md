@@ -4,8 +4,8 @@
 
 | Gate | Nombre | Estado | Fecha | Aprobado por | Notas |
 |------|--------|--------|-------|--------------|-------|
-| G1 | Producto | Listo para revisión | — | — | MVP decidido (Opción A Acotada, **6 RF** = RF-001 a RF-005 + RF-007); PRD, RF y RNF con umbral actualizados; modelo de perfil del deportista en 4 bloques + principio de configurabilidad por usuario documentados; pendiente aprobación fundador |
-| G2 | Diseño | Pendiente | — | — | Flujos + wireframes |
+| G1 | Producto | **Aprobado** | 2026-04-17 | Andres Agudelo (fundador) | MVP Opción A Acotada, **6 RF** = RF-001 a RF-005 + RF-007; PRD, RF, RNF con umbral; modelo de perfil en 4 bloques + principio de configurabilidad por usuario; módulo post-MVP "Interacción social y gamificación" documentado. Aprobación vía PR #7. |
+| G2 | Diseño | **En curso** | 2026-04-17 | — | Flujos + wireframes. Artefactos obligatorios: `design/user-flows.md` (mapeo a 6 RF) y wireframes base. Ver `tasks/plan-desarrollo.md`. |
 | G3 | Arquitectura + DB | Pendiente | — | — | Solución + modelo + migraciones |
 | G4 | Desarrollo | Pendiente | — | — | HU + PRs |
 | G5 | QA | Pendiente | — | — | Tests + cobertura |
