@@ -185,30 +185,47 @@ export async function cancelMatch(matchId: string): Promise<JoinResult> {
   });
 }
 
-export async function sendMessage(matchId: string, content: string) {
+export async function sendMessage(
+  matchId: string,
+  content: string,
+): Promise<JoinResult> {
   const parsed = sendMessageSchema.safeParse({
     match_id: matchId,
     content,
   });
-  if (!parsed.success) return;
+  if (!parsed.success) {
+    const first = parsed.error.issues[0]?.message ?? "Mensaje inválido.";
+    return { ok: false, error: first };
+  }
 
   return withAuth(async ({ user, supabase }) => {
     const rl = await checkRateLimit(supabase, {
       key: `send-msg:${user.id}`,
       ...RATE_LIMITS.sendMessage,
     });
-    if (!rl.ok) return;
+    if (!rl.ok) return { ok: false, error: rl.error };
 
-    // Defense-in-depth: verificar que el user sea participante activo del
-    // match antes de insertar. RLS lo valida también, pero chequear acá
-    // permite fallar rápido y con mensaje claro server-side.
+    // Defense-in-depth: el usuario debe ser participante activo O el
+    // organizador del partido. Refleja exactamente la policy RLS
+    // `messages_insert_if_in_match`. Nunca es la única garantía (RLS lo es),
+    // pero permite devolver un error claro si algo no cuadra.
     const { count } = await supabase
       .from("match_participants")
       .select("*", { count: "exact", head: true })
       .eq("match_id", parsed.data.match_id)
       .eq("user_id", user.id)
       .eq("status", "joined");
-    if (!count) return;
+
+    if (!count) {
+      const { data: match } = await supabase
+        .from("matches")
+        .select("organizer_id")
+        .eq("id", parsed.data.match_id)
+        .maybeSingle();
+      if (match?.organizer_id !== user.id) {
+        return { ok: false, error: "No tenés acceso al chat de este partido." };
+      }
+    }
 
     const { error } = await supabase.from("messages").insert({
       match_id: parsed.data.match_id,
@@ -217,13 +234,9 @@ export async function sendMessage(matchId: string, content: string) {
     });
 
     if (error) {
-       
-      console.error("[sendMessage] insert failed", {
-        code: error.code,
-        message: error.message,
-      });
-      throw new Error("No se pudo enviar el mensaje.");
+      return { ok: false, error: mapDbError(error, "sendMessage") };
     }
     // No revalidamos — el chat recibe por Realtime en el cliente.
+    return { ok: true };
   });
 }

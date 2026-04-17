@@ -45,6 +45,7 @@ export function MatchChat({
     })),
   );
   const [draft, setDraft] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<ChatStatus>({
     rt: "init",
@@ -201,12 +202,18 @@ export function MatchChat({
     const content = draft.trim();
     if (!content) return;
     setDraft("");
+    setSendError(null);
     startTransition(async () => {
       try {
-        await sendMessage(matchId, content);
+        const result = await sendMessage(matchId, content);
+        if (!result.ok) {
+          setDraft(content);
+          setSendError(result.error);
+        }
       } catch (err) {
         console.error(err);
         setDraft(content);
+        setSendError("No se pudo enviar el mensaje. Intentá de nuevo.");
       }
     });
   }
@@ -268,6 +275,12 @@ export function MatchChat({
           Enviar
         </Button>
       </form>
+
+      {sendError && (
+        <p role="alert" className="text-xs text-rose-600">
+          {sendError}
+        </p>
+      )}
 
       {/* Barra de diagnóstico. Nos permite ver en vivo si Realtime está
           conectado y si el polling está corriendo. Si el usuario reporta
