@@ -249,6 +249,7 @@ erDiagram
 ### 3.15 `standings` (vista materializada)
 - **Propósito:** tabla de posiciones derivada de `tournament_matches` + `match_events` (wireframe 10).
 - **Definición:** `create materialized view public.standings as …` agrupando por `(tournament_id, category_id, registration_id)` con columnas `played, wins, draws, losses, goals_for, goals_against, goal_difference, points`.
+- **Índice único obligatorio:** `create unique index standings_unique_row on public.standings (tournament_id, category_id, registration_id);` — **requisito de PostgreSQL** para que `REFRESH MATERIALIZED VIEW CONCURRENTLY` funcione. Sin este índice, el refresco concurrente falla en runtime.
 - **Refresco:** `refresh materialized view concurrently public.standings` **siempre refresca la vista completa** — PostgreSQL no soporta refresco parcial por filtro. Para los volúmenes objetivo MVP1 (ver §6) esto es aceptable; el parámetro `tournament` en `refresh_standings()` se conserva sólo para registrar el torneo disparador e idempotencia (debounce). Si el volumen crece post-MVP, evaluar reemplazo por **tabla regular mantenida por triggers** (ver §8).
 - **Desempates:** resueltos en la SQL según `tournaments.tiebreaker_rules` (orden por `jsonb` array).
 
@@ -302,4 +303,4 @@ El esquema v0 (`profiles`, `matches`, `match_participants`, `ratings`, `messages
 - [ ] Validación del fundador al modelo completo.
 - [ ] Confirmar si `tournament_categories` entra al MVP1 o se difiere (propuesta: entra como metadata, sin UI de edición compleja en MVP1).
 - [x] ~~Confirmar estrategia de `standings` (vista materializada vs tabla regular actualizada por trigger).~~ **Resuelto:** vista materializada con refresco completo vía `refresh materialized view concurrently` (PostgreSQL no soporta refresco selectivo). Aceptable para volúmenes MVP1. Reevaluar si post-MVP el tiempo de refresco degrada UX.
-- [ ] Decidir si `profile_field_visibility` se persiste como tabla genérica o como columnas enum `visibility_<field>` en cada bloque — resuelto en ADR-002 con preferencia por tabla genérica.
+- [x] ~~Decidir si `profile_field_visibility` se persiste como tabla genérica o como columnas enum `visibility_<field>` en cada bloque.~~ **Resuelto en ADR-002** con preferencia por tabla genérica.
