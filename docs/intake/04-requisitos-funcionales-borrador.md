@@ -49,8 +49,8 @@ La ficha muestra ambos: primero los tags (scanneable) y debajo la descripción l
 
 | Campo | Tipo / unidad | Obligatorio | Visibilidad default | Notas |
 |-------|---------------|-------------|---------------------|-------|
-| Estatura | decimal (m) | sí | promotores | 1 decimal mínimo. Configurable por el usuario. |
-| Peso competitivo | decimal (kg) | sí | promotores | Peso en temporada competitiva; histórico opcional. Sensible → default `promotores`. |
+| Estatura | decimal (m) | sí (visión) / no (MVP1) | promotores | 1 decimal mínimo. Configurable por el usuario. MVP1: opcional (ver RF-002 en `docs/01-requisitos-funcionales.md` y `tasks/hu/HU-003.md`). |
+| Peso competitivo | decimal (kg) | sí (visión) / no (MVP1) | promotores | Peso en temporada competitiva; histórico opcional. Sensible → default `promotores`. MVP1: opcional (ver RF-002 y `tasks/hu/HU-003.md`). |
 | Envergadura / cobertura | decimal (m) | no | promotores | Alcance total de brazos; relevante en voleibol, básquet, boxeo. |
 | Lateralidad | enum (`diestro`, `zurdo`, `ambidiestro`) | sí | público | — |
 | Somatotipo | enum (`ectomorfo`, `mesomorfo`, `endomorfo`, mixtos) | no | promotores | Campo opcional tipo scouting; sólo si hay auto-reporte o evaluación. |
