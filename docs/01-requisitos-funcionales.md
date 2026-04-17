@@ -31,6 +31,7 @@ Los siguientes 5 RF conforman el alcance del MVP1. Decisión documentada en `doc
 - **Flujo alterno:** Campos opcionales omitidos.
 - **Criterios de aceptación (GIVEN/WHEN/THEN):**
   - GIVEN jugador autenticado WHEN guarda perfil con datos mínimos THEN el sistema persiste y muestra ficha pública o privada según reglas.
+- **Modelo extendido (visión post-MVP):** el modelo de “perfil tipo ficha” está descrito en detalle en `docs/intake/04-requisitos-funcionales-borrador.md` con 4 bloques (Identidad, Morfológico/Biométrico, Capacidades Condicionales, Destrezas Técnicas) y es deporte-agnóstico. En MVP1 se implementa sólo el subconjunto para fútbol (nombre, edad, ubicación, estatura, peso, lateralidad, posición, pie hábil + stats derivadas de RF-005); el resto queda en backlog. Ejemplo de llenado en `docs/intake/08-anexos.md`.
 
 ### RF-003 — Crear y configurar torneo (promotor)
 
