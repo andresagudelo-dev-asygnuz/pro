@@ -1,6 +1,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { safeRelativePath } from "@/lib/validation/safe-path";
 
 // Handler del link de confirmación que Supabase envía por email.
 // Ver: https://supabase.com/docs/guides/auth/server-side/email-based-auth-with-pkce-flow-for-ssr
@@ -21,12 +22,4 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.redirect(new URL("/login?error=invalid_link", request.url));
-}
-
-function safeRelativePath(input: string): string | null {
-  // Solo paths que empiecen con "/" y no con "//" (evita protocol-relative).
-  if (!input.startsWith("/")) return null;
-  if (input.startsWith("//")) return null;
-  if (input.startsWith("/\\")) return null;
-  return input;
 }
