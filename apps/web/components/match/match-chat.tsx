@@ -18,6 +18,14 @@ type MessageWithAuthor = Message & {
   author_name: string | null;
 };
 
+type ChatStatus = {
+  rt: string;
+  rtErr: string | null;
+  polls: number;
+  lastPollAt: number | null;
+  lastPollErr: string | null;
+};
+
 export function MatchChat({
   matchId,
   currentUserId,
@@ -38,13 +46,28 @@ export function MatchChat({
   );
   const [draft, setDraft] = useState("");
   const [pending, startTransition] = useTransition();
+  const [status, setStatus] = useState<ChatStatus>({
+    rt: "init",
+    rtErr: null,
+    polls: 0,
+    lastPollAt: null,
+    lastPollErr: null,
+  });
   const scrollerRef = useRef<HTMLDivElement>(null);
-  // Espejo síncrono de messages para que el polling fallback pueda consultarlo
-  // sin depender de closures con estado viejo.
+
+  // Espejo síncrono de messages para consultarlo dentro del effect sin
+  // depender de closures con estado viejo.
   const messagesRef = useRef<MessageWithAuthor[]>(messages);
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  // Espejo del map de autores: así podemos cambiarlo sin que el effect se
+  // tire abajo y reconecte el canal de Realtime en cada cambio de props.
+  const authorsRef = useRef(authorsById);
+  useEffect(() => {
+    authorsRef.current = authorsById;
+  }, [authorsById]);
 
   const scrollToBottom = useCallback(() => {
     const el = scrollerRef.current;
@@ -55,14 +78,16 @@ export function MatchChat({
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // Bloque principal: suscribe Realtime + pollea cada 2s. Dependencias
+  // minimizadas a [supabase, matchId] para no reconectar en cada render.
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const addMessage = async (m: Message) => {
       if (messagesRef.current.some((x) => x.id === m.id)) return;
-      let authorName = authorsById[m.sender_id] ?? null;
+      let authorName = authorsRef.current[m.sender_id] ?? null;
       if (!authorName) {
         const { data } = await supabase
           .from("profiles")
@@ -78,15 +103,8 @@ export function MatchChat({
       );
     };
 
-    // Polling SIEMPRE activo como red de seguridad: aunque Realtime falle
-    // silenciosamente (RLS filtra eventos sin avisar, socket anónimo, WS
-    // bloqueado por proxy, etc.), garantizamos que los mensajes lleguen en
-    // máximo 3s. Cuando la pestaña está oculta pausamos para no gastar
-    // requests.
     const pollOnce = async () => {
       if (cancelled) return;
-      // Traemos solo lo más nuevo que el último mensaje conocido para que la
-      // consulta sea chica y no se nos escape nada aunque el chat sea largo.
       const lastCreatedAt =
         messagesRef.current[messagesRef.current.length - 1]?.created_at ?? null;
       let q = supabase
@@ -94,45 +112,46 @@ export function MatchChat({
         .select("*")
         .eq("match_id", matchId)
         .order("created_at", { ascending: true })
-        .limit(200);
+        .limit(500);
       if (lastCreatedAt) q = q.gt("created_at", lastCreatedAt);
-      const { data } = await q;
-      if (!data) return;
+      const { data, error } = await q;
+      setStatus((s) => ({
+        ...s,
+        polls: s.polls + 1,
+        lastPollAt: Date.now(),
+        lastPollErr: error?.message ?? null,
+      }));
+      if (error || !data) return;
       for (const row of data) {
         await addMessage(row as Message);
       }
     };
-    const startPolling = () => {
-      if (pollTimer) return;
-      pollTimer = setInterval(() => {
-        if (document.visibilityState === "visible") void pollOnce();
-      }, 3000);
-    };
-    const stopPolling = () => {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-    };
 
-    // Al volver a la pestaña, reconciliamos inmediatamente.
+    // Polling every 2s. Pausado si la pestaña está oculta — al volver al
+    // foco hacemos un fetch inmediato.
+    pollTimer = setInterval(() => {
+      if (document.visibilityState === "visible") void pollOnce();
+    }, 2000);
     const onVisibility = () => {
       if (document.visibilityState === "visible") void pollOnce();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onVisibility);
 
+    // Subscribe a Realtime (bonus: latencia sub-segundo cuando funciona).
     const subscribe = async () => {
-      // Sincronizamos el JWT del usuario con el cliente Realtime antes de
-      // suscribirnos. Sin esto, con @supabase/ssr el socket puede conectarse
-      // como anónimo y RLS filtra todos los INSERT para los participantes.
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (token) supabase.realtime.setAuth(token);
-
       if (cancelled) return;
 
+      // Canal con sufijo random — evita reutilizar canales viejos que puedan
+      // haber quedado colgados tras un HMR o navegación suave.
+      const channelName = `match:${matchId}:messages:${Math.random()
+        .toString(36)
+        .slice(2, 10)}`;
       channel = supabase
-        .channel(`match:${matchId}:messages`)
+        .channel(channelName)
         .on(
           "postgres_changes",
           {
@@ -145,15 +164,19 @@ export function MatchChat({
             void addMessage(payload.new as Message);
           },
         )
-        .subscribe((status, err) => {
-          if (err || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            console.warn("[match-chat] realtime status", status, err);
-          }
+        .subscribe((s, err) => {
+          setStatus((prev) => ({
+            ...prev,
+            rt: s,
+            rtErr: err ? err.message : null,
+          }));
         });
     };
-
     void subscribe();
-    startPolling();
+
+    // Primer poll inmediato + otro al montar la suscripción (por si hubo un
+    // mensaje entre SSR y mount).
+    void pollOnce();
 
     const { data: authSub } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -165,12 +188,13 @@ export function MatchChat({
 
     return () => {
       cancelled = true;
-      stopPolling();
+      if (pollTimer) clearInterval(pollTimer);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onVisibility);
       authSub.subscription.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };
-  }, [supabase, matchId, authorsById]);
+  }, [supabase, matchId]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -186,6 +210,11 @@ export function MatchChat({
       }
     });
   }
+
+  const lastPollLabel = status.lastPollAt
+    ? new Date(status.lastPollAt).toLocaleTimeString()
+    : "—";
+  const rtOk = status.rt === "SUBSCRIBED";
 
   return (
     <div className="flex flex-col gap-3">
@@ -239,6 +268,23 @@ export function MatchChat({
           Enviar
         </Button>
       </form>
+
+      {/* Barra de diagnóstico. Nos permite ver en vivo si Realtime está
+          conectado y si el polling está corriendo. Si el usuario reporta
+          que no llegan mensajes podemos pedirle un screenshot de esta línea
+          y vemos el estado real del cliente. */}
+      <p className="text-[10px] font-mono text-muted-foreground/70">
+        rt:{" "}
+        <span className={rtOk ? "text-emerald-600" : "text-amber-600"}>
+          {status.rt}
+        </span>
+        {status.rtErr && <span className="text-rose-600"> ({status.rtErr})</span>}
+        {" · "}polls: {status.polls} · last: {lastPollLabel}
+        {status.lastPollErr && (
+          <span className="text-rose-600"> err={status.lastPollErr}</span>
+        )}
+        {" · "}msgs: {messages.length}
+      </p>
     </div>
   );
 }
