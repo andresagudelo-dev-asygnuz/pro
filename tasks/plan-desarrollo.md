@@ -17,7 +17,7 @@
 | HU-002 | Verificación de edad con documento | RF-007 | Alta | HU-001 |
 | HU-003 | Perfil tipo ficha (subconjunto MVP1 fútbol) + selector de visibilidad | RF-002 | Alta | HU-001, HU-002 |
 | HU-004 | Creación y gestión de torneos | RF-003 | Alta | HU-001 (rol promotor) |
-| HU-005 | Inscripción de equipo / jugador a torneo | RF-004 | Alta | HU-003, HU-004 |
+| HU-005 | Inscripción de equipo / jugador a torneo | RF-004 | Alta | HU-002, HU-003, HU-004 |
 | HU-006 | Resultados y tabla de posiciones | RF-005 | Alta | HU-004, HU-005 |
 
 Detalle GWT por HU: `tasks/hu/HU-001.md` … `tasks/hu/HU-006.md`.

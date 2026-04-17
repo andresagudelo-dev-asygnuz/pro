@@ -1,8 +1,8 @@
 {
   "version": 1,
   "product": "PRO",
-  "current_gate": 1,
-  "updated_at": "2026-04-16",
-  "gate_status": "Listo para revisión",
-  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt"
+  "current_gate": 2,
+  "updated_at": "2026-04-17",
+  "gate_status": "En curso",
+  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1 Aprobado el 2026-04-17; G2 (Diseño) en curso."
 }
