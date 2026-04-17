@@ -48,6 +48,15 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+        run: pnpm test
+
       - name: Build
         env:
           # Placeholder vars so `next build` does not fail on missing envs.
