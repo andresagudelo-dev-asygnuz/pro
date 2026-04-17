@@ -18,6 +18,11 @@ Bitácora **del producto** (negocio, alcance, gates y hitos de entrega). Mantene
 
 ## 2026-04-17
 
+- **[Gate] G3 Arquitectura + DB entregado para revisión.** `architecture/solution-architecture.md` (stack Next.js 16 + Supabase, módulos por RF, RLS), `db/data-model.md` (modelo lógico MVP1 con convivencia del esquema v0) y 4 ADRs aceptadas en `architecture/adr/`: ADR-001 (Bloque 4 → tablas satélite por deporte), ADR-002 (`visibility_level` → tabla genérica + catálogo), ADR-003 (verificación de edad RF-007 → upload interno + revisión manual), ADR-004 (auth → email/password + verificación email; Google OAuth opcional en Sprint 2). `tasks/current-gate.txt` = `3`, `.factory/state.json` y `tasks/gate-status.md` sincronizados.
+- **[Gate] G2 Diseño aprobado por el fundador** vía merge de PR #8.
+
+## 2026-04-17 (entradas previas)
+
 - `[Alcance]` **MVP1 ampliado de 5 a 6 RF**: se agrega RF-007 (verificación de edad con documento) al onboarding obligatorio por resolución del fundador.
 - `[Definición]` Modelo del perfil del deportista documentado como **4 bloques deporte-agnóstico** (Identidad, Morfológico/Biométrico, Capacidades Condicionales, Destrezas Técnicas) con MVP1 instanciando sólo fútbol. Ver `docs/intake/04-requisitos-funcionales-borrador.md`.
 - `[Definición]` **Principio transversal de configurabilidad por usuario**: selector de visibilidad `público`/`promotores`/`privado` por cada campo del perfil, con defaults sensibles (morfológicos en `promotores`, documento de identidad en `privado`).
