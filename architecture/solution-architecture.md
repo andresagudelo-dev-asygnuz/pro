@@ -107,7 +107,7 @@ Cada módulo expone:
 |----|---------------|-----------|
 | Rendimiento | p95 LCP < 2 s en 4G; TTFB < 500 ms | PPR en rutas públicas, `cache: 'force-cache'` en lecturas estables (standings, fichas públicas) con `updateTag` en mutaciones. Ver `.agents/skills/next-cache-components`. |
 | Disponibilidad | 99% en horario diurno | Dependemos de SLAs Vercel + Supabase. Deploys con rollback automático en Vercel. |
-| Escalabilidad | 50–200 usuarios concurrentes | Plan Supabase small + Vercel Hobby/Pro. Queries indexadas (§8 de `db/data-model.md`). |
+| Escalabilidad | 50–200 usuarios concurrentes | Plan Supabase small + Vercel Hobby/Pro. Queries indexadas (§3 de `db/data-model.md`). |
 | Seguridad | RLS al 100% + sin secretos en repo | Check `supabase/migrations/*` obligatorio; rotación de claves documentada en `devops/`. |
 | Observabilidad | Errores server y cliente capturados | Vercel Analytics + logs de Supabase; alerta manual en MVP1. |
 | Accesibilidad | WCAG 2.1 AA básica | shadcn + `.agents/skills/web-design-guidelines`. |

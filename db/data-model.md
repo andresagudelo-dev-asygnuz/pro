@@ -248,8 +248,22 @@ erDiagram
 
 ### 3.15 `standings` (vista materializada)
 - **Propósito:** tabla de posiciones derivada de `tournament_matches` + `match_events` (wireframe 10).
-- **Definición:** `create materialized view public.standings as …` agrupando por `(tournament_id, category_id, registration_id)` con columnas `played, wins, draws, losses, goals_for, goals_against, goal_difference, points` y refresco por trigger al cerrar partido o por llamada explícita `refresh materialized view concurrently public.standings`.
+- **Definición:** `create materialized view public.standings as …` agrupando por `(tournament_id, category_id, registration_id)` con columnas `played, wins, draws, losses, goals_for, goals_against, goal_difference, points`.
+- **Refresco:** `refresh materialized view concurrently public.standings` **siempre refresca la vista completa** — PostgreSQL no soporta refresco parcial por filtro. Para los volúmenes objetivo MVP1 (ver §6) esto es aceptable; el parámetro `tournament` en `refresh_standings()` se conserva sólo para registrar el torneo disparador e idempotencia (debounce). Si el volumen crece post-MVP, evaluar reemplazo por **tabla regular mantenida por triggers** (ver §8).
 - **Desempates:** resueltos en la SQL según `tournaments.tiebreaker_rules` (orden por `jsonb` array).
+
+### 3.16 `visibility_fields`
+- **Propósito:** catálogo cerrado de `field_key` válidos; referenciado por `profile_field_visibility.field_key` (FK) y por el trigger `default_field_visibility()`. Ver ADR-002.
+- **Columnas:**
+  - `field_key text pk` — clave canónica (ej. `'identity.full_name'`, `'morpho.height_m'`).
+  - `block text not null check (block in ('identity','morpho','conditional','technical'))` — bloque al que pertenece el campo.
+  - `label text not null` — etiqueta visible en UI de privacidad.
+  - `default_level public.visibility_level not null` — default sensato (ver §3.7).
+  - `description text` — ayuda contextual opcional.
+  - `active boolean not null default true`.
+  - `created_at`, `updated_at`.
+- **Seed obligatorio:** migración de G4 Sprint 2 carga la lista completa alineada con el wireframe 03 (un `field_key` por campo editable en los 4 bloques).
+- **RLS:** lectura pública (cualquier autenticado); escritura sólo `service_role`.
 
 ## 4. Funciones y triggers clave
 
@@ -258,8 +272,8 @@ erDiagram
 | `public.set_updated_at()` | trigger (before update) | Mantiene `updated_at = now()`. |
 | `public.ensure_verification_aprobada(user uuid)` | función | Lanza error si el usuario no tiene `age_verifications.status = 'aprobada'`. Usada por `tournament_registrations.insert`. |
 | `public.is_promoter(user uuid)` | función | `select coalesce((select is_promoter from user_roles where user_id = $1), false)`. |
-| `public.default_field_visibility()` | trigger | Inserta filas en `profile_field_visibility` con defaults sensibles cuando se completa un bloque. |
-| `public.refresh_standings(tournament uuid)` | función | Llama `refresh materialized view concurrently` filtrando por torneo. |
+| `public.default_field_visibility()` | trigger | Inserta filas en `profile_field_visibility` con defaults sensibles (leídos desde `visibility_fields.default_level`) cuando se completa un bloque. |
+| `public.refresh_standings(tournament uuid)` | función | Ejecuta `refresh materialized view concurrently public.standings` (refresco completo; PostgreSQL no soporta filtrado). El parámetro se usa para logging/debounce y para invalidar el `cacheTag` `standings:<tournament_id>`. |
 
 ## 5. Seeds
 
@@ -287,5 +301,5 @@ El esquema v0 (`profiles`, `matches`, `match_participants`, `ratings`, `messages
 
 - [ ] Validación del fundador al modelo completo.
 - [ ] Confirmar si `tournament_categories` entra al MVP1 o se difiere (propuesta: entra como metadata, sin UI de edición compleja en MVP1).
-- [ ] Confirmar estrategia de `standings` (vista materializada vs tabla regular actualizada por trigger). Propuesta inicial: vista materializada con refresco selectivo.
+- [x] ~~Confirmar estrategia de `standings` (vista materializada vs tabla regular actualizada por trigger).~~ **Resuelto:** vista materializada con refresco completo vía `refresh materialized view concurrently` (PostgreSQL no soporta refresco selectivo). Aceptable para volúmenes MVP1. Reevaluar si post-MVP el tiempo de refresco degrada UX.
 - [ ] Decidir si `profile_field_visibility` se persiste como tabla genérica o como columnas enum `visibility_<field>` en cada bloque — resuelto en ADR-002 con preferencia por tabla genérica.
