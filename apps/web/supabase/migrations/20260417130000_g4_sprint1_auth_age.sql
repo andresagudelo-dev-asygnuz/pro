@@ -92,8 +92,15 @@ security definer
 set search_path = public
 as $$
 declare
-  v_is_player   boolean := coalesce((new.raw_user_meta_data->>'is_player')::boolean, false);
-  v_is_promoter boolean := coalesce((new.raw_user_meta_data->>'is_promoter')::boolean, false);
+  -- Parseo tolerante a JSON no confiable: cualquier valor no booleano o
+  -- ausente se trata como false. Evita ::boolean directo que aborta el
+  -- trigger ante metadata inesperada (RF-001, RF-007).
+  v_is_player   boolean := coalesce(
+    nullif(lower(new.raw_user_meta_data->>'is_player'), '') in ('true','t','yes','y','1','on'),
+    false);
+  v_is_promoter boolean := coalesce(
+    nullif(lower(new.raw_user_meta_data->>'is_promoter'), '') in ('true','t','yes','y','1','on'),
+    false);
 begin
   if not v_is_player and not v_is_promoter then
     v_is_player := true;
