@@ -39,6 +39,12 @@ export function MatchChat({
   const [draft, setDraft] = useState("");
   const [pending, startTransition] = useTransition();
   const scrollerRef = useRef<HTMLDivElement>(null);
+  // Espejo síncrono de messages para que el polling fallback pueda consultarlo
+  // sin depender de closures con estado viejo.
+  const messagesRef = useRef<MessageWithAuthor[]>(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const scrollToBottom = useCallback(() => {
     const el = scrollerRef.current;
@@ -50,38 +56,109 @@ export function MatchChat({
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`match:${matchId}:messages`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `match_id=eq.${matchId}`,
-        },
-        async (payload) => {
-          const m = payload.new as Message;
-          let authorName = authorsById[m.sender_id] ?? null;
-          if (!authorName) {
-            const { data } = await supabase
-              .from("profiles")
-              .select("full_name, username")
-              .eq("id", m.sender_id)
-              .maybeSingle();
-            authorName = data?.full_name ?? data?.username ?? null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const handleInsert = async (m: Message) => {
+      let authorName = authorsById[m.sender_id] ?? null;
+      if (!authorName) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("full_name, username")
+          .eq("id", m.sender_id)
+          .maybeSingle();
+        authorName = data?.full_name ?? data?.username ?? null;
+      }
+      setMessages((prev) =>
+        prev.some((x) => x.id === m.id)
+          ? prev
+          : [...prev, { ...m, author_name: authorName }],
+      );
+    };
+
+    // Fallback de polling: si Realtime falla (RLS, auth, network), refrescamos
+    // cada 5s comparando contra el último id conocido. Así nadie se queda sin
+    // ver mensajes aunque la suscripción esté rota.
+    const startPollingFallback = () => {
+      if (pollTimer) return;
+      pollTimer = setInterval(async () => {
+        if (cancelled) return;
+        const lastId = messagesRef.current[messagesRef.current.length - 1]?.id;
+        const q = supabase
+          .from("messages")
+          .select("*")
+          .eq("match_id", matchId)
+          .order("created_at", { ascending: true })
+          .limit(50);
+        const { data } = await q;
+        if (!data) return;
+        for (const row of data) {
+          if (!messagesRef.current.some((x) => x.id === row.id)) {
+            await handleInsert(row as Message);
           }
-          setMessages((prev) =>
-            prev.some((x) => x.id === m.id)
-              ? prev
-              : [...prev, { ...m, author_name: authorName }],
-          );
-        },
-      )
-      .subscribe();
+        }
+        void lastId;
+      }, 5000);
+    };
+    const stopPollingFallback = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
+
+    const subscribe = async () => {
+      // Sincronizamos el JWT del usuario con el cliente Realtime antes de
+      // suscribirnos. Sin esto, con @supabase/ssr el socket puede conectarse
+      // como anónimo y RLS filtra todos los INSERT para los participantes.
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (token) supabase.realtime.setAuth(token);
+
+      if (cancelled) return;
+
+      channel = supabase
+        .channel(`match:${matchId}:messages`, {
+          config: { private: false },
+        })
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `match_id=eq.${matchId}`,
+          },
+          (payload) => {
+            void handleInsert(payload.new as Message);
+          },
+        )
+        .subscribe((status, err) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            console.warn("[match-chat] realtime status", status, err);
+            startPollingFallback();
+          }
+          if (status === "CLOSED") {
+            startPollingFallback();
+          }
+        });
+    };
+
+    void subscribe();
+
+    // Si el usuario se re-autentica (token refresh, login), resuscribimos.
+    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.access_token) {
+        supabase.realtime.setAuth(session.access_token);
+      }
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      stopPollingFallback();
+      authSub.subscription.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
     };
   }, [supabase, matchId, authorsById]);
 
