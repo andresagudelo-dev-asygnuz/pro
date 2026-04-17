@@ -192,7 +192,7 @@ begin
   ) then
     raise exception 'age_verification_required'
       using errcode = 'check_violation',
-            hint = 'El usuario % no tiene verificación de edad aprobada.', p_user;
+            hint = format('El usuario %s no tiene verificación de edad aprobada.', p_user);
   end if;
 end;
 $$;
