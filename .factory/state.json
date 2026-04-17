@@ -1,8 +1,8 @@
 {
   "version": 1,
   "product": "PRO",
-  "current_gate": 2,
+  "current_gate": 3,
   "updated_at": "2026-04-17",
   "gate_status": "Listo para revisión",
-  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1 Aprobado el 2026-04-17; G2 (Diseño) entregado — flujos en design/user-flows.md + 10 wireframes en design/wireframes/ — pendiente aprobación del fundador."
+  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1 y G2 Aprobados el 2026-04-17; G3 (Arquitectura + DB) entregado — architecture/solution-architecture.md, db/data-model.md y ADR-001..ADR-004 en architecture/adr/ — pendiente aprobación del fundador."
 }
