@@ -32,7 +32,7 @@ export function MatchForm({
     initialState,
   );
 
-  const err = state.fieldErrors ?? {};
+  const err: Record<string, string> = state.fieldErrors ?? {};
 
   return (
     <form action={formAction} className="flex flex-col gap-5">

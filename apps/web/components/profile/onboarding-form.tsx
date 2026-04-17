@@ -131,6 +131,12 @@ export function OnboardingForm({
           {state.error}
         </p>
       )}
+      {state.fieldErrors &&
+        Object.entries(state.fieldErrors).map(([field, msg]) => (
+          <p key={field} className="text-xs text-destructive">
+            {field}: {msg}
+          </p>
+        ))}
 
       <Button type="submit" disabled={pending}>
         {pending ? "Guardando…" : "Guardar y continuar"}

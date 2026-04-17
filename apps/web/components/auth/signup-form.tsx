@@ -49,9 +49,10 @@ export function SignupForm() {
           type="password"
           autoComplete="new-password"
           required
-          minLength={6}
+          minLength={8}
+          maxLength={128}
         />
-        <p className="text-xs text-muted-foreground">Mínimo 6 caracteres.</p>
+        <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
       </div>
 
       {state.error && (
@@ -59,6 +60,12 @@ export function SignupForm() {
           {state.error}
         </p>
       )}
+      {state.fieldErrors &&
+        Object.entries(state.fieldErrors).map(([field, msg]) => (
+          <p key={field} className="text-xs text-destructive">
+            {field}: {msg}
+          </p>
+        ))}
       {state.message && (
         <p role="status" className="text-sm text-foreground">
           {state.message}

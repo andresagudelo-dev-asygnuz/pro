@@ -2,31 +2,46 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { resolveOrigin } from "@/lib/auth/origin";
+import { mapAuthError } from "@/lib/errors/map-db-error";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  formDataToObject,
+  signInSchema,
+  signUpSchema,
+  zFieldErrors,
+} from "@/lib/validation/schemas";
 
 export type AuthState = {
   error?: string;
   message?: string;
+  fieldErrors?: Record<string, string>;
 };
 
 export async function signInWithPassword(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  if (!email || !password) {
-    return { error: "Ingresá email y contraseña." };
+  const parsed = signInSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) {
+    return {
+      error: "Revisá los campos marcados.",
+      fieldErrors: zFieldErrors(parsed) ?? undefined,
+    };
   }
+  const { email, password } = parsed.data;
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) {
-    return { error: traducirError(error.message) };
-  }
+  const rl = await checkRateLimit(supabase, {
+    key: `signin:${email.toLowerCase()}`,
+    ...RATE_LIMITS.signIn,
+  });
+  if (!rl.ok) return { error: rl.error };
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { error: mapAuthError(error.message) };
 
   revalidatePath("/", "layout");
   redirect("/feed");
@@ -36,32 +51,35 @@ export async function signUpWithPassword(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const fullName = String(formData.get("full_name") ?? "").trim();
-
-  if (!email || !password || !fullName) {
-    return { error: "Completá nombre, email y contraseña." };
+  const parsed = signUpSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) {
+    return {
+      error: "Revisá los campos marcados.",
+      fieldErrors: zFieldErrors(parsed) ?? undefined,
+    };
   }
-  if (password.length < 6) {
-    return { error: "La contraseña debe tener al menos 6 caracteres." };
-  }
+  const { email, password, full_name } = parsed.data;
 
   const supabase = await createClient();
+
+  const rl = await checkRateLimit(supabase, {
+    key: `signup:${email.toLowerCase()}`,
+    ...RATE_LIMITS.signUp,
+  });
+  if (!rl.ok) return { error: rl.error };
+
   const emailRedirectTo = `${await resolveOrigin()}/auth/confirm`;
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName },
+      data: { full_name },
       emailRedirectTo,
     },
   });
 
-  if (error) {
-    return { error: traducirError(error.message) };
-  }
+  if (error) return { error: mapAuthError(error.message) };
 
   // Si el proyecto tiene "Confirm email" habilitado, no hay sesión todavía.
   if (!data.session) {
@@ -80,30 +98,4 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");
-}
-
-// Resuelve el origin del request en runtime para que el email de confirmación
-// siempre vuelva al dominio en el que el usuario está (localhost, preview o
-// producción) — sin depender de una env var fija tipo NEXT_PUBLIC_SITE_URL.
-// Requiere que el dominio esté whitelisted en Supabase → Auth → URL Configuration.
-async function resolveOrigin(): Promise<string> {
-  const hdrs = await headers();
-  const origin = hdrs.get("origin");
-  if (origin && origin.startsWith("http")) return origin;
-
-  const forwardedHost = hdrs.get("x-forwarded-host");
-  const host = forwardedHost ?? hdrs.get("host") ?? "localhost:3000";
-  const proto =
-    hdrs.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
-
-function traducirError(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes("invalid login")) return "Email o contraseña incorrectos.";
-  if (m.includes("user already registered"))
-    return "Ya existe una cuenta con ese email. Iniciá sesión.";
-  if (m.includes("email not confirmed"))
-    return "Todavía no confirmaste tu email. Revisá tu bandeja.";
-  return msg;
 }

@@ -2,197 +2,228 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import type { SkillLevel } from "@/lib/types/db";
+import { withAuth } from "@/lib/auth/with-auth";
+import { mapDbError } from "@/lib/errors/map-db-error";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  createMatchSchema,
+  formDataToObject,
+  sendMessageSchema,
+  zFieldErrors,
+} from "@/lib/validation/schemas";
 
 export type MatchFormState = {
   error?: string;
-  fieldErrors?: Partial<
-    Record<
-      | "title"
-      | "sport_id"
-      | "city"
-      | "location"
-      | "starts_at"
-      | "duration_minutes"
-      | "max_players",
-      string
-    >
-  >;
+  fieldErrors?: Record<string, string>;
 };
-
-const SKILL_LEVELS: SkillLevel[] = [
-  "principiante",
-  "intermedio",
-  "avanzado",
-  "pro",
-];
 
 export async function createMatch(
   _prev: MatchFormState,
   formData: FormData,
 ): Promise<MatchFormState> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim() || null;
-  const sport_id = String(formData.get("sport_id") ?? "").trim();
-  const city = String(formData.get("city") ?? "").trim();
-  const location = String(formData.get("location") ?? "").trim();
-  const starts_at_raw = String(formData.get("starts_at") ?? "").trim();
-  const duration_minutes = Number(formData.get("duration_minutes") ?? 60);
-  const max_players = Number(formData.get("max_players") ?? 0);
-  const skill_level_raw = String(
-    formData.get("skill_level") ?? "",
-  ).trim() as SkillLevel | "";
-
-  const fieldErrors: MatchFormState["fieldErrors"] = {};
-  if (!title) fieldErrors.title = "Ingresá un título.";
-  if (!sport_id) fieldErrors.sport_id = "Elegí un deporte.";
-  if (!city) fieldErrors.city = "Indicá la ciudad.";
-  if (!location) fieldErrors.location = "Indicá el lugar/cancha.";
-  const startsDate = starts_at_raw ? new Date(starts_at_raw) : null;
-  if (!startsDate || Number.isNaN(startsDate.getTime())) {
-    fieldErrors.starts_at = "Fecha/hora inválida.";
-  } else if (startsDate.getTime() < Date.now() - 5 * 60_000) {
-    fieldErrors.starts_at = "La fecha tiene que ser futura.";
+  const parsed = createMatchSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) {
+    return {
+      error: "Revisá los campos marcados.",
+      fieldErrors: zFieldErrors(parsed) ?? undefined,
+    };
   }
-  if (!Number.isFinite(duration_minutes) || duration_minutes <= 0) {
-    fieldErrors.duration_minutes = "Duración inválida.";
-  }
-  if (!Number.isFinite(max_players) || max_players < 2) {
-    fieldErrors.max_players = "Mínimo 2 jugadores.";
-  }
-  if (Object.keys(fieldErrors).length > 0) {
-    return { error: "Revisá los campos marcados.", fieldErrors };
-  }
+  const input = parsed.data;
 
-  const skill_level =
-    skill_level_raw && SKILL_LEVELS.includes(skill_level_raw as SkillLevel)
-      ? (skill_level_raw as SkillLevel)
-      : null;
+  return withAuth(async ({ user, supabase }) => {
+    const rl = await checkRateLimit(supabase, {
+      key: `create-match:${user.id}`,
+      ...RATE_LIMITS.createMatch,
+    });
+    if (!rl.ok) return { error: rl.error };
 
-  const { data, error } = await supabase
-    .from("matches")
-    .insert({
-      organizer_id: user.id,
-      sport_id,
-      title,
-      description,
-      skill_level,
-      city,
-      location,
-      starts_at: startsDate!.toISOString(),
-      duration_minutes,
-      max_players,
-    })
-    .select("id")
-    .single();
+    const { data, error } = await supabase
+      .from("matches")
+      .insert({
+        organizer_id: user.id,
+        sport_id: input.sport_id,
+        title: input.title,
+        description: input.description,
+        skill_level: input.skill_level,
+        city: input.city,
+        location: input.location,
+        starts_at: input.starts_at,
+        duration_minutes: input.duration_minutes,
+        max_players: input.max_players,
+      })
+      .select("id")
+      .single();
 
-  if (error) return { error: error.message };
+    if (error) return { error: mapDbError(error, "createMatch") };
 
-  // Auto-join al organizador como participante.
-  await supabase.from("match_participants").insert({
-    match_id: data.id,
-    user_id: user.id,
-    status: "joined",
+    // Auto-join al organizador como participante. Si falla el insert igual
+    // devolvemos el match creado; el organizador puede refrescar y re-joinear.
+    await supabase.from("match_participants").insert({
+      match_id: data.id,
+      user_id: user.id,
+      status: "joined",
+    });
+
+    revalidatePath("/feed");
+    redirect(`/matches/${data.id}`);
   });
-
-  revalidatePath("/feed");
-  redirect(`/matches/${data.id}`);
 }
 
 export type JoinResult = { ok: true } | { ok: false; error: string };
 
 export async function joinMatch(matchId: string): Promise<JoinResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  return withAuth(async ({ user, supabase }) => {
+    const rl = await checkRateLimit(supabase, {
+      key: `join:${user.id}`,
+      ...RATE_LIMITS.joinLeave,
+    });
+    if (!rl.ok) return { ok: false, error: rl.error };
 
-  // Defense-in-depth check previo al insert (el trigger es la garantía real).
-  const { data: match, error: matchErr } = await supabase
-    .from("matches")
-    .select("id, max_players, status")
-    .eq("id", matchId)
-    .single();
-  if (matchErr || !match) return { ok: false, error: "Partido no encontrado." };
-  if (match.status !== "open") {
-    return { ok: false, error: "El partido ya no admite nuevos jugadores." };
-  }
-  const { count, error: countErr } = await supabase
-    .from("match_participants")
-    .select("*", { count: "exact", head: true })
-    .eq("match_id", matchId);
-  if (countErr) return { ok: false, error: countErr.message };
-  if ((count ?? 0) >= match.max_players) {
-    return { ok: false, error: "El partido ya está completo." };
-  }
-
-  const { error } = await supabase.from("match_participants").insert({
-    match_id: matchId,
-    user_id: user.id,
-    status: "joined",
-  });
-
-  if (error) {
-    // 23505 = unique violation (ya estaba unido → no-op)
-    if (error.code === "23505") {
-      revalidatePath(`/matches/${matchId}`);
-      return { ok: true };
+    // Defense-in-depth check previo al insert (el trigger es la garantía real).
+    const { data: match, error: matchErr } = await supabase
+      .from("matches")
+      .select("id, max_players, status")
+      .eq("id", matchId)
+      .single();
+    if (matchErr || !match) {
+      return { ok: false, error: "Partido no encontrado." };
     }
-    // P0001 → raise del trigger de capacidad (condición de carrera resuelta).
-    if (error.code === "P0001" && error.message.includes("match_full")) {
+    if (match.status !== "open") {
+      return { ok: false, error: "El partido ya no admite nuevos jugadores." };
+    }
+    const { count, error: countErr } = await supabase
+      .from("match_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("match_id", matchId);
+    if (countErr) return { ok: false, error: mapDbError(countErr, "joinMatch:count") };
+    if ((count ?? 0) >= match.max_players) {
       return { ok: false, error: "El partido ya está completo." };
     }
-    return { ok: false, error: error.message };
-  }
-  revalidatePath(`/matches/${matchId}`);
-  revalidatePath("/feed");
-  return { ok: true };
+
+    const { error } = await supabase.from("match_participants").insert({
+      match_id: matchId,
+      user_id: user.id,
+      status: "joined",
+    });
+
+    if (error) {
+      // 23505 = unique violation (ya estaba unido → no-op)
+      if (error.code === "23505") {
+        revalidatePath(`/matches/${matchId}`);
+        return { ok: true };
+      }
+      return { ok: false, error: mapDbError(error, "joinMatch:insert") };
+    }
+    revalidatePath(`/matches/${matchId}`);
+    revalidatePath("/feed");
+    return { ok: true };
+  });
 }
 
 export async function leaveMatch(matchId: string): Promise<JoinResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  return withAuth(async ({ user, supabase }) => {
+    const rl = await checkRateLimit(supabase, {
+      key: `leave:${user.id}`,
+      ...RATE_LIMITS.joinLeave,
+    });
+    if (!rl.ok) return { ok: false, error: rl.error };
 
-  const { error } = await supabase
-    .from("match_participants")
-    .delete()
-    .eq("match_id", matchId)
-    .eq("user_id", user.id);
+    // App-level check antes de tocar la DB: organizador no puede salir.
+    // El trigger DB `prevent_organizer_leave` es la garantía real.
+    const { data: match } = await supabase
+      .from("matches")
+      .select("organizer_id")
+      .eq("id", matchId)
+      .single();
+    if (match?.organizer_id === user.id) {
+      return {
+        ok: false,
+        error:
+          "Como organizador no podés salir del partido. Cancelalo si no lo vas a jugar.",
+      };
+    }
 
-  if (error) return { ok: false, error: error.message };
-  revalidatePath(`/matches/${matchId}`);
-  revalidatePath("/feed");
-  return { ok: true };
+    const { error } = await supabase
+      .from("match_participants")
+      .delete()
+      .eq("match_id", matchId)
+      .eq("user_id", user.id);
+
+    if (error) return { ok: false, error: mapDbError(error, "leaveMatch") };
+    revalidatePath(`/matches/${matchId}`);
+    revalidatePath("/feed");
+    return { ok: true };
+  });
+}
+
+export async function cancelMatch(matchId: string): Promise<JoinResult> {
+  return withAuth(async ({ user, supabase }) => {
+    const { data: match, error: readErr } = await supabase
+      .from("matches")
+      .select("organizer_id, status")
+      .eq("id", matchId)
+      .single();
+    if (readErr || !match) {
+      return { ok: false, error: "Partido no encontrado." };
+    }
+    if (match.organizer_id !== user.id) {
+      return { ok: false, error: "Solo el organizador puede cancelar el partido." };
+    }
+    if (match.status === "cancelled" || match.status === "completed") {
+      return { ok: false, error: "El partido ya está cerrado." };
+    }
+
+    const { error } = await supabase
+      .from("matches")
+      .update({ status: "cancelled" })
+      .eq("id", matchId);
+    if (error) return { ok: false, error: mapDbError(error, "cancelMatch") };
+
+    revalidatePath(`/matches/${matchId}`);
+    revalidatePath("/feed");
+    return { ok: true };
+  });
 }
 
 export async function sendMessage(matchId: string, content: string) {
-  const trimmed = content.trim();
-  if (!trimmed) return;
-  if (trimmed.length > 2000) return;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { error } = await supabase.from("messages").insert({
+  const parsed = sendMessageSchema.safeParse({
     match_id: matchId,
-    sender_id: user.id,
-    content: trimmed,
+    content,
   });
+  if (!parsed.success) return;
 
-  if (error) throw error;
-  // No revalidamos — el chat recibe por Realtime en el cliente.
+  return withAuth(async ({ user, supabase }) => {
+    const rl = await checkRateLimit(supabase, {
+      key: `send-msg:${user.id}`,
+      ...RATE_LIMITS.sendMessage,
+    });
+    if (!rl.ok) return;
+
+    // Defense-in-depth: verificar que el user sea participante activo del
+    // match antes de insertar. RLS lo valida también, pero chequear acá
+    // permite fallar rápido y con mensaje claro server-side.
+    const { count } = await supabase
+      .from("match_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("match_id", parsed.data.match_id)
+      .eq("user_id", user.id)
+      .eq("status", "joined");
+    if (!count) return;
+
+    const { error } = await supabase.from("messages").insert({
+      match_id: parsed.data.match_id,
+      sender_id: user.id,
+      content: parsed.data.content,
+    });
+
+    if (error) {
+       
+      console.error("[sendMessage] insert failed", {
+        code: error.code,
+        message: error.message,
+      });
+      throw new Error("No se pudo enviar el mensaje.");
+    }
+    // No revalidamos — el chat recibe por Realtime en el cliente.
+  });
 }
