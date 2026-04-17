@@ -3,6 +3,6 @@
   "product": "PRO",
   "current_gate": 2,
   "updated_at": "2026-04-17",
-  "gate_status": "En curso",
-  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1 Aprobado el 2026-04-17; G2 (Diseño) en curso."
+  "gate_status": "Listo para revisión",
+  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1 Aprobado el 2026-04-17; G2 (Diseño) entregado — flujos en design/user-flows.md + 10 wireframes en design/wireframes/ — pendiente aprobación del fundador."
 }
