@@ -62,7 +62,11 @@ export const onboardingSchema = z.object({
     .max(500, "La bio no puede superar los 500 caracteres.")
     .optional()
     .transform((v) => (v && v.length > 0 ? v : null)),
-  primary_sport_id: z.string().uuid("Elegí tu deporte principal."),
+  primary_sport_id: z
+    .string()
+    .trim()
+    .min(1, "Elegí tu deporte principal.")
+    .max(40, "Deporte inválido."),
   primary_skill_level: z.enum(SKILL_LEVELS, {
     error: () => ({ message: "Elegí un nivel de juego válido." }),
   }),
@@ -81,7 +85,11 @@ export const createMatchSchema = z
       .max(2000, "La descripción no puede superar los 2000 caracteres.")
       .optional()
       .transform((v) => (v && v.length > 0 ? v : null)),
-    sport_id: z.string().uuid("Elegí un deporte."),
+    sport_id: z
+      .string()
+      .trim()
+      .min(1, "Elegí un deporte.")
+      .max(40, "Deporte inválido."),
     city: z.string().trim().min(1, "Indicá la ciudad.").max(80),
     location: z.string().trim().min(1, "Indicá el lugar/cancha.").max(200),
     starts_at: z

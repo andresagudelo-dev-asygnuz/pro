@@ -10,6 +10,7 @@ import {
 } from "@/lib/validation/schemas";
 
 const UUID = "00000000-0000-4000-8000-000000000000";
+const SPORT_ID = "futbol";
 
 describe("signInSchema", () => {
   it("acepta credenciales válidas", () => {
@@ -64,7 +65,7 @@ describe("onboardingSchema", () => {
       username: "ANDRES_GK",
       full_name: "Andrés",
       city: "Manizales",
-      primary_sport_id: UUID,
+      primary_sport_id: SPORT_ID,
       primary_skill_level: "intermedio",
     });
     expect(r.success).toBe(true);
@@ -76,7 +77,7 @@ describe("onboardingSchema", () => {
       username: "andrés!",
       full_name: "A",
       city: "X",
-      primary_sport_id: UUID,
+      primary_sport_id: SPORT_ID,
       primary_skill_level: "intermedio",
     });
     expect(r.success).toBe(false);
@@ -88,7 +89,7 @@ describe("onboardingSchema", () => {
       full_name: "Andrés",
       city: "Manizales",
       bio: "x".repeat(501),
-      primary_sport_id: UUID,
+      primary_sport_id: SPORT_ID,
       primary_skill_level: "intermedio",
     });
     expect(r.success).toBe(false);
@@ -100,7 +101,7 @@ describe("onboardingSchema", () => {
       full_name: "Andrés",
       city: "Manizales",
       bio: "",
-      primary_sport_id: UUID,
+      primary_sport_id: SPORT_ID,
       primary_skill_level: "intermedio",
     });
     expect(r.success).toBe(true);
@@ -111,7 +112,7 @@ describe("onboardingSchema", () => {
 describe("createMatchSchema", () => {
   const base = {
     title: "Futbol 5",
-    sport_id: UUID,
+    sport_id: SPORT_ID,
     city: "Manizales",
     location: "Cancha",
     starts_at: new Date(Date.now() + 86400000).toISOString(),
