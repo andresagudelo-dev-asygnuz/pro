@@ -7,7 +7,7 @@
 | G1 | Producto | **Aprobado** | 2026-04-17 | Andres Agudelo (fundador) | MVP Opción A Acotada, **6 RF** = RF-001 a RF-005 + RF-007; PRD, RF, RNF con umbral; modelo de perfil en 4 bloques + principio de configurabilidad por usuario; módulo post-MVP "Interacción social y gamificación" documentado. Aprobación vía PR #7. |
 | G2 | Diseño | **Aprobado** | 2026-04-17 | Andres Agudelo (fundador) | Flujos + wireframes aprobados vía merge de PR #8: `design/user-flows.md` (6 flujos mapeados 1:1 a HU-001..HU-006 con mermaid) y `design/wireframes/01-register.md` … `10-standings-table.md` (10 pantallas clave + `README.md`). |
 | G3 | Arquitectura + DB | **Aprobado** | 2026-04-17 | Andres Agudelo (fundador) | Aprobado vía merge de PR #9: `architecture/solution-architecture.md`, `db/data-model.md` (16 entidades + RLS + mat view standings + visibility_fields) y ADRs `architecture/adr/ADR-001..ADR-004`. |
-| G4 | Desarrollo | **En curso — Sprint 1** | 2026-04-17 | — | Sprint 1 activo: **HU-001 Registro con rol + HU-002 Verificación de edad**. Plan: `tasks/sprint-week-01.md`. |
+| G4 | Desarrollo | **En curso — Sprint 1** | 2026-04-17 | — | Sprint 1 activo: PR A (DB foundation, #10) ✓ y PR B (registro con rol, #11) ✓ mergeados; **PR C (verificación de edad) en revisión**. Plan: `tasks/sprint-week-01.md`. |
 | G5 | QA | Pendiente | — | — | Tests + cobertura |
 | G6 | UAT | Pendiente | — | — | Negocio |
 | G7 | Release | Pendiente | — | — | Seguridad + deploy + trazabilidad |

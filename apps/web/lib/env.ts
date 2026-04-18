@@ -22,6 +22,11 @@ const serverSchema = publicSchema.extend({
   // post-signup. Si no se setea, usamos NEXT_PUBLIC_SITE_URL + localhost en
   // dev. Ver `resolveOrigin` en lib/auth/origin.ts.
   AUTH_ALLOWED_ORIGINS: z.string().optional(),
+  // Service role key para uploads al bucket privado `age-verifications`
+  // (ADR-003). Sólo usada en Server Actions — nunca expuesta al cliente.
+  // Opcional en dev/build; si falta, la Server Action correspondiente
+  // devuelve error controlado.
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
   NODE_ENV: z.string().optional(),
   VERCEL_URL: z.string().optional(),
   VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
@@ -37,6 +42,7 @@ const parsed = serverSchema.safeParse({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
   AUTH_ALLOWED_ORIGINS: process.env.AUTH_ALLOWED_ORIGINS,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   NODE_ENV: process.env.NODE_ENV,
   VERCEL_URL: process.env.VERCEL_URL,
   VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
@@ -60,6 +66,7 @@ export const env: Env = parsed.success
       NEXT_PUBLIC_SUPABASE_ANON_KEY:
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "placeholder-anon-key",
       AUTH_ALLOWED_ORIGINS: process.env.AUTH_ALLOWED_ORIGINS,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     };
 
 /**
