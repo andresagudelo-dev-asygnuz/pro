@@ -24,38 +24,73 @@ describe("signInSchema", () => {
 });
 
 describe("signUpSchema", () => {
+  const base = {
+    email: "a@b.com",
+    password: "12345678",
+    full_name: "Nombre",
+    is_player: "on",
+  };
+
   it("exige password >= 8 chars", () => {
-    const short = signUpSchema.safeParse({
-      email: "a@b.com",
-      password: "1234567",
-      full_name: "Nombre",
-    });
+    const short = signUpSchema.safeParse({ ...base, password: "1234567" });
     expect(short.success).toBe(false);
 
-    const ok = signUpSchema.safeParse({
-      email: "a@b.com",
-      password: "12345678",
-      full_name: "Nombre",
-    });
+    const ok = signUpSchema.safeParse(base);
     expect(ok.success).toBe(true);
   });
 
   it("rechaza password > 128 chars", () => {
-    const r = signUpSchema.safeParse({
-      email: "a@b.com",
-      password: "x".repeat(129),
-      full_name: "Nombre",
-    });
+    const r = signUpSchema.safeParse({ ...base, password: "x".repeat(129) });
     expect(r.success).toBe(false);
   });
 
   it("rechaza full_name muy corto", () => {
+    const r = signUpSchema.safeParse({ ...base, full_name: "A" });
+    expect(r.success).toBe(false);
+  });
+
+  it("interpreta checkboxes HTML: 'on' => true, ausente => false", () => {
+    const r = signUpSchema.safeParse({ ...base, is_promoter: "on" });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.is_player).toBe(true);
+      expect(r.data.is_promoter).toBe(true);
+    }
+
+    const onlyPlayer = signUpSchema.safeParse({ ...base });
+    expect(onlyPlayer.success).toBe(true);
+    if (onlyPlayer.success) {
+      expect(onlyPlayer.data.is_player).toBe(true);
+      expect(onlyPlayer.data.is_promoter).toBe(false);
+    }
+  });
+
+  it("ambos desmarcados => schema OK (el trigger DB aplica default is_player=true)", () => {
     const r = signUpSchema.safeParse({
       email: "a@b.com",
       password: "12345678",
-      full_name: "A",
+      full_name: "Nombre",
+      // is_player / is_promoter ausentes
     });
-    expect(r.success).toBe(false);
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.is_player).toBe(false);
+      expect(r.data.is_promoter).toBe(false);
+    }
+  });
+
+  it("acepta sólo promotor", () => {
+    const r = signUpSchema.safeParse({
+      email: "a@b.com",
+      password: "12345678",
+      full_name: "Nombre",
+      is_promoter: "on",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.is_player).toBe(false);
+      expect(r.data.is_promoter).toBe(true);
+    }
   });
 });
 

@@ -35,6 +35,23 @@ export const signInSchema = z.object({
   password: z.string().min(1, "Ingresá tu contraseña."),
 });
 
+// Checkbox de HTML: si va marcado llega como "on" (o el value del input), si
+// va desmarcado no llega. Convertimos cualquier presencia no-vacía a `true`.
+const checkboxToBoolean = z
+  .union([z.string(), z.undefined(), z.boolean()])
+  .transform((v) => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "string") {
+      const s = v.trim().toLowerCase();
+      return s === "on" || s === "true" || s === "1" || s === "yes";
+    }
+    return false;
+  });
+
+// Nota: no hay refine "al menos un rol". La UI permite desmarcar ambos y en
+// ese caso el trigger DB `on_auth_user_created_roles` (migración
+// 20260417130000) asigna `is_player = true` por defecto (RF-001). Validar
+// client-side rompería la promesa UX "si no marcás ninguno te damos jugador".
 export const signUpSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
@@ -43,6 +60,8 @@ export const signUpSchema = z.object({
     .trim()
     .min(2, "Ingresá tu nombre completo.")
     .max(80, "Nombre demasiado largo."),
+  is_player: checkboxToBoolean,
+  is_promoter: checkboxToBoolean,
 });
 
 export const onboardingSchema = z.object({

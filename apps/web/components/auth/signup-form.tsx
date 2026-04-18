@@ -55,6 +55,41 @@ export function SignupForm() {
         <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
       </div>
 
+      <fieldset className="flex flex-col gap-3">
+        <legend className="text-sm font-medium">Quiero usar PRO como</legend>
+        <p className="text-xs text-muted-foreground">
+          Podés elegir los dos. Si no marcás ninguno, te damos el rol de jugador
+          por defecto.
+        </p>
+        <label className="flex items-start gap-3 rounded-md border border-input p-3 text-sm hover:bg-accent/50">
+          <input
+            type="checkbox"
+            name="is_player"
+            defaultChecked
+            className="mt-0.5 size-4 rounded border-input text-primary focus-visible:outline-2 focus-visible:outline-ring"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="font-medium">Jugador</span>
+            <span className="text-xs text-muted-foreground">
+              Inscribirte a torneos y construir tu ficha deportiva.
+            </span>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 rounded-md border border-input p-3 text-sm hover:bg-accent/50">
+          <input
+            type="checkbox"
+            name="is_promoter"
+            className="mt-0.5 size-4 rounded border-input text-primary focus-visible:outline-2 focus-visible:outline-ring"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="font-medium">Promotor</span>
+            <span className="text-xs text-muted-foreground">
+              Crear y gestionar torneos. Podés combinarlo con el rol de jugador.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
       {state.error && (
         <p role="alert" className="text-sm text-destructive">
           {state.error}

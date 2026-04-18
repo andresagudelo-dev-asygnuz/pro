@@ -58,7 +58,7 @@ export async function signUpWithPassword(
       fieldErrors: zFieldErrors(parsed) ?? undefined,
     };
   }
-  const { email, password, full_name } = parsed.data;
+  const { email, password, full_name, is_player, is_promoter } = parsed.data;
 
   const supabase = await createClient();
 
@@ -70,11 +70,15 @@ export async function signUpWithPassword(
 
   const emailRedirectTo = `${await resolveOrigin()}/auth/confirm`;
 
+  // `is_player` / `is_promoter` se pasan a `auth.users.raw_user_meta_data`; el
+  // trigger `on_auth_user_created_roles` (ver migración 20260417130000) los lee
+  // para crear la fila en `public.user_roles`. Default del trigger es
+  // is_player=true si ambos vienen vacíos (RF-001).
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name },
+      data: { full_name, is_player, is_promoter },
       emailRedirectTo,
     },
   });
