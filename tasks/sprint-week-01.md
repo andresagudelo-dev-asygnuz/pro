@@ -32,11 +32,13 @@ Sprint 1 se entrega en PRs pequeños y revisables, en este orden:
    - Server Action `signUpWithPassword` pasa ambos flags en `options.data` del `supabase.auth.signUp`; el trigger `on_auth_user_created_roles` (PR A) crea la fila en `public.user_roles`.
    - Validación Zod centralizada en `lib/validation/schemas.ts` con `checkboxToBoolean` tolerante a `on` / ausente.
    - Tests en `tests/lib/schemas.test.ts` (6 cases de schema, incluyendo "al menos un rol" y "sólo promotor").
-3. **PR C — Verificación de edad (HU-002).** Ruta nueva `app/(app)/verificacion/page.tsx`:
+3. **PR C — Verificación de edad (HU-002) [este PR].** Ruta nueva `app/(app)/verificacion/page.tsx`:
    - Upload de documento con validación client+server (max 5 MB, mime permitidos).
-   - Server Action que inserta `age_verifications` `pendiente` + sube a bucket privado.
-   - Vista de estado (`pendiente` / `aprobada` / `rechazada` / `menor_edad`).
-   - Guard en rutas RF-002 / RF-004: sin `aprobada` → redirect a `/verificacion`.
+   - Server Action `uploadAgeVerification` que sube el archivo al bucket privado vía `SUPABASE_SERVICE_ROLE_KEY` e inserta `age_verifications` en estado `pendiente` desde la sesión del usuario (RLS).
+   - Vista de estado (`pendiente` / `aprobada` / `rechazada` / `menor_edad`) con copy por estado + motivo de rechazo cuando aplique.
+   - Banner persistente `AgeVerificationBanner` en el layout `(app)` mientras el estado no sea `aprobada` (alinea con wireframe 02).
+   - Helper `requireAgeVerificationAprobada()` disponible para Sprint 3 (se usará en `/torneos/*/inscripcion`, RF-004). En Sprint 1 no se enforce sobre RF-002 porque la ruta de perfil de MVP1 se construye en Sprint 2.
+   - Tests: 5 casos nuevos para `verifyAgeFileSchema` (mime válido / inválido / archivo vacío / > 5 MB / = 5 MB exacto).
 4. **PR D — Admin de cola (HU-002 admin).** Ruta `app/(app)/admin/verificaciones/page.tsx`:
    - Lista de pendientes (sólo rol admin; MVP: feature flag por email whitelist o RLS `service_role`).
    - Acciones aprobar / rechazar con nota (usa Server Action server-side con `service_role` via Edge Function).

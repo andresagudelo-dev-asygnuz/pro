@@ -16,6 +16,28 @@ export type MatchStatus =
 
 export type ParticipantStatus = "joined" | "left" | "attended" | "no_show";
 
+export type AgeVerificationStatus =
+  | "pendiente"
+  | "aprobada"
+  | "rechazada"
+  | "menor_edad";
+
+export interface AgeVerification {
+  id: string;
+  user_id: string;
+  status: AgeVerificationStatus;
+  storage_path: string | null;
+  mime_type: string | null;
+  file_size_bytes: number | null;
+  uploaded_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  review_notes: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Sport {
   id: string;
   name: string;

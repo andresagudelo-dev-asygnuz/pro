@@ -64,6 +64,34 @@ export const signUpSchema = z.object({
   is_promoter: checkboxToBoolean,
 });
 
+/**
+ * Verificación de edad (RF-007).
+ *
+ * El File no pasa por `formDataToObject`: se valida aparte en la Server Action
+ * y aquí sólo declaramos los límites (mime + size) para consumir el mismo
+ * schema desde tests unitarios (ver `tests/lib/schemas.test.ts`).
+ */
+export const AGE_VERIFICATION_ALLOWED_MIME = [
+  "image/jpeg",
+  "image/png",
+  "application/pdf",
+] as const satisfies readonly string[];
+
+export const AGE_VERIFICATION_MAX_BYTES = 5 * 1024 * 1024;
+
+export const verifyAgeFileSchema = z.object({
+  mime_type: z.enum(AGE_VERIFICATION_ALLOWED_MIME, {
+    error: () => ({
+      message: "Formato no permitido. Subí JPG, PNG o PDF.",
+    }),
+  }),
+  file_size_bytes: z
+    .number()
+    .int()
+    .positive("Archivo vacío.")
+    .max(AGE_VERIFICATION_MAX_BYTES, "El archivo supera los 5 MB."),
+});
+
 export const onboardingSchema = z.object({
   username: z
     .string()

@@ -4,5 +4,5 @@
   "current_gate": 4,
   "updated_at": "2026-04-17",
   "gate_status": "En curso — Sprint 1",
-  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1, G2 y G3 Aprobados el 2026-04-17 (PRs #7, #8, #9). G4 Sprint 1 activo: HU-001 (registro con rol) + HU-002 (verificación de edad); plan en tasks/sprint-week-01.md."
+  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1, G2 y G3 Aprobados el 2026-04-17 (PRs #7, #8, #9). G4 Sprint 1 activo: PR A DB foundation (#10) y PR B registro con rol (#11) mergeados; PR C verificación de edad en revisión. Plan en tasks/sprint-week-01.md."
 }

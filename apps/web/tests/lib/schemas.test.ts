@@ -5,6 +5,8 @@ import {
   onboardingSchema,
   createMatchSchema,
   sendMessageSchema,
+  verifyAgeFileSchema,
+  AGE_VERIFICATION_MAX_BYTES,
   formDataToObject,
   zFieldErrors,
 } from "@/lib/validation/schemas";
@@ -196,6 +198,64 @@ describe("createMatchSchema", () => {
     const r = createMatchSchema.safeParse({ ...base, skill_level: "wizard" });
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.skill_level).toBeNull();
+  });
+});
+
+describe("verifyAgeFileSchema", () => {
+  it("acepta JPG/PNG/PDF dentro del tamaño máximo", () => {
+    for (const mime of ["image/jpeg", "image/png", "application/pdf"]) {
+      const r = verifyAgeFileSchema.safeParse({
+        mime_type: mime,
+        file_size_bytes: 1024,
+      });
+      expect(r.success, `mime=${mime}`).toBe(true);
+    }
+  });
+
+  it("rechaza mime no permitido (ej. heic, docx)", () => {
+    for (const mime of [
+      "image/heic",
+      "image/webp",
+      "application/msword",
+      "text/plain",
+    ]) {
+      const r = verifyAgeFileSchema.safeParse({
+        mime_type: mime,
+        file_size_bytes: 1024,
+      });
+      expect(r.success, `mime=${mime}`).toBe(false);
+    }
+  });
+
+  it("rechaza archivo vacío o negativo", () => {
+    expect(
+      verifyAgeFileSchema.safeParse({
+        mime_type: "image/jpeg",
+        file_size_bytes: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      verifyAgeFileSchema.safeParse({
+        mime_type: "image/jpeg",
+        file_size_bytes: -1,
+      }).success,
+    ).toBe(false);
+  });
+
+  it(`rechaza archivo > ${AGE_VERIFICATION_MAX_BYTES} bytes (5 MB)`, () => {
+    const r = verifyAgeFileSchema.safeParse({
+      mime_type: "image/jpeg",
+      file_size_bytes: AGE_VERIFICATION_MAX_BYTES + 1,
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("acepta exactamente el máximo permitido (5 MB exacto)", () => {
+    const r = verifyAgeFileSchema.safeParse({
+      mime_type: "application/pdf",
+      file_size_bytes: AGE_VERIFICATION_MAX_BYTES,
+    });
+    expect(r.success).toBe(true);
   });
 });
 
