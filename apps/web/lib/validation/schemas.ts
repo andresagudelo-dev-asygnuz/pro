@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { SkillLevel } from "@/lib/types/db";
+import type { SkillLevel, VisibilityLevel } from "@/lib/types/db";
+import { IDENTITY_FIELD_KEYS } from "@/lib/types/db";
 
 /**
  * Schemas centralizados de validación de FormData para server actions.
@@ -221,6 +222,163 @@ export const createMatchSchema = z
 export const sendMessageSchema = z.object({
   match_id: z.string().uuid(),
   content: z.string().trim().min(1).max(2000, "Mensaje demasiado largo."),
+});
+
+/**
+ * Perfil tipo ficha · Bloque 1 Identidad (HU-003 / RF-002).
+ *
+ * Reglas espejo de los CHECK constraints de `public.profiles_core` en la
+ * migración `20260417140000`:
+ *   - full_name: 2..120 chars.
+ *   - birth_date: YYYY-MM-DD, ≥ 18 años (chequeo client-side; server repite).
+ *   - city: 2..80 chars.
+ *   - region: opcional, 1..80 chars cuando viene.
+ *   - country: ISO alpha-2, 2 chars.
+ *   - primary_sport_id: referencia a `public.sports` (validado server-side).
+ *   - interests: hasta 10 ítems separados por coma.
+ *   - soft_skills_text: 0..1000 chars.
+ *   - soft_skills_tags: hasta 10 ids de catálogo (validados contra
+ *     `skill_tags` server-side).
+ *   - slug: 3..80, minúsculas/dígitos/guiones.
+ */
+export const VISIBILITY_LEVEL_VALUES = [
+  "publico",
+  "promotores",
+  "privado",
+] as const satisfies readonly VisibilityLevel[];
+
+const MIN_BIRTH = "1900-01-01";
+
+function yearsBetween(fromIso: string, nowIso: string): number {
+  const from = new Date(fromIso);
+  const now = new Date(nowIso);
+  let years = now.getUTCFullYear() - from.getUTCFullYear();
+  const m = now.getUTCMonth() - from.getUTCMonth();
+  if (m < 0 || (m === 0 && now.getUTCDate() < from.getUTCDate())) years -= 1;
+  return years;
+}
+
+export const identityBlockSchema = z
+  .object({
+    full_name: z
+      .string()
+      .trim()
+      .min(2, "Ingresá tu nombre completo (mínimo 2 caracteres).")
+      .max(120, "Nombre demasiado largo (máx 120 caracteres)."),
+    birth_date: z
+      .string()
+      .trim()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida (formato AAAA-MM-DD)."),
+    city: z
+      .string()
+      .trim()
+      .min(2, "Ingresá tu ciudad (mínimo 2 caracteres).")
+      .max(80, "Ciudad demasiado larga."),
+    region: z
+      .string()
+      .trim()
+      .max(80, "Región demasiado larga.")
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+    country: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{2}$/, "Código de país ISO alpha-2 (ej. CO, AR, MX)."),
+    primary_sport_id: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(1, "Elegí tu deporte principal.")
+      .max(40, "Deporte inválido."),
+    interests_raw: z
+      .string()
+      .trim()
+      .max(400, "La lista de intereses es demasiado larga.")
+      .optional()
+      .transform((v) => {
+        if (!v) return [] as string[];
+        return v
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+          .slice(0, 10);
+      }),
+    soft_skills_text: z
+      .string()
+      .trim()
+      .max(1000, "Máx 1000 caracteres.")
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+    soft_skills_tags_raw: z
+      .string()
+      .trim()
+      .max(400, "Demasiadas habilidades seleccionadas.")
+      .optional()
+      .transform((v) => {
+        if (!v) return [] as string[];
+        return Array.from(
+          new Set(
+            v
+              .split(",")
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0),
+          ),
+        ).slice(0, 10);
+      }),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(
+        /^[a-z0-9]+(-[a-z0-9]+)*$/,
+        "Slug: sólo minúsculas, números y guiones (sin espacios).",
+      )
+      .min(3, "Slug muy corto (mínimo 3 caracteres).")
+      .max(80, "Slug demasiado largo (máx 80 caracteres)."),
+  })
+  .superRefine((val, ctx) => {
+    if (val.birth_date < MIN_BIRTH) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["birth_date"],
+        message: "Fecha demasiado antigua.",
+      });
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    if (val.birth_date > today) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["birth_date"],
+        message: "La fecha no puede estar en el futuro.",
+      });
+      return;
+    }
+    const age = yearsBetween(val.birth_date, today);
+    if (age < 18) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["birth_date"],
+        message: "Tenés que ser mayor de 18 años.",
+      });
+    }
+  });
+
+/**
+ * Visibilidad por campo (HU-003 §1 / ADR-002).
+ *
+ * El `field_key` debe pertenecer al catálogo `visibility_fields`. Para PR B
+ * lo acotamos al bloque 1 (identity.*); PR C/D ampliarán a morpho/conditional/
+ * technical.football.
+ */
+export const fieldVisibilitySchema = z.object({
+  field_key: z.enum(IDENTITY_FIELD_KEYS, {
+    error: () => ({ message: "Campo inválido." }),
+  }),
+  level: z.enum(VISIBILITY_LEVEL_VALUES, {
+    error: () => ({ message: "Nivel de visibilidad inválido." }),
+  }),
 });
 
 /**

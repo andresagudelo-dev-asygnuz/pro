@@ -31,6 +31,12 @@ export function AppNav({
             >
               Crear partido
             </Link>
+            <Link
+              href="/perfil"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Mi perfil
+            </Link>
             {isAdmin && (
               <Link
                 href="/admin/verificaciones"
