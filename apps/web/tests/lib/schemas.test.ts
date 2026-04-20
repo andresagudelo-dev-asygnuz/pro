@@ -10,6 +10,8 @@ import {
   formDataToObject,
   zFieldErrors,
   reviewVerificationSchema,
+  identityBlockSchema,
+  fieldVisibilitySchema,
 } from "@/lib/validation/schemas";
 
 const UUID = "00000000-0000-4000-8000-000000000000";
@@ -381,6 +383,178 @@ describe("reviewVerificationSchema", () => {
     const r = reviewVerificationSchema.safeParse({
       verification_id: "not-a-uuid",
       decision: "aprobada",
+    });
+    expect(r.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// identityBlockSchema + fieldVisibilitySchema (HU-003 PR B)
+// ---------------------------------------------------------------------------
+
+const ID_VALID = {
+  full_name: "Juan Pérez",
+  birth_date: "2000-03-15",
+  city: "Manizales",
+  region: "Caldas",
+  country: "CO",
+  primary_sport_id: "futbol",
+  interests_raw: "senderismo, nutrición deportiva",
+  soft_skills_text: "Liderazgo bajo presión.",
+  soft_skills_tags_raw: "soft.liderazgo,soft.disciplina",
+  slug: "juan-perez",
+};
+
+describe("identityBlockSchema", () => {
+  it("acepta un payload válido y normaliza arrays + country upper", () => {
+    const r = identityBlockSchema.safeParse({ ...ID_VALID, country: "co" });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.country).toBe("CO");
+    expect(r.data.interests_raw).toEqual([
+      "senderismo",
+      "nutrición deportiva",
+    ]);
+    expect(r.data.soft_skills_tags_raw).toEqual([
+      "soft.liderazgo",
+      "soft.disciplina",
+    ]);
+    expect(r.data.region).toBe("Caldas");
+  });
+
+  it("rechaza menores de 18", () => {
+    const today = new Date();
+    const tooYoung = `${today.getFullYear() - 17}-01-01`;
+    const r = identityBlockSchema.safeParse({
+      ...ID_VALID,
+      birth_date: tooYoung,
+    });
+    expect(r.success).toBe(false);
+    if (r.success) return;
+    const msg = r.error.issues.find((i) => i.path[0] === "birth_date")?.message;
+    expect(msg).toContain("mayor de 18");
+  });
+
+  it("rechaza fechas en el futuro", () => {
+    const r = identityBlockSchema.safeParse({
+      ...ID_VALID,
+      birth_date: "2999-01-01",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza fechas demasiado antiguas (< 1900)", () => {
+    const r = identityBlockSchema.safeParse({
+      ...ID_VALID,
+      birth_date: "1899-12-31",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza fechas semánticamente inválidas que pasan el regex", () => {
+    // Casos que el regex /^\d{4}-\d{2}-\d{2}$/ acepta pero son inválidos.
+    // Antes del round-trip, "2000-13-01" y "2000-02-30" producían NaN en
+    // `yearsBetween` y `NaN < 18 === false`, salteando el check de edad.
+    const invalid = [
+      "2000-13-01", // mes 13
+      "2000-00-15", // mes 00
+      "2000-02-30", // 30 de febrero
+      "2000-04-31", // 31 de abril
+      "2000-12-32", // día 32
+    ];
+    for (const birth_date of invalid) {
+      const r = identityBlockSchema.safeParse({ ...ID_VALID, birth_date });
+      expect(r.success, `birth_date="${birth_date}"`).toBe(false);
+      if (r.success) continue;
+      const msg = r.error.issues.find((i) => i.path[0] === "birth_date")
+        ?.message;
+      expect(msg).toBe("Fecha inválida.");
+    }
+  });
+
+  it("rechaza slug con mayúsculas o espacios", () => {
+    const bad = ["Juan Perez", "juan_perez", "juan--perez", "ju", "-juan"];
+    for (const slug of bad) {
+      const r = identityBlockSchema.safeParse({ ...ID_VALID, slug });
+      expect(r.success, `slug="${slug}"`).toBe(false);
+    }
+  });
+
+  it("acepta slug con números y guion simple", () => {
+    const r = identityBlockSchema.safeParse({ ...ID_VALID, slug: "juan-perez-10" });
+    expect(r.success).toBe(true);
+  });
+
+  it("acota intereses a 10 ítems y descarta vacíos", () => {
+    const many = Array.from({ length: 15 }, (_, i) => `interes${i + 1}`).join(", ");
+    const r = identityBlockSchema.safeParse({ ...ID_VALID, interests_raw: many });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.interests_raw).toHaveLength(10);
+  });
+
+  it("rechaza country que no sea ISO alpha-2", () => {
+    for (const bad of ["COL", "C", "123", ""]) {
+      const r = identityBlockSchema.safeParse({ ...ID_VALID, country: bad });
+      expect(r.success, `country="${bad}"`).toBe(false);
+    }
+  });
+
+  it("normaliza region vacío a null", () => {
+    const r = identityBlockSchema.safeParse({ ...ID_VALID, region: "   " });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.region).toBeNull();
+  });
+
+  it("deduplica soft_skills_tags_raw y acota a 10", () => {
+    const raw = [
+      "soft.liderazgo",
+      "soft.liderazgo",
+      "soft.disciplina",
+      ...Array.from({ length: 15 }, (_, i) => `extra.${i}`),
+    ].join(",");
+    const r = identityBlockSchema.safeParse({
+      ...ID_VALID,
+      soft_skills_tags_raw: raw,
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.soft_skills_tags_raw).toHaveLength(10);
+    const unique = new Set(r.data.soft_skills_tags_raw);
+    expect(unique.size).toBe(r.data.soft_skills_tags_raw.length);
+  });
+});
+
+describe("fieldVisibilitySchema", () => {
+  it("acepta un field_key de identity + nivel válido", () => {
+    const r = fieldVisibilitySchema.safeParse({
+      field_key: "identity.full_name",
+      level: "publico",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rechaza field_keys fuera del bloque identity (vendrán en PR C)", () => {
+    const r = fieldVisibilitySchema.safeParse({
+      field_key: "morpho.height_m",
+      level: "privado",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza niveles no soportados", () => {
+    const r = fieldVisibilitySchema.safeParse({
+      field_key: "identity.city",
+      level: "amigos",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza nivel con acento (la DB usa ASCII)", () => {
+    const r = fieldVisibilitySchema.safeParse({
+      field_key: "identity.city",
+      level: "público",
     });
     expect(r.success).toBe(false);
   });
