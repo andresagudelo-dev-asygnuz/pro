@@ -3,6 +3,6 @@
   "product": "PRO",
   "current_gate": 4,
   "updated_at": "2026-04-17",
-  "gate_status": "En curso — Sprint 1",
-  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1, G2 y G3 Aprobados el 2026-04-17 (PRs #7, #8, #9). G4 Sprint 1 activo: PRs A (#10), B (#11) y C (#13) mergeados; PR D (admin approval queue) en revisión. Plan en tasks/sprint-week-01.md."
+  "gate_status": "En curso — Sprint 2",
+  "note": "Opcional: mantener sincronizado con tasks/gate-status.md y tasks/current-gate.txt. G1, G2 y G3 Aprobados el 2026-04-17 (PRs #7, #8, #9). G4 Sprint 1 cerrado (PRs #10, #11, #13, #14). Sprint 2 activo con HU-003 (perfil tipo ficha + visibilidad). PR A (DB foundation Sprint 2) en revisión. Plan en tasks/sprint-week-02.md."
 }
