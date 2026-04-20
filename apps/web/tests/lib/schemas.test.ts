@@ -9,6 +9,7 @@ import {
   AGE_VERIFICATION_MAX_BYTES,
   formDataToObject,
   zFieldErrors,
+  reviewVerificationSchema,
 } from "@/lib/validation/schemas";
 
 const UUID = "00000000-0000-4000-8000-000000000000";
@@ -311,5 +312,76 @@ describe("zFieldErrors", () => {
     expect(err).not.toBeNull();
     expect(err?.email).toBeTruthy();
     expect(err?.password).toBeTruthy();
+  });
+});
+
+describe("reviewVerificationSchema", () => {
+  const baseApprove = {
+    verification_id: UUID,
+    decision: "aprobada",
+  };
+
+  it("acepta aprobada sin motivo", () => {
+    const r = reviewVerificationSchema.safeParse(baseApprove);
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.rejection_reason).toBeNull();
+  });
+
+  it("acepta rechazada con motivo válido", () => {
+    const r = reviewVerificationSchema.safeParse({
+      verification_id: UUID,
+      decision: "rechazada",
+      rejection_reason: "Foto borrosa, no se ve la fecha.",
+    });
+    expect(r.success).toBe(true);
+    if (r.success)
+      expect(r.data.rejection_reason).toBe("Foto borrosa, no se ve la fecha.");
+  });
+
+  it("rechaza rechazada sin motivo", () => {
+    const r = reviewVerificationSchema.safeParse({
+      verification_id: UUID,
+      decision: "rechazada",
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const err = zFieldErrors(r);
+      expect(err?.rejection_reason).toBeTruthy();
+    }
+  });
+
+  it("rechaza rechazada con motivo vacío/espacios", () => {
+    const r = reviewVerificationSchema.safeParse({
+      verification_id: UUID,
+      decision: "rechazada",
+      rejection_reason: "   ",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza motivo > 500 chars", () => {
+    const r = reviewVerificationSchema.safeParse({
+      verification_id: UUID,
+      decision: "rechazada",
+      rejection_reason: "x".repeat(501),
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza decision desconocida (ej. menor_edad via UI)", () => {
+    const r = reviewVerificationSchema.safeParse({
+      verification_id: UUID,
+      decision: "menor_edad",
+      rejection_reason: "no aplica",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza verification_id no UUID", () => {
+    const r = reviewVerificationSchema.safeParse({
+      verification_id: "not-a-uuid",
+      decision: "aprobada",
+    });
+    expect(r.success).toBe(false);
   });
 });

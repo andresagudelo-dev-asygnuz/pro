@@ -27,6 +27,11 @@ const serverSchema = publicSchema.extend({
   // Opcional en dev/build; si falta, la Server Action correspondiente
   // devuelve error controlado.
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
+  // Lista de emails (coma-separados) con permiso para la UI de admin
+  // de verificaciones (HU-002 §6). En MVP es una whitelist por env; el
+  // sprint plan admite RLS service_role como alternativa. Comparación
+  // case-insensitive vía `lib/auth/admin.ts`.
+  ADMIN_EMAILS: z.string().optional(),
   NODE_ENV: z.string().optional(),
   VERCEL_URL: z.string().optional(),
   VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
@@ -43,6 +48,7 @@ const parsed = serverSchema.safeParse({
   NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
   AUTH_ALLOWED_ORIGINS: process.env.AUTH_ALLOWED_ORIGINS,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  ADMIN_EMAILS: process.env.ADMIN_EMAILS,
   NODE_ENV: process.env.NODE_ENV,
   VERCEL_URL: process.env.VERCEL_URL,
   VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
@@ -67,6 +73,7 @@ export const env: Env = parsed.success
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "placeholder-anon-key",
       AUTH_ALLOWED_ORIGINS: process.env.AUTH_ALLOWED_ORIGINS,
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      ADMIN_EMAILS: process.env.ADMIN_EMAILS,
     };
 
 /**

@@ -92,6 +92,45 @@ export const verifyAgeFileSchema = z.object({
     .max(AGE_VERIFICATION_MAX_BYTES, "El archivo supera los 5 MB."),
 });
 
+/**
+ * Revisión de verificación por admin (HU-002 §6 / PR D Sprint 1).
+ *
+ * Un `decision` = "aprobada" pasa a estado aprobada (sin motivo requerido).
+ * Un `decision` = "rechazada" exige `rejection_reason` (2–500 chars) para
+ * que el usuario pueda corregir y reintentar. `menor_edad` no se expone en
+ * MVP1: es bloqueo permanente y se setea sólo vía SQL manual (ver ADR-003).
+ */
+export const REVIEW_DECISIONS = ["aprobada", "rechazada"] as const satisfies readonly [
+  "aprobada",
+  "rechazada",
+];
+
+export const reviewVerificationSchema = z
+  .object({
+    verification_id: z.string().uuid("ID inválido."),
+    decision: z.enum(REVIEW_DECISIONS, {
+      error: () => ({ message: "Decisión inválida." }),
+    }),
+    rejection_reason: z
+      .string()
+      .trim()
+      .max(500, "Motivo demasiado largo (máx 500 caracteres).")
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+  })
+  .superRefine((val, ctx) => {
+    if (val.decision === "rechazada") {
+      const r = val.rejection_reason;
+      if (!r || r.length < 2) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["rejection_reason"],
+          message: "Ingresá un motivo (mínimo 2 caracteres).",
+        });
+      }
+    }
+  });
+
 export const onboardingSchema = z.object({
   username: z
     .string()

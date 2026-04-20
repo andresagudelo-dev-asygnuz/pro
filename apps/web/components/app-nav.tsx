@@ -4,7 +4,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import type { Profile } from "@/lib/types/db";
 
-export function AppNav({ profile }: { profile: Profile | null }) {
+export function AppNav({
+  profile,
+  isAdmin = false,
+}: {
+  profile: Profile | null;
+  isAdmin?: boolean;
+}) {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
@@ -25,6 +31,14 @@ export function AppNav({ profile }: { profile: Profile | null }) {
             >
               Crear partido
             </Link>
+            {isAdmin && (
+              <Link
+                href="/admin/verificaciones"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Admin
+              </Link>
+            )}
           </nav>
         </div>
 

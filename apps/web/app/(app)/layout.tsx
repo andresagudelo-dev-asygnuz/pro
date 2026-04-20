@@ -2,14 +2,15 @@ import type { ReactNode } from "react";
 import { AppNav } from "@/components/app-nav";
 import { AgeVerificationBanner } from "@/components/age-verification-banner";
 import { getProfile, requireUser } from "@/lib/auth/session";
+import { getAdminUser } from "@/lib/auth/admin";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   await requireUser();
-  const profile = await getProfile();
+  const [profile, admin] = await Promise.all([getProfile(), getAdminUser()]);
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">
-      <AppNav profile={profile} />
+      <AppNav profile={profile} isAdmin={Boolean(admin)} />
       <AgeVerificationBanner />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
         {children}
