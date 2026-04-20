@@ -149,7 +149,12 @@ export async function uploadAgeVerification(
     };
   }
 
-  revalidatePath("/verificacion");
+  // Revalidar el layout completo: el `AgeVerificationBanner` vive en
+  // `app/(app)/layout.tsx`, así que todas las rutas de ese grupo (`/feed`,
+  // `/matches/*`, etc.) muestran data stale hasta una navegación hard si
+  // sólo revalidamos `/verificacion`. Mismo patrón que `signUpWithPassword`
+  // y `updateProfile`.
+  revalidatePath("/", "layout");
   return {
     message:
       "Documento subido. Lo vamos a revisar y te avisamos por email cuando esté aprobado.",
