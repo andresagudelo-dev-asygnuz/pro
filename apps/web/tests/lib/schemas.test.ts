@@ -451,6 +451,27 @@ describe("identityBlockSchema", () => {
     expect(r.success).toBe(false);
   });
 
+  it("rechaza fechas semánticamente inválidas que pasan el regex", () => {
+    // Casos que el regex /^\d{4}-\d{2}-\d{2}$/ acepta pero son inválidos.
+    // Antes del round-trip, "2000-13-01" y "2000-02-30" producían NaN en
+    // `yearsBetween` y `NaN < 18 === false`, salteando el check de edad.
+    const invalid = [
+      "2000-13-01", // mes 13
+      "2000-00-15", // mes 00
+      "2000-02-30", // 30 de febrero
+      "2000-04-31", // 31 de abril
+      "2000-12-32", // día 32
+    ];
+    for (const birth_date of invalid) {
+      const r = identityBlockSchema.safeParse({ ...ID_VALID, birth_date });
+      expect(r.success, `birth_date="${birth_date}"`).toBe(false);
+      if (r.success) continue;
+      const msg = r.error.issues.find((i) => i.path[0] === "birth_date")
+        ?.message;
+      expect(msg).toBe("Fecha inválida.");
+    }
+  });
+
   it("rechaza slug con mayúsculas o espacios", () => {
     const bad = ["Juan Perez", "juan_perez", "juan--perez", "ju", "-juan"];
     for (const slug of bad) {

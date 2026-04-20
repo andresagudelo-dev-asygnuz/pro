@@ -338,6 +338,21 @@ export const identityBlockSchema = z
       .max(80, "Slug demasiado largo (máx 80 caracteres)."),
   })
   .superRefine((val, ctx) => {
+    // El regex valida forma pero no semántica (p. ej. "2000-13-01" pasa).
+    // Chequear con Date y comparar round-trip evita que valores inválidos
+    // salteen la verificación de edad por NaN (NaN < 18 === false).
+    const parsed = new Date(`${val.birth_date}T00:00:00Z`);
+    const roundTrip = Number.isNaN(parsed.getTime())
+      ? null
+      : parsed.toISOString().slice(0, 10);
+    if (roundTrip !== val.birth_date) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["birth_date"],
+        message: "Fecha inválida.",
+      });
+      return;
+    }
     if (val.birth_date < MIN_BIRTH) {
       ctx.addIssue({
         code: "custom",
