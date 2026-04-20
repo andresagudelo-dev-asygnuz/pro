@@ -15,6 +15,12 @@ export type VerifyAgeState = {
   error?: string;
   message?: string;
   fieldErrors?: Record<string, string>;
+  /**
+   * Timestamp (ms) de la última respuesta exitosa. Le sirve al client para
+   * detectar uploads consecutivos aunque `message` sea idéntico y así
+   * poder resetear el form en cada éxito.
+   */
+  uploadedAt?: number;
 };
 
 const BUCKET = "age-verifications";
@@ -147,6 +153,7 @@ export async function uploadAgeVerification(
   return {
     message:
       "Documento subido. Lo vamos a revisar y te avisamos por email cuando esté aprobado.",
+    uploadedAt: Date.now(),
   };
 }
 

@@ -63,22 +63,27 @@ export function VerifyAgeForm({ disabled = false }: { disabled?: boolean }) {
     setSelected({ name: file.name, sizeBytes: file.size });
   }
 
-  // Tras upload exitoso (state.message seteado por la Server Action) reseteamos
-  // el form y la selección en memoria para que el botón quede deshabilitado y
-  // evitemos submissions duplicadas (mismo archivo reenviado sin cambios).
+  // Tras upload exitoso reseteamos el form y la selección en memoria para que
+  // el botón quede deshabilitado y evitemos submissions duplicadas (mismo
+  // archivo reenviado sin cambios).
+  //
+  // Dependemos de `state.uploadedAt` (timestamp ms que la Server Action setea
+  // en cada éxito) en lugar de `state.message`: el mensaje es idéntico entre
+  // uploads consecutivos, así que `Object.is` no dispararía el effect la
+  // segunda vez. El timestamp cambia en cada respuesta exitosa.
   //
   // `useEffect` es el hook correcto para sincronizar con el DOM externo
   // (`form.reset()`). Los setState encadenados son intencionales (limpiar
   // estado local que deriva del archivo recién subido) y sólo corren una vez
   // por respuesta del servidor, por lo que los cascading renders son acotados.
   useEffect(() => {
-    if (state.message) {
+    if (state.uploadedAt) {
       formRef.current?.reset();
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelected(null);
       setClientError(null);
     }
-  }, [state.message]);
+  }, [state.uploadedAt]);
 
   const submitDisabled = disabled || pending || !selected || !!clientError;
 
