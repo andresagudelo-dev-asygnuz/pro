@@ -15,13 +15,14 @@ const initialState: ReviewVerificationState = {};
  * Formulario de revisión admin (HU-002 §6 / PR D Sprint 1).
  *
  * UX:
- *   - Botón "Aprobar" envía el form con `decision=aprobada`.
- *   - Botón "Rechazar" abre un textarea inline y, en el segundo click
- *     (ya desplegado), envía con `decision=rechazada` + motivo requerido.
- *   - El input hidden `decision` se setea por referencia al click del botón;
- *     no usamos name/value en los botones porque React deja el último click
- *     con la prop value como submitter, pero ante recargas o a11y preferimos
- *     un campo explícito.
+ *   - Botón "Aprobar" envía el form con `decision=aprobada` (via submitter).
+ *   - Botón "Rechazar…" abre un textarea inline y, en el segundo click
+ *     (ya desplegado), "Confirmar rechazo" envía con `decision=rechazada`
+ *     + motivo requerido (via submitter).
+ *   - Usamos `name`/`value` directamente en los botones submit para evitar
+ *     race conditions de React: el submitter del form pone su par name/value
+ *     en `FormData` sin depender de un re-render (comparar con
+ *     `components/auth/verify-age-form.tsx`).
  *
  * Tras una respuesta exitosa (`reviewedAt` cambia) cerramos el panel de
  * rechazo. Re-usa el patrón `uploadedAt` del form de usuario para soportar
@@ -37,24 +38,19 @@ export function VerificationReviewForm({
     initialState,
   );
   const [rejectOpen, setRejectOpen] = useState(false);
-  const [decision, setDecision] = useState<"aprobada" | "rechazada" | "">("");
 
-  // Sincronizamos estado local con la respuesta del servidor: al confirmar
-  // una revisión (reviewedAt cambia) cerramos el textarea y limpiamos la
-  // decisión para dejar el form listo para la siguiente fila. Los setState
-  // acá son intencionales y acotados (corre una vez por respuesta exitosa).
+  // Al confirmar una revisión (reviewedAt cambia) cerramos el textarea
+  // para dejar el form listo para la siguiente fila.
   useEffect(() => {
     if (state.reviewedAt) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRejectOpen(false);
-      setDecision("");
     }
   }, [state.reviewedAt]);
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="verification_id" value={verificationId} />
-      <input type="hidden" name="decision" value={decision} />
 
       {rejectOpen && (
         <div className="flex flex-col gap-2">
@@ -79,8 +75,9 @@ export function VerificationReviewForm({
           <>
             <Button
               type="submit"
+              name="decision"
+              value="aprobada"
               disabled={pending}
-              onClick={() => setDecision("aprobada")}
             >
               Aprobar
             </Button>
@@ -88,10 +85,7 @@ export function VerificationReviewForm({
               type="button"
               variant="destructive"
               disabled={pending}
-              onClick={() => {
-                setRejectOpen(true);
-                setDecision("rechazada");
-              }}
+              onClick={() => setRejectOpen(true)}
             >
               Rechazar…
             </Button>
@@ -100,9 +94,10 @@ export function VerificationReviewForm({
           <>
             <Button
               type="submit"
+              name="decision"
+              value="rechazada"
               variant="destructive"
               disabled={pending}
-              onClick={() => setDecision("rechazada")}
             >
               Confirmar rechazo
             </Button>
@@ -110,10 +105,7 @@ export function VerificationReviewForm({
               type="button"
               variant="ghost"
               disabled={pending}
-              onClick={() => {
-                setRejectOpen(false);
-                setDecision("");
-              }}
+              onClick={() => setRejectOpen(false)}
             >
               Cancelar
             </Button>
