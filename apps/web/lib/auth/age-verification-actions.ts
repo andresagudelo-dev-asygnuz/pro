@@ -6,7 +6,6 @@ import { getServiceRoleClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   AGE_VERIFICATION_ALLOWED_MIME,
-  AGE_VERIFICATION_MAX_BYTES,
   verifyAgeFileSchema,
   zFieldErrors,
 } from "@/lib/validation/schemas";
@@ -178,7 +177,3 @@ function cryptoRandomHex(bytes: number) {
   crypto.getRandomValues(arr);
   return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
-
-// Sanity check en TS para que no nos olvidemos de mantener este import
-// alineado con el schema.
-export { AGE_VERIFICATION_MAX_BYTES };
