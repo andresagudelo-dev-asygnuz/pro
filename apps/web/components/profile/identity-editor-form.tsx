@@ -65,12 +65,18 @@ export function IdentityEditorForm({
     }
   }, [fullName, slugTouched]);
 
+  // Post-save: re-sincronizar el estado controlado con los props nuevos
+  // que llegan tras `revalidatePath`. Sin esto, chips y nombre mostrado
+  // quedan con el valor pre-submit hasta F5.
   useEffect(() => {
     if (state.savedAt) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFullName(profile?.full_name ?? "");
+      setSlug(profile?.slug ?? "");
       setSlugTouched(true);
+      setSelectedTags(profile?.soft_skills_tags ?? []);
     }
-  }, [state.savedAt]);
+  }, [state.savedAt, profile]);
 
   function toggleTag(id: string) {
     setSelectedTags((prev) =>
@@ -83,8 +89,15 @@ export function IdentityEditorForm({
     [softSkills],
   );
 
+  // Re-mount del <form> tras save exitoso: los `<input defaultValue>` y
+  // `<select defaultValue>` son uncontrolled; React sólo aplica
+  // `defaultValue` en el mount inicial. Sin esta key los campos siguen
+  // mostrando el valor pre-submit hasta un F5.
+  const formKey = state.savedAt ?? "initial";
+
   return (
     <form
+      key={formKey}
       ref={formRef}
       action={formAction}
       className="flex flex-col gap-6"

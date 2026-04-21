@@ -215,3 +215,112 @@ export const IDENTITY_FIELD_KEYS = [
 ] as const;
 
 export type IdentityFieldKey = (typeof IDENTITY_FIELD_KEYS)[number];
+
+// ---------------------------------------------------------------------------
+// Bloque 2 · Morfológico / Biométrico
+// ---------------------------------------------------------------------------
+
+export interface ProfileMorpho {
+  user_id: string;
+  height_m: number | null; // numeric(3,2) — 1.00..2.50
+  weight_kg: number | null; // numeric(5,2) — 30..200
+  wingspan_m: number | null; // numeric(3,2) — 1.00..2.80
+  laterality: Laterality | null;
+  somatotype: Somatotype | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const MORPHO_FIELD_KEYS = [
+  "morpho.height_m",
+  "morpho.weight_kg",
+  "morpho.wingspan_m",
+  "morpho.laterality",
+  "morpho.somatotype",
+] as const;
+
+export type MorphoFieldKey = (typeof MORPHO_FIELD_KEYS)[number];
+
+// ---------------------------------------------------------------------------
+// Bloque 3 · Capacidades Condicionales
+// ---------------------------------------------------------------------------
+
+export interface ProfileConditional {
+  user_id: string;
+  strength_tags: string[];
+  strength_notes: string | null;
+  speed_tags: string[];
+  speed_notes: string | null;
+  endurance_tags: string[];
+  endurance_notes: string | null;
+  flexibility_tags: string[];
+  flexibility_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const CONDITIONAL_FIELD_KEYS = [
+  "conditional.strength",
+  "conditional.speed",
+  "conditional.endurance",
+  "conditional.flexibility",
+] as const;
+
+export type ConditionalFieldKey = (typeof CONDITIONAL_FIELD_KEYS)[number];
+
+// ---------------------------------------------------------------------------
+// Bloque 4 · Destrezas Técnicas Fútbol
+// ---------------------------------------------------------------------------
+
+export interface ProfileTechnicalFootball {
+  user_id: string;
+  position: FootballPosition;
+  dominant_foot: DominantFoot;
+  performance_notes: string | null;
+  tactical_role_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const TECHNICAL_FOOTBALL_FIELD_KEYS = [
+  "technical.football.position",
+  "technical.football.dominant_foot",
+  "technical.football.performance_notes",
+  "technical.football.tactical_role_notes",
+] as const;
+
+export type TechnicalFootballFieldKey =
+  (typeof TECHNICAL_FOOTBALL_FIELD_KEYS)[number];
+
+// ---------------------------------------------------------------------------
+// Union of all profile field keys (used by FieldWithVisibility + schemas)
+// ---------------------------------------------------------------------------
+
+export const ALL_PROFILE_FIELD_KEYS = [
+  ...IDENTITY_FIELD_KEYS,
+  ...MORPHO_FIELD_KEYS,
+  ...CONDITIONAL_FIELD_KEYS,
+  ...TECHNICAL_FOOTBALL_FIELD_KEYS,
+] as const;
+
+export type ProfileFieldKey = (typeof ALL_PROFILE_FIELD_KEYS)[number];
+
+// Enum value arrays for selects
+export const LATERALITY_VALUES = ["diestro", "zurdo", "ambos"] as const satisfies readonly Laterality[];
+export const SOMATOTYPE_VALUES = [
+  "ectomorfo",
+  "mesomorfo",
+  "endomorfo",
+  "mixto",
+] as const satisfies readonly Somatotype[];
+export const FOOTBALL_POSITION_VALUES = [
+  "arquero",
+  "defensa",
+  "mediocampista",
+  "delantero",
+] as const satisfies readonly FootballPosition[];
+export const DOMINANT_FOOT_VALUES = [
+  "derecho",
+  "izquierdo",
+  "ambos",
+] as const satisfies readonly DominantFoot[];

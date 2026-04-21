@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
-import { Badge } from "@/components/ui/badge";
 import { IdentityEditorForm } from "@/components/profile/identity-editor-form";
+import { MorphoEditorForm } from "@/components/profile/morpho-editor-form";
+import { ConditionalEditorForm } from "@/components/profile/conditional-editor-form";
+import { TechnicalFootballEditorForm } from "@/components/profile/technical-football-editor-form";
+import { ProfilePreview } from "@/components/profile/profile-preview";
+import {
+  ProfileTabs,
+  resolveTab,
+  type ProfileTabId,
+} from "@/components/profile/profile-tabs";
 import { createClient } from "@/lib/supabase/server";
 import { requireAgeVerificationAprobada } from "@/lib/auth/age-verification";
 import {
@@ -8,41 +16,110 @@ import {
   getIdentityVisibility,
   getSoftSkillsCatalog,
 } from "@/lib/profiles/identity";
-import type { Sport } from "@/lib/types/db";
+import {
+  getMorphoProfile,
+  getMorphoVisibility,
+} from "@/lib/profiles/morpho";
+import {
+  getConditionalProfile,
+  getConditionalVisibility,
+  getSkillTagsByCategory,
+} from "@/lib/profiles/conditional";
+import {
+  getTechnicalFootballProfile,
+  getTechnicalFootballVisibility,
+} from "@/lib/profiles/technical-football";
+import type {
+  ProfileFieldKey,
+  SkillTag,
+  Sport,
+  VisibilityLevel,
+} from "@/lib/types/db";
 
 export const metadata: Metadata = {
-  title: "Mi perfil · Bloque 1 Identidad",
+  title: "Mi perfil · Bloques 1-4 + vista previa",
 };
 
 export const dynamic = "force-dynamic";
 
+type SearchParams = Promise<{ tab?: string | string[] }>;
+
+const TITLES: Record<ProfileTabId, string> = {
+  identidad: "Bloque 1 · Identidad y perfil personal",
+  morfo: "Bloque 2 · Análisis morfológico y biométrico",
+  condicional: "Bloque 3 · Capacidades condicionales",
+  tecnico: "Bloque 4 · Destrezas técnicas (fútbol)",
+  preview: "Vista previa por audiencia",
+};
+
 /**
- * Ruta `/perfil` — HU-003 PR B.
+ * Ruta `/perfil` — HU-003 PR C.
  *
- * Gate: la verificación de edad debe estar aprobada. Si no, el helper
- * `requireAgeVerificationAprobada` redirige a `/verificacion` antes de
- * ejecutar nada más (UX sobre RLS/CHECK del server).
+ * Presenta los 4 bloques + vista previa como tabs URL-driven (`?tab=<id>`).
+ * Siempre fetchea datos de los 4 bloques (queries cache()-enabled y RLS
+ * self-only) para que la tab de preview vea el estado completo.
  *
- * Este PR entrega sólo el Bloque 1 (Identidad). Los bloques 2/3/4 llegan
- * en PR C per `tasks/sprint-week-02.md`. Dejamos el shell listo con una
- * tira de bloques + badges "Próximamente" para que el usuario vea el
- * roadmap y no se frustre.
+ * Gate: verificación de edad aprobada — el helper redirige a /verificacion
+ * si no lo está.
  */
-export default async function ProfileEditPage() {
+export default async function ProfileEditPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   await requireAgeVerificationAprobada();
+  const { tab: rawTab } = await searchParams;
+  const active = resolveTab(rawTab);
   const supabase = await createClient();
 
-  const [profile, visibility, softSkills, sportsRes] = await Promise.all([
+  // Fetch en paralelo — todas cachean por request vía React `cache()`.
+  const [
+    identityProfile,
+    identityVisibility,
+    softSkills,
+    sportsRes,
+    morphoProfile,
+    morphoVisibility,
+    conditionalProfile,
+    conditionalVisibility,
+    strengthTags,
+    speedTags,
+    enduranceTags,
+    flexibilityTags,
+    techProfile,
+    techVisibility,
+  ] = await Promise.all([
     getIdentityProfile(),
     getIdentityVisibility(),
     getSoftSkillsCatalog(),
-    supabase.from("sports").select("id,name").order("name", { ascending: true }),
+    supabase
+      .from("sports")
+      .select("id,name")
+      .order("name", { ascending: true }),
+    getMorphoProfile(),
+    getMorphoVisibility(),
+    getConditionalProfile(),
+    getConditionalVisibility(),
+    getSkillTagsByCategory("strength"),
+    getSkillTagsByCategory("speed"),
+    getSkillTagsByCategory("endurance"),
+    getSkillTagsByCategory("flexibility"),
+    getTechnicalFootballProfile(),
+    getTechnicalFootballVisibility(),
   ]);
 
   const sports =
     ((sportsRes.data as Pick<Sport, "id" | "name">[] | null) ?? []).length > 0
       ? (sportsRes.data as Pick<Sport, "id" | "name">[])
       : [{ id: "futbol", name: "Fútbol" }];
+
+  // Visibilidad unificada para la vista previa (incluye los 20 field_keys).
+  const visibility: Record<ProfileFieldKey, VisibilityLevel> = {
+    ...identityVisibility,
+    ...morphoVisibility,
+    ...conditionalVisibility,
+    ...techVisibility,
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -56,25 +133,78 @@ export default async function ProfileEditPage() {
         </p>
       </header>
 
-      <nav
-        aria-label="Bloques del perfil"
-        className="flex flex-wrap items-center gap-2 rounded-xl border bg-background p-3 text-xs"
-      >
-        <span className="font-medium text-foreground">Bloque activo:</span>
-        <Badge>1 · Identidad</Badge>
-        <span className="text-muted-foreground">·</span>
-        <Badge variant="outline">2 · Morfológico (próx.)</Badge>
-        <Badge variant="outline">3 · Capacidades (próx.)</Badge>
-        <Badge variant="outline">4 · Destrezas fútbol (próx.)</Badge>
-      </nav>
+      <ProfileTabs active={active} />
 
-      <section className="rounded-xl border bg-background p-5">
-        <IdentityEditorForm
-          profile={profile}
-          visibility={visibility}
-          sports={sports}
-          softSkills={softSkills.map((s) => ({ id: s.id, label: s.label }))}
-        />
+      <section
+        aria-label={TITLES[active]}
+        className="rounded-xl border bg-background p-5"
+      >
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">
+          {TITLES[active]}
+        </h2>
+
+        {active === "identidad" ? (
+          <IdentityEditorForm
+            profile={identityProfile}
+            visibility={identityVisibility}
+            sports={sports}
+            softSkills={softSkills.map((s: SkillTag) => ({
+              id: s.id,
+              label: s.label,
+            }))}
+          />
+        ) : null}
+
+        {active === "morfo" ? (
+          <MorphoEditorForm
+            profile={morphoProfile}
+            visibility={morphoVisibility}
+          />
+        ) : null}
+
+        {active === "condicional" ? (
+          <ConditionalEditorForm
+            profile={conditionalProfile}
+            visibility={conditionalVisibility}
+            strengthTags={strengthTags}
+            speedTags={speedTags}
+            enduranceTags={enduranceTags}
+            flexibilityTags={flexibilityTags}
+          />
+        ) : null}
+
+        {active === "tecnico" ? (
+          <TechnicalFootballEditorForm
+            profile={techProfile}
+            visibility={techVisibility}
+          />
+        ) : null}
+
+        {active === "preview" ? (
+          <ProfilePreview
+            core={identityProfile}
+            morpho={morphoProfile}
+            conditional={conditionalProfile}
+            technicalFootball={techProfile}
+            visibility={visibility}
+            sportsById={Object.fromEntries(sports.map((s) => [s.id, s.name]))}
+            softSkillsById={Object.fromEntries(
+              softSkills.map((s: SkillTag) => [s.id, s.label]),
+            )}
+            strengthTagsById={Object.fromEntries(
+              strengthTags.map((t) => [t.id, t.label]),
+            )}
+            speedTagsById={Object.fromEntries(
+              speedTags.map((t) => [t.id, t.label]),
+            )}
+            enduranceTagsById={Object.fromEntries(
+              enduranceTags.map((t) => [t.id, t.label]),
+            )}
+            flexibilityTagsById={Object.fromEntries(
+              flexibilityTags.map((t) => [t.id, t.label]),
+            )}
+          />
+        ) : null}
       </section>
     </div>
   );

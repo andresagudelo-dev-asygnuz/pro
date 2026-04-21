@@ -12,6 +12,9 @@ import {
   reviewVerificationSchema,
   identityBlockSchema,
   fieldVisibilitySchema,
+  morphologicalBlockSchema,
+  conditionalBlockSchema,
+  technicalFootballBlockSchema,
 } from "@/lib/validation/schemas";
 
 const UUID = "00000000-0000-4000-8000-000000000000";
@@ -535,9 +538,23 @@ describe("fieldVisibilitySchema", () => {
     expect(r.success).toBe(true);
   });
 
-  it("rechaza field_keys fuera del bloque identity (vendrán en PR C)", () => {
+  it("acepta field_keys de bloques 2/3/4 (PR C)", () => {
+    for (const key of [
+      "morpho.height_m",
+      "conditional.strength",
+      "technical.football.position",
+    ]) {
+      const r = fieldVisibilitySchema.safeParse({
+        field_key: key,
+        level: "privado",
+      });
+      expect(r.success).toBe(true);
+    }
+  });
+
+  it("rechaza field_keys fuera del catálogo (typo o inexistente)", () => {
     const r = fieldVisibilitySchema.safeParse({
-      field_key: "morpho.height_m",
+      field_key: "morpho.foo_bar",
       level: "privado",
     });
     expect(r.success).toBe(false);
@@ -555,6 +572,157 @@ describe("fieldVisibilitySchema", () => {
     const r = fieldVisibilitySchema.safeParse({
       field_key: "identity.city",
       level: "público",
+    });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("morphologicalBlockSchema", () => {
+  it("acepta todos los campos vacíos (bloque opcional)", () => {
+    const r = morphologicalBlockSchema.safeParse({});
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.height_m).toBeNull();
+    expect(r.data.weight_kg).toBeNull();
+    expect(r.data.wingspan_m).toBeNull();
+    expect(r.data.laterality).toBeNull();
+    expect(r.data.somatotype).toBeNull();
+  });
+
+  it("acepta valores válidos dentro del rango y redondea a 2 decimales", () => {
+    const r = morphologicalBlockSchema.safeParse({
+      height_m: "1.885",
+      weight_kg: "82.1",
+      wingspan_m: "1.95",
+      laterality: "diestro",
+      somatotype: "mesomorfo",
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.height_m).toBe(1.89);
+    expect(r.data.weight_kg).toBe(82.1);
+    expect(r.data.wingspan_m).toBe(1.95);
+    expect(r.data.laterality).toBe("diestro");
+    expect(r.data.somatotype).toBe("mesomorfo");
+  });
+
+  it("normaliza ',' como separador decimal", () => {
+    const r = morphologicalBlockSchema.safeParse({
+      height_m: "1,88",
+      weight_kg: "82,5",
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.height_m).toBe(1.88);
+    expect(r.data.weight_kg).toBe(82.5);
+  });
+
+  it("rechaza estatura fuera de rango (>2.50)", () => {
+    const r = morphologicalBlockSchema.safeParse({ height_m: "3.0" });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza peso fuera de rango (<30)", () => {
+    const r = morphologicalBlockSchema.safeParse({ weight_kg: "10" });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza valores no numéricos", () => {
+    const r = morphologicalBlockSchema.safeParse({ height_m: "abc" });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza enums fuera del catálogo", () => {
+    const r = morphologicalBlockSchema.safeParse({
+      laterality: "zurdo-y-diestro",
+    });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("conditionalBlockSchema", () => {
+  it("acepta bloque vacío (tags y notes opcionales)", () => {
+    const r = conditionalBlockSchema.safeParse({});
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.strength_tags_raw).toEqual([]);
+    expect(r.data.strength_notes).toBeNull();
+  });
+
+  it("parsea CSV a array, deduplica y limpia espacios", () => {
+    const r = conditionalBlockSchema.safeParse({
+      strength_tags_raw: "fuerza-explosiva, fuerza-resistencia , fuerza-explosiva",
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.strength_tags_raw).toEqual([
+      "fuerza-explosiva",
+      "fuerza-resistencia",
+    ]);
+  });
+
+  it("rechaza >10 tags en un grupo", () => {
+    const tooMany = Array.from({ length: 11 }, (_, i) => `tag-${i}`).join(",");
+    const r = conditionalBlockSchema.safeParse({ strength_tags_raw: tooMany });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza notas >400 chars", () => {
+    const r = conditionalBlockSchema.safeParse({
+      speed_notes: "a".repeat(401),
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("acepta notas hasta 400 chars", () => {
+    const r = conditionalBlockSchema.safeParse({
+      endurance_notes: "a".repeat(400),
+    });
+    expect(r.success).toBe(true);
+  });
+});
+
+describe("technicalFootballBlockSchema", () => {
+  it("acepta posición + pierna válidas", () => {
+    const r = technicalFootballBlockSchema.safeParse({
+      position: "delantero",
+      dominant_foot: "derecho",
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.position).toBe("delantero");
+    expect(r.data.dominant_foot).toBe("derecho");
+    expect(r.data.performance_notes).toBeNull();
+    expect(r.data.tactical_role_notes).toBeNull();
+  });
+
+  it("rechaza bloque sin posición (requerido por DB NOT NULL)", () => {
+    const r = technicalFootballBlockSchema.safeParse({
+      dominant_foot: "derecho",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza bloque sin pierna dominante (requerido)", () => {
+    const r = technicalFootballBlockSchema.safeParse({
+      position: "delantero",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza posición fuera del enum DB", () => {
+    const r = technicalFootballBlockSchema.safeParse({
+      position: "portero",
+      dominant_foot: "derecho",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rechaza notas >1000 chars", () => {
+    const r = technicalFootballBlockSchema.safeParse({
+      position: "delantero",
+      dominant_foot: "derecho",
+      performance_notes: "a".repeat(1001),
     });
     expect(r.success).toBe(false);
   });

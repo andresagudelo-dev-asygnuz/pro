@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { SkillLevel, VisibilityLevel } from "@/lib/types/db";
-import { IDENTITY_FIELD_KEYS } from "@/lib/types/db";
+import {
+  IDENTITY_FIELD_KEYS,
+  ALL_PROFILE_FIELD_KEYS,
+} from "@/lib/types/db";
 
 /**
  * Schemas centralizados de validación de FormData para server actions.
@@ -381,19 +384,217 @@ export const identityBlockSchema = z
   });
 
 /**
- * Visibilidad por campo (HU-003 §1 / ADR-002).
+ * Visibilidad por campo (HU-003 / ADR-002).
  *
- * El `field_key` debe pertenecer al catálogo `visibility_fields`. Para PR B
- * lo acotamos al bloque 1 (identity.*); PR C/D ampliarán a morpho/conditional/
- * technical.football.
+ * Acepta cualquier `field_key` del catálogo `visibility_fields` (20 keys
+ * repartidas en 4 bloques: identity, morpho, conditional, technical.football).
+ *
+ * Para validaciones *por bloque* (identity-only, morpho-only, etc.), usar
+ * `identityFieldVisibilitySchema`, `morphoFieldVisibilitySchema`, etc.
  */
 export const fieldVisibilitySchema = z.object({
+  field_key: z.enum(ALL_PROFILE_FIELD_KEYS, {
+    error: () => ({ message: "Campo inválido." }),
+  }),
+  level: z.enum(VISIBILITY_LEVEL_VALUES, {
+    error: () => ({ message: "Nivel de visibilidad inválido." }),
+  }),
+});
+
+/** Visibilidad acotada a Bloque 1 (identity.*). */
+export const identityFieldVisibilitySchema = z.object({
   field_key: z.enum(IDENTITY_FIELD_KEYS, {
     error: () => ({ message: "Campo inválido." }),
   }),
   level: z.enum(VISIBILITY_LEVEL_VALUES, {
     error: () => ({ message: "Nivel de visibilidad inválido." }),
   }),
+});
+
+// ---------------------------------------------------------------------------
+// Perfil · Bloque 2 Morfológico (HU-003 PR C).
+//
+// Refleja los CHECK constraints de `public.profiles_morpho`:
+//   height_m   numeric(3,2)  1.00..2.50
+//   weight_kg  numeric(5,2)  30..200
+//   wingspan_m numeric(3,2)  1.00..2.80
+//   laterality public.laterality
+//   somatotype public.somatotype
+// Todos los campos son opcionales (Bloque 2 es 0..1): vacío ⇒ null.
+// ---------------------------------------------------------------------------
+
+const LATERALITY_ENUM = ["diestro", "zurdo", "ambos"] as const;
+const SOMATOTYPE_ENUM = [
+  "ectomorfo",
+  "mesomorfo",
+  "endomorfo",
+  "mixto",
+] as const;
+
+function optionalNumeric(opts: {
+  min: number;
+  max: number;
+  field: string;
+}): z.ZodType<number | null, unknown> {
+  const { min, max, field } = opts;
+  return z
+    .union([z.string(), z.number(), z.undefined(), z.null()])
+    .transform((v, ctx) => {
+      if (v === undefined || v === null || v === "") return null;
+      const str = typeof v === "number" ? String(v) : v.trim();
+      if (str.length === 0) return null;
+      // Aceptar tanto "1.80" como "1,80" (coma decimal).
+      const normalized = str.replace(",", ".");
+      const n = Number(normalized);
+      if (!Number.isFinite(n)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${field} inválido (debe ser un número).`,
+        });
+        return z.NEVER;
+      }
+      if (n < min || n > max) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${field} fuera de rango (${min}..${max}).`,
+        });
+        return z.NEVER;
+      }
+      // Redondear a 2 decimales para alinear con numeric(_,2).
+      return Math.round(n * 100) / 100;
+    });
+}
+
+export const morphologicalBlockSchema = z.object({
+  height_m: optionalNumeric({ min: 1.0, max: 2.5, field: "Estatura" }),
+  weight_kg: optionalNumeric({ min: 30, max: 200, field: "Peso" }),
+  wingspan_m: optionalNumeric({ min: 1.0, max: 2.8, field: "Envergadura" }),
+  laterality: z
+    .union([z.string(), z.undefined(), z.null()])
+    .transform((v, ctx) => {
+      if (v === undefined || v === null || v === "") return null;
+      const s = typeof v === "string" ? v.trim().toLowerCase() : "";
+      if ((LATERALITY_ENUM as readonly string[]).includes(s)) {
+        return s as (typeof LATERALITY_ENUM)[number];
+      }
+      ctx.addIssue({ code: "custom", message: "Lateralidad inválida." });
+      return z.NEVER;
+    }),
+  somatotype: z
+    .union([z.string(), z.undefined(), z.null()])
+    .transform((v, ctx) => {
+      if (v === undefined || v === null || v === "") return null;
+      const s = typeof v === "string" ? v.trim().toLowerCase() : "";
+      if ((SOMATOTYPE_ENUM as readonly string[]).includes(s)) {
+        return s as (typeof SOMATOTYPE_ENUM)[number];
+      }
+      ctx.addIssue({ code: "custom", message: "Somatotipo inválido." });
+      return z.NEVER;
+    }),
+});
+
+// ---------------------------------------------------------------------------
+// Perfil · Bloque 3 Capacidades Condicionales (HU-003 PR C).
+//
+// 4 grupos (strength, speed, endurance, flexibility). Cada uno con:
+//   *_tags_raw  string CSV (opcional) → array[text] limit 10
+//   *_notes     string (opcional) 0..400 chars
+// Los tags se validan contra `skill_tags` server-side (category matching).
+// ---------------------------------------------------------------------------
+
+function tagsRawSchema(field: string): z.ZodType<string[], string | undefined> {
+  return z
+    .string()
+    .trim()
+    .max(400, `${field}: demasiadas habilidades seleccionadas.`)
+    .optional()
+    .transform((v, ctx) => {
+      if (!v) return [] as string[];
+      const arr = Array.from(
+        new Set(
+          v
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0),
+        ),
+      );
+      if (arr.length > 10) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${field}: máx 10 habilidades por grupo.`,
+        });
+        return z.NEVER;
+      }
+      return arr;
+    });
+}
+
+function notesSchema(field: string): z.ZodType<string | null, string | undefined> {
+  return z
+    .string()
+    .trim()
+    .max(400, `${field}: máx 400 caracteres.`)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null));
+}
+
+export const conditionalBlockSchema = z.object({
+  strength_tags_raw: tagsRawSchema("Fuerza"),
+  strength_notes: notesSchema("Fuerza"),
+  speed_tags_raw: tagsRawSchema("Velocidad"),
+  speed_notes: notesSchema("Velocidad"),
+  endurance_tags_raw: tagsRawSchema("Resistencia"),
+  endurance_notes: notesSchema("Resistencia"),
+  flexibility_tags_raw: tagsRawSchema("Flexibilidad"),
+  flexibility_notes: notesSchema("Flexibilidad"),
+});
+
+// ---------------------------------------------------------------------------
+// Perfil · Bloque 4 Destrezas Técnicas Fútbol (HU-003 PR C).
+//
+// position        public.football_position (arquero|defensa|mediocampista|delantero) · required
+// dominant_foot   public.dominant_foot (derecho|izquierdo|ambos) · required
+// performance_notes  text 0..1000 chars · optional
+// tactical_role_notes text 0..1000 chars · optional
+// ---------------------------------------------------------------------------
+
+const FOOTBALL_POSITION_ENUM = [
+  "arquero",
+  "defensa",
+  "mediocampista",
+  "delantero",
+] as const;
+const DOMINANT_FOOT_ENUM = ["derecho", "izquierdo", "ambos"] as const;
+
+export const technicalFootballBlockSchema = z.object({
+  position: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine(
+      (v) => (FOOTBALL_POSITION_ENUM as readonly string[]).includes(v),
+      "Elegí una posición válida.",
+    ),
+  dominant_foot: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine(
+      (v) => (DOMINANT_FOOT_ENUM as readonly string[]).includes(v),
+      "Elegí un pie hábil válido.",
+    ),
+  performance_notes: z
+    .string()
+    .trim()
+    .max(1000, "Rendimiento individual: máx 1000 caracteres.")
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  tactical_role_notes: z
+    .string()
+    .trim()
+    .max(1000, "Rol táctico: máx 1000 caracteres.")
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
 });
 
 /**
