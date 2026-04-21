@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldWithVisibility } from "@/components/profile/field-with-visibility";
@@ -47,18 +47,19 @@ export function MorphoEditorForm({ profile, visibility }: Props) {
 
   const fieldErrors = state.fieldErrors ?? {};
 
-  // Re-render defaults al recargar datos post-save (p. ej. cambiaste valor y
-  // el server persistió). No usamos reset() porque los defaultValues se
-  // regeneran con el prop `profile` al revalidar la ruta.
-  useEffect(() => {
-    if (state.savedAt) {
-      // noop: el revalidatePath del server action hace que el server
-      // component padre re-fetchee profile y re-monte este form.
-    }
-  }, [state.savedAt]);
+  // Re-mount del <form> tras save exitoso: los `<input defaultValue>` y
+  // `<select defaultValue>` son uncontrolled y React sólo aplica
+  // `defaultValue` en el mount inicial. Sin esta key, después de guardar
+  // los campos siguen mostrando el valor pre-submit hasta un F5.
+  const formKey = state.savedAt ?? "initial";
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-6">
+    <form
+      key={formKey}
+      ref={formRef}
+      action={formAction}
+      className="flex flex-col gap-6"
+    >
       <FieldWithVisibility
         fieldKey="morpho.height_m"
         label="Estatura (m)"

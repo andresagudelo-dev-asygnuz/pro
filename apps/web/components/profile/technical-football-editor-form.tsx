@@ -56,8 +56,12 @@ export function TechnicalFootballEditorForm({ profile, visibility }: Props) {
   );
   const fieldErrors = state.fieldErrors ?? {};
 
+  // Re-mount tras save exitoso para que los `<select defaultValue>` y
+  // `<Textarea defaultValue>` apliquen los valores nuevos del server.
+  const formKey = state.savedAt ?? "initial";
+
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form key={formKey} action={formAction} className="flex flex-col gap-6">
       <FieldWithVisibility
         fieldKey="technical.football.position"
         label="Posición principal"

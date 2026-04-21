@@ -49,8 +49,13 @@ export function ConditionalEditorForm({
   );
   const fieldErrors = state.fieldErrors ?? {};
 
+  // Re-mount tras save exitoso: fuerza remount de cada TagGroup
+  // (useState inicializa desde `initialTags` fresh) y de los
+  // `<Textarea defaultValue>` con las notas guardadas.
+  const formKey = state.savedAt ?? "initial";
+
   return (
-    <form action={formAction} className="flex flex-col gap-8">
+    <form key={formKey} action={formAction} className="flex flex-col gap-8">
       <TagGroup
         fieldKey="conditional.strength"
         label="Fuerza (explosiva / resistencia)"
