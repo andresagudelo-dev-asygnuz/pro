@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { VisibilitySelect } from "@/components/profile/visibility-select";
-import type { IdentityFieldKey, VisibilityLevel } from "@/lib/types/db";
+import type { ProfileFieldKey, VisibilityLevel } from "@/lib/types/db";
 
 type Props = {
   /** `field_key` del catálogo `visibility_fields` (ADR-002). */
-  fieldKey: IdentityFieldKey;
+  fieldKey: ProfileFieldKey;
   /** Label visible del field, renderizado como `<label>` del input principal. */
   label: string;
   /** ID del input principal para vincular con el `<label>`. */

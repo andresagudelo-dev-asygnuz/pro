@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAgeVerificationAprobada } from "@/lib/auth/age-verification";
 import {
   fieldVisibilitySchema,
+  identityFieldVisibilitySchema,
   formDataToObject,
   identityBlockSchema,
   zFieldErrors,
@@ -130,7 +131,7 @@ export async function saveIdentityBlock(
   // --- Validar visibilidad por campo contra schema --------------------
   const visibilityByKey: Partial<Record<IdentityFieldKey, VisibilityLevel>> = {};
   for (const [field_key, level] of Object.entries(visibilityInput)) {
-    const parsedVis = fieldVisibilitySchema.safeParse({ field_key, level });
+    const parsedVis = identityFieldVisibilitySchema.safeParse({ field_key, level });
     if (!parsedVis.success) {
       return {
         error: "Revisá los campos marcados.",
