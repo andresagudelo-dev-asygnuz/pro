@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JoinForm } from "@/components/match/join-form";
 import { MatchChat } from "@/components/match/match-chat";
+import { RequestManagement } from "@/components/match/request-management";
+import { InviteUser } from "@/components/match/invite-user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -68,8 +70,13 @@ export default async function MatchPage({
   const participantProfiles = (participantProfilesRaw ?? []) as Profile[];
   const profilesById = new Map(participantProfiles.map((p) => [p.id, p]));
 
-  const joinedCount = participantRows.length;
-  const isJoined = participantRows.some((p) => p.user_id === profile.id);
+  const joinedCount = participantRows.filter((p) => p.status === "joined").length;
+  const isJoined = participantRows.some(
+    (p) => p.user_id === profile.id && p.status === "joined",
+  );
+  const isRequested = participantRows.some(
+    (p) => p.user_id === profile.id && p.status === "requested",
+  );
   const isOrganizer = match.organizer_id === profile.id;
   const isFull = joinedCount >= match.max_players && !isJoined;
 
@@ -86,10 +93,25 @@ export default async function MatchPage({
     authorsById[p.id] = p.full_name ?? p.username ?? null;
   }
 
+  const pendingRequests = participantRows
+    .filter((p) => p.status === "requested")
+    .map((p) => {
+      const pp = profilesById.get(p.user_id);
+      return {
+        user_id: p.user_id,
+        full_name: pp?.full_name ?? null,
+        username: pp?.username ?? null,
+        avatar_url: pp?.avatar_url ?? null,
+      };
+    });
+
   const canChat = isJoined || isOrganizer;
 
   return (
     <div className="flex flex-col gap-6">
+      {isOrganizer && pendingRequests.length > 0 && (
+        <RequestManagement matchId={match.id} requests={pendingRequests} />
+      )}
       <header className="flex flex-col gap-3 rounded-xl border bg-background p-6 shadow-sm">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{sport?.icon}</span>
@@ -118,6 +140,7 @@ export default async function MatchPage({
             <JoinForm
               matchId={match.id}
               isJoined={isJoined}
+              isRequested={isRequested}
               disabled={isFull || isOrganizer}
             />
           </div>
@@ -163,47 +186,58 @@ export default async function MatchPage({
       </header>
 
       <section className="rounded-xl border bg-background p-6 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold">
-          Jugadores ({joinedCount}/{match.max_players})
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">
+            Jugadores ({joinedCount}/{match.max_players})
+          </h2>
+        </div>
+
+        {isOrganizer && joinedCount < match.max_players && (
+          <InviteUser matchId={match.id} />
+        )}
+
+        <div className="mt-4 flex flex-col gap-2">
         <ul className="flex flex-col gap-2">
-          {participantRows.length === 0 && (
+          {participantRows.filter(p => p.status === 'joined').length === 0 && (
             <li className="text-sm text-muted-foreground">
               Nadie se unió todavía.
             </li>
           )}
-          {participantRows.map((p) => {
-            const pp = profilesById.get(p.user_id);
-            if (!pp) return null;
-            return (
-              <li key={p.user_id}>
-                <Link
-                  href={`/profile/${pp.id}`}
-                  className="flex items-center gap-3 rounded-md p-2 hover:bg-muted"
-                >
-                  <Avatar className="size-8">
-                    {pp.avatar_url && (
-                      <AvatarImage src={pp.avatar_url} alt="" />
-                    )}
-                    <AvatarFallback>
-                      {initialsFromName(pp.full_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm">
-                      {pp.full_name ?? pp.username ?? "—"}
-                    </span>
-                    {pp.rating_count > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        ★ {pp.rating_avg} ({pp.rating_count})
+          {participantRows
+            .filter(p => p.status === 'joined')
+            .map((p) => {
+              const pp = profilesById.get(p.user_id);
+              if (!pp) return null;
+              return (
+                <li key={p.user_id}>
+                  <Link
+                    href={`/profile/${pp.id}`}
+                    className="flex items-center gap-3 rounded-md p-2 hover:bg-muted"
+                  >
+                    <Avatar className="size-8">
+                      {pp.avatar_url && (
+                        <AvatarImage src={pp.avatar_url} alt="" />
+                      )}
+                      <AvatarFallback>
+                        {initialsFromName(pp.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-sm">
+                        {pp.full_name ?? pp.username ?? "—"}
                       </span>
-                    )}
-                  </div>
-                </Link>
-              </li>
-            );
+                      {pp.rating_count > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          ★ {pp.rating_avg} ({pp.rating_count})
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              );
           })}
         </ul>
+        </div>
       </section>
 
       <section className="rounded-xl border bg-background p-6 shadow-sm">

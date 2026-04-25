@@ -22,9 +22,11 @@ const initialState: MatchFormState = {};
 
 export function MatchForm({
   sports,
+  venues = [],
   defaultCity,
 }: {
   sports: Sport[];
+  venues?: any[];
   defaultCity: string;
 }) {
   const [state, formAction, pending] = useActionState(
@@ -56,11 +58,13 @@ export function MatchForm({
               <SelectValue placeholder="Elegí deporte" />
             </SelectTrigger>
             <SelectContent>
-              {sports.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.icon} {s.name}
-                </SelectItem>
-              ))}
+              {sports
+                .filter((s) => s.id === "futbol")
+                .map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.icon} {s.name}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
           {err.sport_id && (
@@ -98,12 +102,32 @@ export function MatchForm({
           {err.city && <p className="text-xs text-destructive">{err.city}</p>}
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="location">Lugar / cancha</Label>
+          <Label>Lugar / Cancha</Label>
+          <Select name="court_id" defaultValue="manual">
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Elegí una cancha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="manual">Ingresar manualmente</SelectItem>
+              {venues.map((v) => (
+                <div key={v.id}>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30">
+                    {v.name} ({v.city})
+                  </div>
+                  {v.venue_courts?.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} (Cap: {c.capacity_players})
+                    </SelectItem>
+                  ))}
+                </div>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             id="location"
             name="location"
-            required
-            placeholder="Cancha Central, Av. Siempre Viva 123"
+            placeholder="O ingresá ubicación manual..."
+            className="mt-1"
             aria-invalid={Boolean(err.location) || undefined}
           />
           {err.location && (
