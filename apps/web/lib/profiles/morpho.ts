@@ -19,14 +19,14 @@ import { MORPHO_FIELD_KEYS } from "@/lib/types/db";
  */
 
 export const getMorphoProfile = cache(
-  async (): Promise<ProfileMorpho | null> => {
-    const user = await getUser();
-    if (!user) return null;
+  async (userId?: string): Promise<ProfileMorpho | null> => {
+    const uid = userId ?? (await getUser())?.id;
+    if (!uid) return null;
     const supabase = await createClient();
     const { data } = await supabase
       .from("profiles_morpho")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", uid)
       .maybeSingle();
     return (data as ProfileMorpho | null) ?? null;
   },
@@ -46,16 +46,16 @@ export const getMorphoVisibilityCatalog = cache(
 );
 
 export const getMorphoVisibility = cache(
-  async (): Promise<Record<MorphoFieldKey, VisibilityLevel>> => {
-    const user = await getUser();
+  async (userId?: string): Promise<Record<MorphoFieldKey, VisibilityLevel>> => {
+    const uid = userId ?? (await getUser())?.id;
     const catalog = await getMorphoVisibilityCatalog();
     const defaults = defaultsFromCatalog(catalog);
-    if (!user) return defaults;
+    if (!uid) return defaults;
     const supabase = await createClient();
     const { data } = await supabase
       .from("profile_field_visibility")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", uid)
       .in("field_key", [...MORPHO_FIELD_KEYS]);
     const rows = (data as ProfileFieldVisibility[] | null) ?? [];
     for (const row of rows) {
