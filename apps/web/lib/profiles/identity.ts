@@ -20,28 +20,45 @@ import { IDENTITY_FIELD_KEYS } from "@/lib/types/db";
  */
 
 export const getIdentityProfile = cache(
-  async (): Promise<ProfileCore | null> => {
-    const user = await getUser();
-    if (!user) return null;
+  async (userId?: string): Promise<ProfileCore | null> => {
+    const uid = userId ?? (await getUser())?.id;
+    if (!uid) return null;
+
     const supabase = await createClient();
     const { data } = await supabase
       .from("profiles_core")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", uid)
+      .maybeSingle();
+    return (data as ProfileCore | null) ?? null;
+  },
+);
+
+/**
+ * Busca un perfil por slug. Útil para la vista pública `/u/[slug]`.
+ */
+export const getIdentityProfileBySlug = cache(
+  async (slug: string): Promise<ProfileCore | null> => {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("profiles_core")
+      .select("*")
+      .eq("slug", slug)
       .maybeSingle();
     return (data as ProfileCore | null) ?? null;
   },
 );
 
 export const getIdentityVisibility = cache(
-  async (): Promise<Record<IdentityFieldKey, VisibilityLevel>> => {
-    const user = await getUser();
-    if (!user) return defaultsFromCatalog(await getIdentityVisibilityCatalog());
+  async (userId?: string): Promise<Record<IdentityFieldKey, VisibilityLevel>> => {
+    const uid = userId ?? (await getUser())?.id;
+    if (!uid) return defaultsFromCatalog(await getIdentityVisibilityCatalog());
+
     const supabase = await createClient();
     const { data } = await supabase
       .from("profile_field_visibility")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", uid)
       .in("field_key", [...IDENTITY_FIELD_KEYS]);
 
     const rows = (data as ProfileFieldVisibility[] | null) ?? [];
