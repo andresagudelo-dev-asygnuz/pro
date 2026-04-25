@@ -17,14 +17,14 @@ import { CONDITIONAL_FIELD_KEYS } from "@/lib/types/db";
  */
 
 export const getConditionalProfile = cache(
-  async (): Promise<ProfileConditional | null> => {
-    const user = await getUser();
-    if (!user) return null;
+  async (userId?: string): Promise<ProfileConditional | null> => {
+    const uid = userId ?? (await getUser())?.id;
+    if (!uid) return null;
     const supabase = await createClient();
     const { data } = await supabase
       .from("profiles_conditional")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", uid)
       .maybeSingle();
     return (data as ProfileConditional | null) ?? null;
   },
@@ -44,16 +44,18 @@ export const getConditionalVisibilityCatalog = cache(
 );
 
 export const getConditionalVisibility = cache(
-  async (): Promise<Record<ConditionalFieldKey, VisibilityLevel>> => {
-    const user = await getUser();
+  async (
+    userId?: string,
+  ): Promise<Record<ConditionalFieldKey, VisibilityLevel>> => {
+    const uid = userId ?? (await getUser())?.id;
     const catalog = await getConditionalVisibilityCatalog();
     const defaults = defaultsFromCatalog(catalog);
-    if (!user) return defaults;
+    if (!uid) return defaults;
     const supabase = await createClient();
     const { data } = await supabase
       .from("profile_field_visibility")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", uid)
       .in("field_key", [...CONDITIONAL_FIELD_KEYS]);
     const rows = (data as ProfileFieldVisibility[] | null) ?? [];
     for (const row of rows) {
@@ -74,6 +76,19 @@ export const getSkillTagsByCategory = cache(
       .from("skill_tags")
       .select("*")
       .eq("category", category)
+      .eq("active", true)
+      .order("label", { ascending: true });
+    return (data as SkillTag[] | null) ?? [];
+  },
+);
+
+export const getSkillTagsByCategories = cache(
+  async (categories: SkillTagCategory[]): Promise<SkillTag[]> => {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("skill_tags")
+      .select("*")
+      .in("category", categories)
       .eq("active", true)
       .order("label", { ascending: true });
     return (data as SkillTag[] | null) ?? [];

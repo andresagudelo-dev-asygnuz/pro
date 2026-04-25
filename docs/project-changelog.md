@@ -12,6 +12,7 @@ Bitácora **del producto** (negocio, alcance, gates y hitos de entrega). Mantene
 
 ## Unreleased
 
+- `[Construcción]` **G4 Sprint 2 finalizado**: Perfil tipo ficha con visibilidad configurable (HU-003). Implementados los 4 bloques del perfil, selector de visibilidad, vista previa por audiencia y vista pública `/u/[slug]` con filtrado de seguridad server-side.
 - `[Gate]` **G3 aprobado** vía merge de PR #9 (arquitectura + modelo de datos + 4 ADRs, con correcciones de Devin Review incluidas). `tasks/current-gate.txt` = `4`.
 - `[Construcción]` **G4 Sprint 1 iniciado**: HU-001 (registro con rol) + HU-002 (verificación de edad). Plan en `tasks/sprint-week-01.md`. PR A entregó DB foundation: migración `20260417130000_g4_sprint1_auth_age.sql` con `user_roles`, `age_verifications`, RLS, trigger de seed de roles, helper `ensure_verification_aprobada` y bucket privado Storage `age-verifications` (PR #10 mergeado). Confirmación del fundador: default `is_player = true`; principio "info básica pública / detalle logueado" aplica a torneos en HU-004/005.
 - `[Construcción]` **G4 Sprint 1 PR B (HU-001 registro con rol):** toggle jugador/promotor en `components/auth/signup-form.tsx`, `signUpSchema` Zod con `is_player`/`is_promoter` + refine "al menos un rol", `supabase.auth.signUp` pasa ambos flags en `options.data` (el trigger DB los consume). Tests unitarios de schema (`tests/lib/schemas.test.ts`) verde. PR #11 mergeado (post-fix: refine removido para alinear con default del trigger DB).
