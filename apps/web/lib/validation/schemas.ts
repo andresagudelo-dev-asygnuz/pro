@@ -646,3 +646,61 @@ export function formDataToObject(formData: FormData): Record<string, string> {
   }
   return obj;
 }
+
+// --- Torneos (HU-004) ---
+
+export const tournamentStatusEnum = z.enum([
+  "borrador",
+  "abierto_inscripciones",
+  "cerrado_inscripciones",
+  "cancelado",
+  "finalizado",
+]);
+
+export const tournamentFormatEnum = z.enum([
+  "liga",
+  "eliminatoria",
+  "fase_grupos_eliminatoria",
+]);
+
+export const categorySchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(2, "El nombre de categoría es muy corto"),
+  minAge: z.number().int().min(18).optional(),
+  maxAge: z.number().int().optional(),
+  sex: z.enum(["masculino", "femenino", "mixto"]).default("mixto"),
+});
+
+const tournamentBaseSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(3, "El nombre del torneo debe tener al menos 3 caracteres"),
+  format: tournamentFormatEnum.default("liga"),
+  slots: z.number().int().min(2, "Debe haber al menos 2 cupos").max(128, "Máximo 128 cupos"),
+  location: z.string().min(3, "La ubicación debe tener al menos 3 caracteres"),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD)"),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD)"),
+  status: tournamentStatusEnum.default("borrador"),
+  categories: z.array(categorySchema).default([]),
+});
+
+export const tournamentSchema = tournamentBaseSchema.superRefine((data, ctx) => {
+  if (new Date(data.endDate) < new Date(data.startDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha de fin no puede ser anterior a la de inicio",
+      path: ["endDate"],
+    });
+  }
+});
+
+export const tournamentCreateSchema = tournamentBaseSchema.omit({ id: true }).superRefine((data, ctx) => {
+  if (new Date(data.endDate) < new Date(data.startDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha de fin no puede ser anterior a la de inicio",
+      path: ["endDate"],
+    });
+  }
+});
+
+export type Tournament = z.infer<typeof tournamentSchema>;
