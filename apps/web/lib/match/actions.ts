@@ -124,7 +124,7 @@ export async function joinMatch(matchId: string): Promise<JoinResult> {
     // Defense-in-depth check previo al insert (el trigger es la garantía real).
     const { data: match, error: matchErr } = await supabase
       .from("matches")
-      .select("id, max_players, status")
+      .select("id, organizer_id, max_players, status")
       .eq("id", matchId)
       .single();
     if (matchErr || !match) {
