@@ -96,7 +96,7 @@ export function RegistrationForm() {
       trackEvent('registration_submit', { sport: values.sport });
       setIsSubmitted(true)
       toast.success("¡Bienvenido a la lista de espera!")
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving to waitlist:", error)
       toast.error("Hubo un error al registrarte. Inténtalo de nuevo.")
     } finally {

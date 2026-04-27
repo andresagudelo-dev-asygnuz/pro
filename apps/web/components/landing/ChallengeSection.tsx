@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react"
 import { gsap } from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import { FloatingBlob } from "./FloatingBlob"
 import { GlassContainer } from "./GlassContainer"
 import { Trophy, Users, Zap } from "lucide-react"
 
