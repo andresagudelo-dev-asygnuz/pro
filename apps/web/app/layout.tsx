@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://pro-web.vercel.app",
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://pro-sport.app",
   ),
   title: {
     default: "PRO — Comunidad deportiva",
@@ -40,21 +40,32 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "PRO",
     locale: "es",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PRO — Comunidad deportiva",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "PRO — Comunidad deportiva",
     description:
       "Encontrá con quién jugar tu próximo partido. Organizá y sumate a partidos cerca tuyo.",
+    images: ["/og-image.png"],
   },
   icons: {
-    icon: "/favicon.svg",
+    icon: "/favicon.png",
   },
   robots: {
     index: true,
     follow: true,
   },
 };
+
+import { CookieConsent } from "@/components/ui/cookie-consent";
 
 export default function RootLayout({
   children,
@@ -122,6 +133,7 @@ export default function RootLayout({
           />
         </noscript>
         {children}
+        <CookieConsent />
         <Toaster />
       </body>
     </html>
