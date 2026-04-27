@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Shield, Zap, Globe, Heart, Award, Layout } from "lucide-react";
+import { Layout, Award, Zap, Shield, Globe, Heart } from "lucide-react";
 import { FloatingBlobs } from "./floating-blobs";
 
 if (typeof window !== "undefined") {

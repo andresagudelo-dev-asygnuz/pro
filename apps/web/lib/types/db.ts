@@ -14,7 +14,7 @@ export type MatchStatus =
   | "completed"
   | "cancelled";
 
-export type ParticipantStatus = "joined" | "left" | "attended" | "no_show" | "requested" | "invited";
+export type ParticipantStatus = "joined" | "left" | "attended" | "no_show";
 
 export type AgeVerificationStatus =
   | "pendiente"

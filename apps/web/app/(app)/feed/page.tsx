@@ -12,7 +12,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 type MatchRow = Match & {
-  match_participants: { user_id: string; status: string }[];
+  match_participants: { user_id: string }[];
 };
 
 export default async function FeedPage() {
@@ -22,8 +22,7 @@ export default async function FeedPage() {
   const nowIso = new Date().toISOString();
   const { data: matchesRaw } = await supabase
     .from("matches")
-    .select("*, match_participants(user_id, status)")
-    .eq("sport_id", "futbol")
+    .select("*, match_participants(user_id)")
     .in("status", ["open", "full"])
     .gte("starts_at", nowIso)
     .order("starts_at", { ascending: true })
@@ -71,19 +70,10 @@ export default async function FeedPage() {
               key={m.id}
               match={m}
               sport={sports.get(m.sport_id) ?? null}
-              joined={
-                m.match_participants?.filter((p) => p.status === "joined")
-                  .length ?? 0
-              }
+              joined={m.match_participants?.length ?? 0}
               isJoined={
-                m.match_participants?.some(
-                  (p) => p.user_id === profile.id && p.status === "joined",
-                ) ?? false
-              }
-              isRequested={
-                m.match_participants?.some(
-                  (p) => p.user_id === profile.id && p.status === "requested",
-                ) ?? false
+                m.match_participants?.some((p) => p.user_id === profile.id) ??
+                false
               }
             />
           ))}

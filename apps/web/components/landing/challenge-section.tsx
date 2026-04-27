@@ -6,7 +6,9 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Trophy, Users, TrendingUp } from "lucide-react";
 import { FloatingBlobs } from "./floating-blobs";
 
-gsap.registerPlugin(ScrollTrigger);
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 export function ChallengeSection() {
   const sectionRef = useRef<HTMLDivElement>(null);

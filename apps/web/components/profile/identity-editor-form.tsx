@@ -241,13 +241,11 @@ export function IdentityEditorForm({
           disabled={pending}
           className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {sports
-            .filter((s) => s.id === "futbol")
-            .map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
+          {sports.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
         </select>
       </FieldWithVisibility>
 

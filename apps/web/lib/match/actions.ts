@@ -37,16 +37,6 @@ export async function createMatch(
     });
     if (!rl.ok) return { error: rl.error };
 
-    const courtId = formData.get("court_id") as string;
-    const manualLocation = formData.get("location") as string;
-
-    if ((!courtId || courtId === "manual") && !manualLocation) {
-      return {
-        error: "Revisá los campos marcados.",
-        fieldErrors: { location: "Indicá el lugar o seleccioná una cancha." },
-      };
-    }
-
     const { data, error } = await supabase
       .from("matches")
       .insert({
@@ -65,38 +55,6 @@ export async function createMatch(
       .single();
 
     if (error) return { error: mapDbError(error, "createMatch") };
-
-    // Si se seleccionó una cancha, crear la reserva
-    if (courtId && courtId !== "manual") {
-      const start = new Date(input.starts_at);
-      const end = new Date(start.getTime() + input.duration_minutes * 60000);
-
-      await supabase.from("venue_reservations").insert({
-        court_id: courtId,
-        match_id: data.id,
-        reserved_by: user.id,
-        starts_at: start.toISOString(),
-        ends_at: end.toISOString(),
-        status: "confirmed",
-      });
-
-      // Actualizar location con el nombre real de la cancha
-      const { data: court } = await supabase
-        .from("venue_courts")
-        .select("name, venue:venues(name)")
-        .eq("id", courtId)
-        .single();
-
-      if (court) {
-        const venueName = (court.venue as { name?: string })?.name;
-        await supabase
-          .from("matches")
-          .update({
-            location: `${venueName} - ${court.name}`,
-          })
-          .eq("id", data.id);
-      }
-    }
 
     // Auto-join al organizador como participante. Si falla el insert igual
     // devolvemos el match creado; el organizador puede refrescar y re-joinear.
@@ -124,7 +82,7 @@ export async function joinMatch(matchId: string): Promise<JoinResult> {
     // Defense-in-depth check previo al insert (el trigger es la garantía real).
     const { data: match, error: matchErr } = await supabase
       .from("matches")
-      .select("id, max_players, status, organizer_id")
+      .select("id, max_players, status")
       .eq("id", matchId)
       .single();
     if (matchErr || !match) {
@@ -145,7 +103,7 @@ export async function joinMatch(matchId: string): Promise<JoinResult> {
     const { error } = await supabase.from("match_participants").insert({
       match_id: matchId,
       user_id: user.id,
-      status: "requested",
+      status: "joined",
     });
 
     if (error) {
@@ -156,17 +114,6 @@ export async function joinMatch(matchId: string): Promise<JoinResult> {
       }
       return { ok: false, error: mapDbError(error, "joinMatch:insert") };
     }
-    // Notificar al organizador sobre la nueva solicitud
-    await supabase.from("notifications").insert({
-      user_id: match.organizer_id,
-      type: "match_request",
-      data: {
-        match_id: matchId,
-        player_id: user.id,
-        player_name: (await supabase.from('profiles_core').select('full_name').eq('user_id', user.id).single()).data?.full_name
-      },
-    });
-
     revalidatePath(`/matches/${matchId}`);
     revalidatePath("/feed");
     return { ok: true };
@@ -237,79 +184,6 @@ export async function cancelMatch(matchId: string): Promise<JoinResult> {
 
     revalidatePath(`/matches/${matchId}`);
     revalidatePath("/feed");
-    return { ok: true };
-  });
-}
-
-export async function respondToJoinRequest(
-  matchId: string,
-  userId: string,
-  decision: "joined" | "left",
-): Promise<JoinResult> {
-  return withAuth(async ({ user, supabase }) => {
-    // Verificar que el usuario actual es el organizador
-    const { data: match } = await supabase
-      .from("matches")
-      .select("organizer_id")
-      .eq("id", matchId)
-      .single();
-
-    if (match?.organizer_id !== user.id) {
-      return { ok: false, error: "Solo el organizador puede aprobar solicitudes." };
-    }
-
-    const { error } = await supabase
-      .from("match_participants")
-      .update({ status: decision })
-      .eq("match_id", matchId)
-      .eq("user_id", userId);
-
-    if (error) return { ok: false, error: mapDbError(error, "respondToJoinRequest") };
-
-    // Notificar al usuario (opcional, implementar tabla notifications)
-    if (decision === "joined") {
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        type: "match_accepted",
-        data: { match_id: matchId },
-      });
-    }
-
-    revalidatePath(`/matches/${matchId}`);
-    return { ok: true };
-  });
-}
-
-export async function inviteToMatch(
-  matchId: string,
-  userId: string,
-): Promise<JoinResult> {
-  return withAuth(async ({ user, supabase }) => {
-    const { data: match } = await supabase
-      .from("matches")
-      .select("organizer_id")
-      .eq("id", matchId)
-      .single();
-
-    if (match?.organizer_id !== user.id) {
-      return { ok: false, error: "Solo el organizador puede enviar invitaciones." };
-    }
-
-    const { error } = await supabase.from("match_participants").insert({
-      match_id: matchId,
-      user_id: userId,
-      status: "invited",
-    });
-
-    if (error) return { ok: false, error: mapDbError(error, "inviteToMatch") };
-
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      type: "match_invite",
-      data: { match_id: matchId, invited_by: user.id },
-    });
-
-    revalidatePath(`/matches/${matchId}`);
     return { ok: true };
   });
 }
