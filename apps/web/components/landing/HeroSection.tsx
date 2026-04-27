@@ -3,7 +3,7 @@
 import { VideoBackground } from "./VideoBackground"
 import { FloatingBlob } from "./FloatingBlob"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, MousePointer2 } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { trackEvent } from "@/lib/analytics"
 
 export function HeroSection() {

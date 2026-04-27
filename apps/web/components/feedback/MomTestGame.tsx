@@ -56,7 +56,6 @@ interface GameData {
 
 export default function MomTestGame() {
   const [currentStep, setCurrentStep] = useState<Step>("intro");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [data, setData] = useState<GameData>({
@@ -110,6 +109,15 @@ export default function MomTestGame() {
     return () => ctx.revert();
   }, [currentStep, progress]);
 
+  useEffect(() => {
+    if (currentStep === "thanks") {
+      trackEvent('game_finish');
+      fireConfetti();
+      const timer = setTimeout(fireConfetti, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep]);
+
   const nextStep = (customNext?: Step) => {
     const nextIdx = currentStepIndex + 1;
     const nextStepName = customNext || stepsOrder[nextIdx];
@@ -129,8 +137,8 @@ export default function MomTestGame() {
     }
   };
 
-  const handleSelection = (field: keyof GameData, value: any) => {
-    setData(prev => ({ ...prev, [field]: value }));
+  const handleSelection = (field: keyof GameData, value: unknown) => {
+    setData(prev => ({ ...prev, [field]: value as never }));
   };
 
   const fireConfetti = () => {
@@ -156,11 +164,10 @@ export default function MomTestGame() {
   };
 
   const handleSubmit = async (isFinal: boolean = false) => {
-    setIsSubmitting(true);
     console.log("Intentando guardar datos:", data);
 
     try {
-      const { error, data: insertedData } = await supabase
+      const { error } = await supabase
         .from("market_validation_responses")
         .insert([{
           name: data.name,
@@ -202,11 +209,10 @@ export default function MomTestGame() {
       } else {
         nextStep("thanks");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error completo:", err);
-      alert(`Error al guardar: ${err.message || "Problema de conexión"}`);
-    } finally {
-      setIsSubmitting(false);
+      const errorMessage = err instanceof Error ? err.message : "Problema de conexión";
+      alert(`Error al guardar: ${errorMessage}`);
     }
   };
 
@@ -238,7 +244,7 @@ export default function MomTestGame() {
       setCheckingEmail(true);
       
       try {
-        const { data: existing, error } = await supabase
+        const { data: existing } = await supabase
           .from("market_validation_responses")
           .select("id")
           .eq("email", data.email)
@@ -252,7 +258,7 @@ export default function MomTestGame() {
 
         trackEvent('game_contact_submit');
         nextStep();
-      } catch (err) {
+      } catch {
         // Si no se encuentra (error PGRST116), podemos continuar
         nextStep();
       } finally {
@@ -433,7 +439,7 @@ export default function MomTestGame() {
           { id: "digital_payment", label: "Prefiero pagar todo digital (Nequi, Tarjeta)", icon: Zap },
           { id: "bad_experience_unknowns", label: "He jugado con desconocidos y fue mala experiencia", icon: AlertTriangle }
         ].map((item) => (
-          <div key={item.id} onClick={() => handleSelection(item.id as any, !data[item.id as keyof GameData])} className={cn("interactive-card game-card flex items-center gap-6 py-4", data[item.id as keyof GameData] && "selected")}>
+          <div key={item.id} onClick={() => handleSelection(item.id as keyof GameData, !data[item.id as keyof GameData])} className={cn("interactive-card game-card flex items-center gap-6 py-4", data[item.id as keyof GameData] && "selected")}>
             <item.icon className={cn("w-6 h-6", data[item.id as keyof GameData] ? "text-sport-neon" : "text-slate-500")} />
             <span className="font-bold text-sm">{item.label}</span>
           </div>
@@ -571,14 +577,6 @@ export default function MomTestGame() {
   );
 
   const renderThanks = () => {
-    useEffect(() => {
-      trackEvent('game_finish');
-      fireConfetti();
-      // Disparar una segunda ráfaga un segundo después para más impacto
-      const timer = setTimeout(fireConfetti, 1000);
-      return () => clearTimeout(timer);
-    }, []);
-
     return (
       <div ref={contentWrapperRef} className="flex flex-col items-center text-center space-y-8 z-10">
         <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center">

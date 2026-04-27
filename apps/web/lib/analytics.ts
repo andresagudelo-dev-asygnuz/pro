@@ -12,9 +12,15 @@ type EventNames =
   | 'game_finish'
   | 'share_link_click';
 
-export const trackEvent = (eventName: EventNames, properties?: Record<string, any>) => {
-  if (typeof window !== 'undefined' && (window as any).gtag) {
-    (window as any).gtag('event', eventName, {
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
+export const trackEvent = (eventName: EventNames, properties?: Record<string, unknown>) => {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('event', eventName, {
       ...properties,
       timestamp: new Date().toISOString(),
     });
