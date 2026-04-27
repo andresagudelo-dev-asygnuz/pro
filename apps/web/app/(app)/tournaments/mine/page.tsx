@@ -47,7 +47,7 @@ export default async function MyTournamentsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {tournaments.map((t: any) => (
+          {tournaments.map((t: { id: string; name: string; status: string; location: string; slots: number; slots_filled: number }) => (
             <div key={t.id} className="border rounded-lg p-5 flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start">

@@ -39,7 +39,7 @@ export default async function TournamentsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {publicTournaments.map((t: any) => (
+          {publicTournaments.map((t: { id: string; name: string; location: string; format: string; slots: number; slots_filled: number; start_date: string }) => (
             <div key={t.id} className="border rounded-lg p-5 flex flex-col justify-between">
               <div>
                 <h3 className="font-semibold text-lg">{t.name}</h3>

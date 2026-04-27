@@ -22,7 +22,7 @@ export default async function AdminVenuesPage() {
 
             <section className="rounded-xl border bg-background p-6 shadow-sm">
                 <h2 className="mb-4 text-lg font-semibold">Registrar Nuevo Complejo</h2>
-                <form action={createVenue} className="flex flex-col gap-4 max-w-md">
+                <form action={async (formData) => { await createVenue(formData); }} className="flex flex-col gap-4 max-w-md">
                     <Input name="name" placeholder="Nombre del complejo" required />
                     <Input name="city" placeholder="Ciudad" required />
                     <Input name="address" placeholder="Dirección" required />
@@ -43,7 +43,7 @@ export default async function AdminVenuesPage() {
                         <div className="flex flex-col gap-4">
                             <h4 className="font-semibold text-sm">Canchas en este complejo:</h4>
                             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                {v.venue_courts?.map((c: any) => (
+                                {v.venue_courts?.map((c: { id: string; name: string; capacity_players: number }) => (
                                     <div key={c.id} className="p-3 border rounded-md bg-muted/50">
                                         <p className="font-medium">{c.name}</p>
                                         <p className="text-xs text-muted-foreground">Capacidad: {c.capacity_players} jugadores</p>
@@ -51,7 +51,7 @@ export default async function AdminVenuesPage() {
                                 ))}
                             </div>
 
-                            <form action={createCourt.bind(null, v.id)} className="flex gap-2 mt-2 max-w-sm">
+                            <form action={async (formData) => { await createCourt(v.id, formData); }} className="flex gap-2 mt-2 max-w-sm">
                                 <Input name="name" placeholder="Nombre de cancha (ej: Cancha 1)" required />
                                 <Input name="capacity" type="number" placeholder="Capacidad" defaultValue="10" required />
                                 <Button type="submit" variant="outline" size="sm">Añadir Cancha</Button>

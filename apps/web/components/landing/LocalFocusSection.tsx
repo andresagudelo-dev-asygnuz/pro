@@ -1,7 +1,7 @@
 "use client"
 
 import { GlassContainer } from "./GlassContainer"
-import { MapPin, Users, Zap } from "lucide-react"
+import { MapPin, Users } from "lucide-react"
 
 export function LocalFocusSection() {
   return (
