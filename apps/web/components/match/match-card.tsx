@@ -8,9 +8,16 @@ type MatchCardProps = {
   sport: Pick<Sport, "id" | "name" | "icon"> | null;
   joined: number;
   isJoined: boolean;
+  isRequested?: boolean;
 };
 
-export function MatchCard({ match, sport, joined, isJoined }: MatchCardProps) {
+export function MatchCard({
+  match,
+  sport,
+  joined,
+  isJoined,
+  isRequested = false,
+}: MatchCardProps) {
   const full = joined >= match.max_players;
   return (
     <Link
@@ -32,6 +39,8 @@ export function MatchCard({ match, sport, joined, isJoined }: MatchCardProps) {
         <div className="flex shrink-0 flex-col items-end gap-1">
           {isJoined ? (
             <Badge variant="secondary">Estás dentro</Badge>
+          ) : isRequested ? (
+            <Badge variant="outline">Solicitado</Badge>
           ) : full ? (
             <Badge variant="outline">Completo</Badge>
           ) : null}

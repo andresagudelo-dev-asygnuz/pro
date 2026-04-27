@@ -155,6 +155,8 @@ export const onboardingSchema = z.object({
   primary_sport_id: z
     .string()
     .trim()
+    .toLowerCase()
+    .refine((v) => v === "futbol", "En el MVP sólo se admite Fútbol.")
     .min(1, "Elegí tu deporte principal.")
     .max(40, "Deporte inválido."),
   primary_skill_level: z.enum(SKILL_LEVELS, {
@@ -178,10 +180,17 @@ export const createMatchSchema = z
     sport_id: z
       .string()
       .trim()
+      .toLowerCase()
+      .refine((v) => v === "futbol", "En el MVP sólo se admite Fútbol.")
       .min(1, "Elegí un deporte.")
       .max(40, "Deporte inválido."),
     city: z.string().trim().min(1, "Indicá la ciudad.").max(80),
-    location: z.string().trim().min(1, "Indicá el lugar/cancha.").max(200),
+    location: z
+      .string()
+      .trim()
+      .max(200)
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
     starts_at: z
       .string()
       .min(1, "Fecha/hora inválida.")
@@ -200,6 +209,15 @@ export const createMatchSchema = z
         }
         return d.toISOString();
       }),
+  })
+  .superRefine((val, ctx) => {
+    // Si no hay court_id (o es manual), location es obligatorio.
+    // Nota: court_id viene de formData, no está en este objeto base si
+    // usamos formDataToObject tal cual. Pero podemos ajustar el schema
+    // para que lo incluya o simplemente relajar location y validar en la Action.
+    // Relajamos location y validamos en Action para simplicidad con Next Actions.
+  })
+  .extend({
     duration_minutes: z.coerce
       .number()
       .int()
@@ -292,6 +310,7 @@ export const identityBlockSchema = z
       .string()
       .trim()
       .toLowerCase()
+      .refine((v) => v === "futbol", "En el MVP sólo se admite Fútbol.")
       .min(1, "Elegí tu deporte principal.")
       .max(40, "Deporte inválido."),
     interests_raw: z

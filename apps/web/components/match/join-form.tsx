@@ -7,10 +7,12 @@ import { joinMatch, leaveMatch } from "@/lib/match/actions";
 export function JoinForm({
   matchId,
   isJoined,
+  isRequested,
   disabled,
 }: {
   matchId: string;
   isJoined: boolean;
+  isRequested?: boolean;
   disabled?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
@@ -20,8 +22,8 @@ export function JoinForm({
     <div className="flex flex-col items-end gap-2">
       <Button
         type="button"
-        variant={isJoined ? "outline" : "default"}
-        disabled={pending || disabled}
+        variant={isJoined || isRequested ? "outline" : "default"}
+        disabled={pending || disabled || (isRequested && !isJoined)}
         onClick={() =>
           startTransition(async () => {
             setError(null);
@@ -36,9 +38,11 @@ export function JoinForm({
           ? "…"
           : isJoined
             ? "Salir del partido"
-            : disabled
-              ? "Completo"
-              : "Unirme al partido"}
+            : isRequested
+              ? "Solicitud enviada"
+              : disabled
+                ? "Completo"
+                : "Solicitar acceso"}
       </Button>
       {error ? (
         <p className="text-xs text-destructive" role="alert">
