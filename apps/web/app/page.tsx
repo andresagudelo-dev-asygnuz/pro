@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { LandingPage } from "@/components/landing/landing-page";
+import LandingPage from "@/components/landing/LandingPage";
 
 export const dynamic = "force-dynamic";
 
