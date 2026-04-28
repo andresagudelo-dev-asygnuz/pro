@@ -210,13 +210,6 @@ export const createMatchSchema = z
         return d.toISOString();
       }),
   })
-  .superRefine((val, ctx) => {
-    // Si no hay court_id (o es manual), location es obligatorio.
-    // Nota: court_id viene de formData, no está en este objeto base si
-    // usamos formDataToObject tal cual. Pero podemos ajustar el schema
-    // para que lo incluya o simplemente relajar location y validar en la Action.
-    // Relajamos location y validamos en Action para simplicidad con Next Actions.
-  })
   .extend({
     duration_minutes: z.coerce
       .number()

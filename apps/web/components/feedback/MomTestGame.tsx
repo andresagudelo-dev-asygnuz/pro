@@ -14,7 +14,6 @@ import {
   Star,
   ArrowRight,
   ShieldCheck,
-  X,
   MapPin,
   Flame,
   Search,
@@ -54,9 +53,34 @@ interface GameData {
   coordination_time_hours: number;
 }
 
+const ThanksStep = ({ fireConfetti, contentWrapperRef }: { fireConfetti: () => void, contentWrapperRef: React.RefObject<HTMLDivElement | null> }) => {
+  useEffect(() => {
+    trackEvent('game_finish');
+    fireConfetti();
+    // Disparar una segunda ráfaga un segundo después para más impacto
+    const timer = setTimeout(fireConfetti, 1000);
+    return () => clearTimeout(timer);
+  }, [fireConfetti]);
+
+  return (
+    <div ref={contentWrapperRef} className="flex flex-col items-center text-center space-y-8 z-10">
+      <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center">
+        <CheckCircle2 className="w-12 h-12 text-sport-neon" />
+      </div>
+      <h2 className="text-4xl font-black uppercase">¡GRACIAS POR TU TIEMPO!</h2>
+      <p className="text-slate-300 max-w-md">
+        Tus comentarios son invaluables para nosotros. Nos ayudarán a construir la mejor plataforma para los deportistas de Manizales.
+      </p>
+      <button onClick={() => window.location.href = "/"} className="sport-button font-black uppercase">
+        VOLVER AL INICIO
+      </button>
+    </div>
+  );
+};
+
 export default function MomTestGame() {
   const [currentStep, setCurrentStep] = useState<Step>("intro");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [, setIsSubmitting] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [data, setData] = useState<GameData>({
@@ -129,7 +153,7 @@ export default function MomTestGame() {
     }
   };
 
-  const handleSelection = (field: keyof GameData, value: any) => {
+  const handleSelection = (field: keyof GameData, value: string | boolean | string[] | number) => {
     setData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -160,7 +184,7 @@ export default function MomTestGame() {
     console.log("Intentando guardar datos:", data);
 
     try {
-      const { error, data: insertedData } = await supabase
+      const { error } = await supabase
         .from("market_validation_responses")
         .insert([{
           name: data.name,
@@ -202,9 +226,10 @@ export default function MomTestGame() {
       } else {
         nextStep("thanks");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error completo:", err);
-      alert(`Error al guardar: ${err.message || "Problema de conexión"}`);
+      const errorMessage = err instanceof Error ? err.message : "Problema de conexión";
+      alert(`Error al guardar: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -238,7 +263,7 @@ export default function MomTestGame() {
       setCheckingEmail(true);
       
       try {
-        const { data: existing, error } = await supabase
+        const { data: existing } = await supabase
           .from("market_validation_responses")
           .select("id")
           .eq("email", data.email)
@@ -252,7 +277,7 @@ export default function MomTestGame() {
 
         trackEvent('game_contact_submit');
         nextStep();
-      } catch (err) {
+      } catch {
         // Si no se encuentra (error PGRST116), podemos continuar
         nextStep();
       } finally {
@@ -305,36 +330,37 @@ export default function MomTestGame() {
   const renderBasics = () => (
     <div ref={contentWrapperRef} className="space-y-8 max-w-2xl w-full z-10">
       <div className="flex items-center gap-3 text-sport-blue">
-        <Users className="w-6 h-6" />
-        <span className="font-bold tracking-widest uppercase text-sm">INFO BÁSICA</span>
+        <Target className="w-6 h-6" />
+        <span className="font-bold tracking-widest uppercase text-sm">CONCEPTOS BÁSICOS</span>
       </div>
-      <h2 className="text-3xl font-bold">Un par de detalles más...</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase">¿Cuál es tu deporte?</label>
-          <select value={data.main_sport} onChange={(e) => handleSelection("main_sport", e.target.value)} className="custom-select">
-            <option value="">Selecciona...</option>
-            <option value="futbol">Fútbol</option>
-            <option value="padel">Padel</option>
-            <option value="running">Running</option>
-            <option value="tennis">Tennis</option>
-            <option value="other">Otro</option>
-          </select>
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase">Rango de Edad</label>
-          <select value={data.age} onChange={(e) => handleSelection("age", e.target.value)} className="custom-select">
-            <option value="">Selecciona...</option>
-            <option value="18-24">18-24</option>
-            <option value="25-34">25-34</option>
-            <option value="35-44">35-44</option>
-            <option value="45+">45+</option>
-          </select>
-        </div>
+      <h2 className="text-3xl font-bold">¿En qué categoría te encuentras?</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[
+          { id: "main_sport", label: "Deporte Principal", options: ["Fútbol", "Pádel", "Tenis", "Básquetbol", "Vóley", "Otro"] },
+          { id: "frequency", label: "Frecuencia", options: ["Diario", "2-3 veces/semana", "Semanal", "Quincenal", "Mensual"] },
+          { id: "age", label: "Rango de Edad", options: ["18-24", "25-34", "35-44", "45-54", "55+"] },
+          { id: "gender", label: "Género", options: ["Masculino", "Femenino", "No binario", "Prefiero no decir"] }
+        ].map((item) => (
+          <div key={item.id} className="game-card space-y-3">
+            <p className="font-black uppercase tracking-widest text-[10px] text-slate-500">{item.label}</p>
+            <select
+              value={data[item.id as keyof GameData] as string}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 focus:border-sport-blue focus:outline-none transition-colors"
+              onChange={(e) => handleSelection(item.id as keyof GameData, e.target.value)}
+            >
+              <option value="">Seleccionar...</option>
+              {item.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+        ))}
       </div>
       <div className="flex justify-end">
-        <button onClick={() => nextStep()} disabled={!data.main_sport || !data.age} className="sport-button flex items-center gap-2 disabled:opacity-50">
-          SIGUIENTE <ArrowRight className="w-4 h-4" />
+        <button
+          onClick={() => nextStep()}
+          disabled={!data.main_sport || !data.frequency || !data.age || !data.gender}
+          className="sport-button flex items-center gap-2 disabled:opacity-50"
+        >
+          SIGUIENTE NIVEL <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -342,27 +368,36 @@ export default function MomTestGame() {
 
   const renderRole = () => (
     <div ref={contentWrapperRef} className="space-y-8 max-w-2xl w-full z-10">
-      <div className="flex items-center gap-3 text-sport-purple">
-        <Gamepad2 className="w-6 h-6" />
-        <span className="font-bold tracking-widest uppercase text-sm">TU ROL</span>
+      <div className="flex items-center gap-3 text-sport-neon">
+        <Users className="w-6 h-6" />
+        <span className="font-bold tracking-widest uppercase text-sm">TU FUNCIÓN</span>
       </div>
-      <h2 className="text-3xl font-bold">¿Cómo participas habitualmente?</h2>
-      <div className="grid grid-cols-1 gap-4">
-        {[
-          { id: "habitual", label: "Organizador Habitual", desc: "Yo armo los partidos casi siempre" },
-          { id: "occasional", label: "Organizador Ocasional", desc: "A veces me toca coordinar" },
-          { id: "participant", label: "Solo Participo", desc: "Yo solo llego a jugar" }
-        ].map((role) => (
-          <div key={role.id} onClick={() => handleSelection("organizer_type", role.id)} className={cn("interactive-card game-card flex flex-col gap-1 py-6", data.organizer_type === role.id && "selected")}>
-            <span className="font-bold text-lg">{role.label}</span>
-            <span className="text-sm text-slate-400">{role.desc}</span>
+      <h2 className="text-3xl font-bold">¿Cuál es tu rol habitual?</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div
+          onClick={() => { trackEvent('game_role_selection', { role: 'player' }); handleSelection("role", "Jugador"); nextStep(); }}
+          className={cn("interactive-card game-card p-8 flex flex-col items-center gap-4 text-center group", data.role === "Jugador" && "selected")}
+        >
+          <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-sport-neon group-hover:text-black transition-colors">
+            <Gamepad2 className="w-8 h-8" />
           </div>
-        ))}
-      </div>
-      <div className="flex justify-end">
-        <button onClick={() => nextStep()} disabled={!data.organizer_type} className="sport-button flex items-center gap-2 disabled:opacity-50">
-          CONTINUAR <ArrowRight className="w-4 h-4" />
-        </button>
+          <div>
+            <h3 className="font-black text-xl uppercase">JUGADOR</h3>
+            <p className="text-sm text-slate-400">Sólo quiero jugar, sin líos de organización.</p>
+          </div>
+        </div>
+        <div
+          onClick={() => { trackEvent('game_role_selection', { role: 'organizer' }); handleSelection("role", "Organizador"); nextStep(); }}
+          className={cn("interactive-card game-card p-8 flex flex-col items-center gap-4 text-center group", data.role === "Organizador" && "selected")}
+        >
+          <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-sport-blue group-hover:text-white transition-colors">
+            <Clock className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="font-black text-xl uppercase">ORGANIZADOR</h3>
+            <p className="text-sm text-slate-400">Yo armo el parche, busco la gente y la cancha.</p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -371,19 +406,26 @@ export default function MomTestGame() {
     <div ref={contentWrapperRef} className="space-y-8 max-w-2xl w-full z-10">
       <div className="flex items-center gap-3 text-sport-blue">
         <Clock className="w-6 h-6" />
-        <span className="font-bold tracking-widest uppercase text-sm">PASO 1: TU FRECUENCIA</span>
+        <span className="font-bold tracking-widest uppercase text-sm">PUNTOS DE DOLOR</span>
       </div>
-      <h2 className="text-3xl font-bold">¿Qué tan seguido jugaste en los últimos 3 meses?</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {["+3 veces por semana", "2 veces por semana", "1 vez por semana", "Ocasionalmente"].map((freq) => (
-          <div key={freq} onClick={() => handleSelection("frequency", freq)} className={cn("interactive-card game-card text-center py-6", data.frequency === freq && "selected")}>
-            <span className="font-bold">{freq}</span>
+      <h2 className="text-3xl font-bold">¿Qué es lo más difícil de jugar hoy?</h2>
+      <div className="grid grid-cols-1 gap-4">
+        {[
+          { id: "limited_venues_knowledge", label: "No conozco todas las canchas de la ciudad", icon: MapPin },
+          { id: "bad_experience_unknowns", label: "He tenido malas experiencias jugando con desconocidos", icon: AlertTriangle },
+          { id: "digital_payment", label: "Me gustaría pagar mi parte de forma digital", icon: Zap },
+          { id: "searched_solution", label: "He buscado apps para solucionar esto antes", icon: Search },
+          { id: "lost_money", label: "He perdido dinero porque alguien no fue al partido", icon: Target }
+        ].map((item) => (
+          <div key={item.id} onClick={() => handleSelection(item.id as keyof GameData, !data[item.id as keyof GameData])} className={cn("interactive-card game-card flex items-center gap-6 py-4", data[item.id as keyof GameData] && "selected")}>
+            <item.icon className={cn("w-6 h-6", data[item.id as keyof GameData] ? "text-sport-neon" : "text-slate-500")} />
+            <span className="font-bold text-sm">{item.label}</span>
           </div>
         ))}
       </div>
       <div className="flex justify-end">
-        <button onClick={() => nextStep()} disabled={!data.frequency} className="sport-button flex items-center gap-2 disabled:opacity-50">
-          SIGUIENTE <ArrowRight className="w-4 h-4" />
+        <button onClick={() => nextStep()} className="sport-button flex items-center gap-2">
+          CONTINUAR <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -391,53 +433,50 @@ export default function MomTestGame() {
 
   const renderPains = () => (
     <div ref={contentWrapperRef} className="space-y-8 max-w-2xl w-full z-10">
-      <div className="flex items-center gap-3 text-red-500">
+      <div className="flex items-center gap-3 text-sport-neon">
         <Flame className="w-6 h-6" />
-        <span className="font-bold tracking-widest uppercase text-sm">EL DOLOR</span>
+        <span className="font-bold tracking-widest uppercase text-sm">INTENSIDAD</span>
       </div>
-      <h2 className="text-3xl font-bold">¿Qué es lo que más te frustra?</h2>
-      <div className="grid grid-cols-1 gap-4">
-        {[
-          { id: "cancellation", label: "Gente que cancela a última hora", icon: X },
-          { id: "no_players", label: "No completar los equipos", icon: Users },
-          { id: "no_courts", label: "Canchas siempre ocupadas", icon: MapPin },
-          { id: "coordination", label: "Estar horas en WhatsApp coordinando", icon: MessageCircle }
-        ].map((pain) => (
-          <div key={pain.id} onClick={() => handleSelection("problems", pain.label)} className={cn("interactive-card game-card flex items-center gap-6 py-6", data.problems === pain.label && "selected")}>
-            <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center">
-              <pain.icon className="w-6 h-6 text-sport-neon" />
-            </div>
-            <span className="font-bold text-lg">{pain.label}</span>
-          </div>
+      <h2 className="text-3xl font-bold">¿Qué tanto te frustra coordinar un partido?</h2>
+      <div className="grid grid-cols-5 gap-4">
+        {["1", "2", "3", "4", "5"].map((level) => (
+          <button
+            key={level}
+            onClick={() => { handleSelection("pain_intensity", level); nextStep(); }}
+            className={cn("game-card py-10 text-2xl font-black transition-all hover:scale-105", data.pain_intensity === level ? "bg-sport-neon text-black border-white" : "text-slate-500")}
+          >
+            {level}
+          </button>
         ))}
       </div>
-      <div className="flex justify-end">
-        <button onClick={() => nextStep()} disabled={!data.problems} className="sport-button flex items-center gap-2 disabled:opacity-50">
-          CONTINUAR <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
+      <p className="text-center text-slate-500 font-bold text-xs uppercase tracking-widest">1: Nada frustrante | 5: Es una pesadilla</p>
     </div>
   );
 
   const renderBehavior = () => (
     <div ref={contentWrapperRef} className="space-y-8 max-w-2xl w-full z-10">
-      <div className="flex items-center gap-3 text-sport-neon">
+      <div className="flex items-center gap-3 text-sport-blue">
         <History className="w-6 h-6" />
-        <span className="font-bold tracking-widest uppercase text-sm">COMPORTAMIENTO</span>
+        <span className="font-bold tracking-widest uppercase text-sm">HÁBITOS</span>
       </div>
-      <h2 className="text-3xl font-bold">¿Te ha pasado esto alguna vez?</h2>
-      <div className="space-y-4">
-        {[
-          { id: "lost_money", label: "He perdido dinero pagando canchas por cancelaciones", icon: Target },
-          { id: "searched_solution", label: "He buscado apps o webs para solucionar esto antes", icon: Search },
-          { id: "digital_payment", label: "Prefiero pagar todo digital (Nequi, Tarjeta)", icon: Zap },
-          { id: "bad_experience_unknowns", label: "He jugado con desconocidos y fue mala experiencia", icon: AlertTriangle }
-        ].map((item) => (
-          <div key={item.id} onClick={() => handleSelection(item.id as any, !data[item.id as keyof GameData])} className={cn("interactive-card game-card flex items-center gap-6 py-4", data[item.id as keyof GameData] && "selected")}>
-            <item.icon className={cn("w-6 h-6", data[item.id as keyof GameData] ? "text-sport-neon" : "text-slate-500")} />
-            <span className="font-bold text-sm">{item.label}</span>
-          </div>
-        ))}
+      <h2 className="text-3xl font-bold">¿Cuánto tiempo tardas en cerrar un partido?</h2>
+      <div className="space-y-8">
+        <div className="flex justify-between font-black text-4xl text-sport-blue">
+          <span>{data.coordination_time_hours}</span>
+          <span className="text-lg self-end mb-1">HORAS</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="24"
+          step="0.5"
+          value={data.coordination_time_hours}
+          onChange={(e) => handleSelection("coordination_time_hours", parseFloat(e.target.value))}
+          className="w-full accent-sport-blue"
+        />
+        <div className="game-card p-6 border-slate-700 bg-slate-800/30">
+          <p className="text-slate-400 italic">&quot;Casi siempre empezamos a hablar 2 días antes y cerramos el grupo el mismo día del partido...&quot;</p>
+        </div>
       </div>
       <div className="flex justify-end">
         <button onClick={() => nextStep()} className="sport-button flex items-center gap-2">
@@ -570,31 +609,6 @@ export default function MomTestGame() {
     </div>
   );
 
-  const renderThanks = () => {
-    useEffect(() => {
-      trackEvent('game_finish');
-      fireConfetti();
-      // Disparar una segunda ráfaga un segundo después para más impacto
-      const timer = setTimeout(fireConfetti, 1000);
-      return () => clearTimeout(timer);
-    }, []);
-
-    return (
-      <div ref={contentWrapperRef} className="flex flex-col items-center text-center space-y-8 z-10">
-        <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center">
-          <CheckCircle2 className="w-12 h-12 text-sport-neon" />
-        </div>
-        <h2 className="text-4xl font-black uppercase">¡GRACIAS POR TU TIEMPO!</h2>
-        <p className="text-slate-300 max-w-md">
-          Tus comentarios son invaluables para nosotros. Nos ayudarán a construir la mejor plataforma para los deportistas de Manizales.
-        </p>
-        <button onClick={() => window.location.href = "/"} className="sport-button font-black uppercase">
-          VOLVER AL INICIO
-        </button>
-      </div>
-    );
-  };
-
   return (
     <div ref={containerRef} className="feedback-container flex flex-col items-center justify-center p-6 md:p-12 relative min-h-screen">
       <div className="feedback-bg" />
@@ -615,7 +629,7 @@ export default function MomTestGame() {
         {currentStep === "pz3" && renderPZ3()}
         {currentStep === "commitment" && renderCommitment()}
         {currentStep === "referral" && renderReferral()}
-        {currentStep === "thanks" && renderThanks()}
+        {currentStep === "thanks" && <ThanksStep fireConfetti={fireConfetti} contentWrapperRef={contentWrapperRef} />}
       </div>
       {showModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-6">

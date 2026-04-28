@@ -88,7 +88,7 @@ export async function createMatch(
         .single();
 
       if (court) {
-        const venueName = (court.venue as any).name;
+        const venueName = (court.venue as unknown as { name: string }).name;
         await supabase
           .from("matches")
           .update({

@@ -10,15 +10,21 @@ type EventNames =
   | 'game_contact_submit'
   | 'game_beta_interest'
   | 'game_finish'
+  | 'game_role_selection'
   | 'share_link_click';
 
-export const trackEvent = (eventName: EventNames, properties?: Record<string, any>) => {
+interface GtagWindow extends Window {
+  gtag?: (command: 'event', eventName: string, params?: Record<string, unknown>) => void;
+}
+
+export const trackEvent = (eventName: EventNames, properties?: Record<string, unknown>) => {
   if (typeof window !== 'undefined') {
+    const win = window as unknown as GtagWindow;
     // Console log for easier debugging
     console.log(`[Analytics] Event: ${eventName}`, properties);
 
-    if ((window as any).gtag) {
-      (window as any).gtag('event', eventName, {
+    if (win.gtag) {
+      win.gtag('event', eventName, {
         ...properties,
         timestamp: new Date().toISOString(),
       });

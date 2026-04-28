@@ -20,13 +20,24 @@ import { SKILL_LEVELS, type Sport } from "@/lib/types/db";
 
 const initialState: MatchFormState = {};
 
+interface Venue {
+    id: string;
+    name: string;
+    city: string;
+    venue_courts?: {
+        id: string;
+        name: string;
+        capacity_players: number;
+    }[];
+}
+
 export function MatchForm({
   sports,
   venues = [],
   defaultCity,
 }: {
   sports: Sport[];
-  venues?: any[];
+  venues?: Venue[];
   defaultCity: string;
 }) {
   const [state, formAction, pending] = useActionState(
@@ -114,7 +125,7 @@ export function MatchForm({
                   <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30">
                     {v.name} ({v.city})
                   </div>
-                  {v.venue_courts?.map((c: any) => (
+                  {v.venue_courts?.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name} (Cap: {c.capacity_players})
                     </SelectItem>

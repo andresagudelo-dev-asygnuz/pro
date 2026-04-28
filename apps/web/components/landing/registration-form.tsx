@@ -49,7 +49,7 @@ export function RegistrationForm() {
   const sportValue = watch("sport");
   const termsValue = watch("terms");
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit() {
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setIsLoading(false);
@@ -99,7 +99,7 @@ export function RegistrationForm() {
         </div>
 
         <div className="glass p-8 md:p-12 rounded-3xl shadow-2xl border-white/5">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(() => onSubmit())} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre (Opcional)</Label>
               <Input

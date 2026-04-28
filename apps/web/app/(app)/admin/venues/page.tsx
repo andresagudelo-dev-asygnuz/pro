@@ -4,6 +4,20 @@ import { Input } from "@/components/ui/input";
 import { createVenue, createCourt } from "@/lib/venues/actions";
 import { requireUser } from "@/lib/auth/session";
 
+interface VenueCourt {
+    id: string;
+    name: string;
+    capacity_players: number;
+}
+
+interface Venue {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    venue_courts?: VenueCourt[];
+}
+
 export default async function AdminVenuesPage() {
     const user = await requireUser();
     const supabase = await createClient();
@@ -11,7 +25,7 @@ export default async function AdminVenuesPage() {
     const { data: venues } = await supabase
         .from("venues")
         .select("*, venue_courts(*)")
-        .eq("owner_id", user.id);
+        .eq("owner_id", user.id) as { data: Venue[] | null };
 
     return (
         <div className="flex flex-col gap-8">
@@ -43,7 +57,7 @@ export default async function AdminVenuesPage() {
                         <div className="flex flex-col gap-4">
                             <h4 className="font-semibold text-sm">Canchas en este complejo:</h4>
                             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                {v.venue_courts?.map((c: any) => (
+                                {v.venue_courts?.map((c) => (
                                     <div key={c.id} className="p-3 border rounded-md bg-muted/50">
                                         <p className="font-medium">{c.name}</p>
                                         <p className="text-xs text-muted-foreground">Capacidad: {c.capacity_players} jugadores</p>
