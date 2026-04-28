@@ -73,6 +73,7 @@ export function CookieConsent() {
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <Button 
+              id="cookie-decline-button"
               variant="ghost" 
               onClick={handleDecline}
               className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-sm"
@@ -80,8 +81,9 @@ export function CookieConsent() {
               Configurar
             </Button>
             <Button 
+              id="cookie-accept-button"
               onClick={handleAccept}
-              className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black uppercase tracking-tighter italic px-8 hover:scale-105 active:scale-95 transition-all"
+              className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black uppercase tracking-tighter italic px-8 hover:scale-[1.02] active:scale-[0.95] transition-all"
             >
               Aceptar Todo
             </Button>

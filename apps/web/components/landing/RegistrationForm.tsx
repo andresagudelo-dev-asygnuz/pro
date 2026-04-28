@@ -274,6 +274,7 @@ export function RegistrationForm() {
               />
 
               <Button 
+                id="registration-submit-button"
                 type="submit" 
                 disabled={isLoading}
                 className="w-full h-16 text-xl font-black bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 rounded-2xl uppercase tracking-tighter italic overflow-hidden group/btn relative"

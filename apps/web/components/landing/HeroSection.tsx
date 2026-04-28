@@ -45,9 +45,10 @@ export function HeroSection() {
 
         <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
           <Button 
+            id="hero-cta-button"
             size="lg" 
             onClick={handleJoinClick}
-            className="h-16 px-10 text-sm font-black bg-white text-zinc-950 hover:scale-105 transition-all duration-500 shadow-[0_0_40px_rgba(255,255,255,0.2)] relative group overflow-hidden rounded-xl border-2 border-brand-primary uppercase tracking-widest"
+            className="h-16 px-10 text-sm font-black bg-white text-zinc-950 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 shadow-[0_0_40px_rgba(255,255,255,0.2)] relative group overflow-hidden rounded-xl border-2 border-brand-primary uppercase tracking-widest"
           >
             <span className="relative z-10 flex items-center gap-3">
               <span className="relative flex h-2 w-2">
