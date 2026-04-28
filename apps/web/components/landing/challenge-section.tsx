@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Trophy, Users, TrendingUp } from "lucide-react";
@@ -13,7 +13,7 @@ if (typeof window !== "undefined") {
 export function ChallengeSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(".challenge-text", {
         scrollTrigger: {
@@ -80,7 +80,7 @@ export function ChallengeSection() {
           {challenges.map((item, idx) => (
             <div
               key={idx}
-              className="challenge-card glass p-8 rounded-3xl flex flex-col items-center text-center shadow-xl border-white/5"
+              className="challenge-card glass will-change-transform p-8 rounded-3xl flex flex-col items-center text-center shadow-xl border-white/5"
             >
               <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mb-6 text-primary">
                 <item.icon size={32} />

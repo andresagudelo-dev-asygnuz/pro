@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Layout, Award, Zap, Shield, Globe, Heart } from "lucide-react";
@@ -13,7 +13,7 @@ if (typeof window !== "undefined") {
 export function FeaturesSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(".feature-card", {
         scrollTrigger: {
@@ -55,7 +55,7 @@ export function FeaturesSection() {
           {features.map((item, idx) => (
             <div
               key={idx}
-              className="feature-card glass p-8 rounded-3xl group transition-all duration-300 hover:-translate-y-2 hover:scale-[1.03] hover:shadow-2xl hover:border-primary/30 relative overflow-hidden"
+              className="feature-card glass will-change-transform p-8 rounded-3xl group transition-all duration-300 hover:-translate-y-2 hover:scale-[1.03] hover:shadow-2xl hover:border-primary/30 relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 

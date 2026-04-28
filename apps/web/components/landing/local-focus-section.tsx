@@ -1,11 +1,20 @@
 "use client";
 
+import Image from "next/image";
+
 export function LocalFocusSection() {
   return (
     <section
-      className="relative py-32 bg-fixed bg-cover bg-center overflow-hidden"
-      style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1541252260730-0412e8e2108e?q=80&w=2000&auto=format&fit=crop")' }}
+      className="relative py-32 overflow-hidden"
     >
+      <Image
+        src="https://images.unsplash.com/photo-1541252260730-0412e8e2108e?q=80&w=2000&auto=format&fit=crop"
+        alt="Background"
+        fill
+        className="object-cover"
+        sizes="100vw"
+        quality={80}
+      />
       <div className="absolute inset-0 bg-black/85 z-10" />
 
       <div className="container px-4 mx-auto relative z-20">
@@ -19,17 +28,21 @@ export function LocalFocusSection() {
             </p>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl overflow-hidden h-40">
-                <img
+              <div className="rounded-2xl overflow-hidden h-40 relative">
+                <Image
                   src="https://images.unsplash.com/photo-1517466787929-bc90951d0974?q=80&w=600&auto=format&fit=crop"
                   alt="Deporte Local"
+                  width={600}
+                  height={400}
                   className="w-full h-full object-cover hover:scale-110 transition-transform duration-700"
                 />
               </div>
-              <div className="rounded-2xl overflow-hidden h-40">
-                <img
+              <div className="rounded-2xl overflow-hidden h-40 relative">
+                <Image
                   src="https://images.unsplash.com/photo-1526232762682-d2f5f717d33b?q=80&w=600&auto=format&fit=crop"
                   alt="Pasión Deportiva"
+                  width={600}
+                  height={400}
                   className="w-full h-full object-cover hover:scale-110 transition-transform duration-700"
                 />
               </div>

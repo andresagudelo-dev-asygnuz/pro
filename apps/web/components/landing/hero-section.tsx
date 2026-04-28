@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { Button } from "@/components/ui/button";
 import { FloatingBlobs } from "./floating-blobs";
@@ -9,7 +9,7 @@ import Link from "next/link";
 export function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(".hero-content > *", {
         y: 60,
@@ -24,7 +24,7 @@ export function HeroSection() {
 
   return (
     <section ref={containerRef} className="relative h-screen w-full overflow-hidden flex items-center justify-center">
-      <video
+      <video poster="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1920&auto=format&fit=crop" preload="auto"
         autoPlay
         muted
         loop
