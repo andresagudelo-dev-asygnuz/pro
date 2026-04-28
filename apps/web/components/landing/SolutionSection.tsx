@@ -66,7 +66,7 @@ export function SolutionSection() {
     <section ref={sectionRef} className="relative py-32 mesh-gradient overflow-hidden">
       {/* Background Image Overlay */}
       <div 
-        className="absolute inset-0 bg-[url('/hero-bg.png')] bg-fixed bg-cover bg-center opacity-20" 
+        className="absolute inset-0 bg-[url('/hero-bg.png')] bg-fixed bg-cover bg-center opacity-30" 
       />
       {/* Dark Gradient Overlay matching Pasion Sin Fronteras */}
       <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-transparent to-zinc-950" />
