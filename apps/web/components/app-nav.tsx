@@ -3,18 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import type { Profile } from "@/lib/types/db";
-import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function AppNav({
   profile,
   isAdmin = false,
-  isPromoter = false,
-  unreadNotifications = 0,
 }: {
   profile: Profile | null;
   isAdmin?: boolean;
-  isPromoter?: boolean;
-  unreadNotifications?: number;
 }) {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
@@ -42,14 +37,6 @@ export function AppNav({
             >
               Mi perfil
             </Link>
-            {isPromoter && (
-              <Link
-                href="/admin/venues"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Mis Canchas
-              </Link>
-            )}
             {isAdmin && (
               <Link
                 href="/admin/verificaciones"
@@ -62,12 +49,6 @@ export function AppNav({
         </div>
 
         <div className="flex items-center gap-2">
-          {profile && (
-            <NotificationBell
-              initialUnreadCount={unreadNotifications}
-              userId={profile.id}
-            />
-          )}
           {profile ? (
             <Link
               href={`/profile/${profile.id}`}

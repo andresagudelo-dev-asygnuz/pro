@@ -67,8 +67,8 @@ export function SolutionSection() {
     >
       <div className="absolute inset-0 bg-black/80 z-10" />
 
-      <div className="container px-4 mx-auto relative z-20">
-        <div className="max-w-3xl mx-auto text-center mb-20 text-white solution-title">
+      <div className="container px-4 mx-auto relative z-20 text-white">
+        <div className="max-w-3xl mx-auto text-center mb-20 solution-title">
           <h2 className="text-3xl md:text-6xl font-bold mb-6">
             La Solución que Necesitas
           </h2>
@@ -80,8 +80,8 @@ export function SolutionSection() {
 
         <div className="grid md:grid-cols-3 gap-10 solution-grid">
           {solutions.map((item, idx) => (
-            <div key={idx} className="solution-card glass p-10 rounded-3xl text-white text-center flex flex-col items-center group hover:border-primary/50 transition-all duration-500">
-              <div className="w-20 h-20 flex items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-white text-4xl font-black mb-8 shadow-[0_0_20px_rgba(0,181,216,0.3)] group-hover:scale-110 transition-transform">
+            <div key={idx} className="solution-card glass p-10 rounded-3xl text-center flex flex-col items-center group hover:border-primary/50 transition-all duration-500">
+              <div className="w-20 h-20 flex items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary text-white text-4xl font-black mb-8 shadow-[0_0_20px_rgba(107,70,193,0.3)] group-hover:scale-110 transition-transform">
                 {item.num}
               </div>
               <h3 className="text-2xl font-bold mb-4">{item.title}</h3>
