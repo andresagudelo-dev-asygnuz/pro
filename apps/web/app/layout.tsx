@@ -19,15 +19,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://pro-sport.app",
   ),
-  title: {
-    default: "PRO — Comunidad deportiva",
-    template: "%s · PRO",
-  },
+  title: "PRO. — Vive el deporte al siguiente nivel",
   description:
-    "Encontrá con quién jugar tu próximo partido. Organizá, sumate y conocé deportistas de tu nivel y ciudad.",
-  applicationName: "PRO",
+    "La plataforma definitiva para deportistas de élite. Organiza, compite y domina tu ciudad con PRO.",
   keywords: [
-    "deportes",
+    "deporte",
+    "manizales",
     "fútbol",
     "pádel",
     "tenis",
@@ -35,35 +32,35 @@ export const metadata: Metadata = {
     "matching deportivo",
   ],
   openGraph: {
-    title: "PRO — Comunidad deportiva",
+    title: "PRO. — Vive el deporte al siguiente nivel",
     description:
-      "Encontrá con quién jugar tu próximo partido. Organizá, sumate y conocé deportistas de tu nivel y ciudad.",
+      "La plataforma definitiva para deportistas de élite. Organiza, compite y domina tu ciudad con PRO.",
     type: "website",
-    siteName: "PRO",
+    siteName: "PRO.",
     locale: "es",
     images: [
       {
-        url: "https://pro-sport.app/og-image.png?v=6",
+        url: "https://pro-sport.app/og-image.png?v=7",
         width: 1200,
         height: 630,
-        alt: "PRO — Comunidad deportiva",
+        alt: "PRO. — Vive el deporte al siguiente nivel",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PRO — Comunidad deportiva",
+    title: "PRO. — Vive el deporte al siguiente nivel",
     description:
-      "Encontrá con quién jugar tu próximo partido. Organizá y sumate a partidos cerca tuyo.",
-    images: ["https://pro-sport.app/og-image.png?v=6"],
+      "La plataforma definitiva para deportistas de élite. Organiza, compite y domina tu ciudad con PRO.",
+    images: ["https://pro-sport.app/og-image.png?v=7"],
   },
   icons: {
     icon: [
-      { url: "/favicon.png?v=6" },
-      { url: "/favicon.png?v=6", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.png?v=7" },
+      { url: "/favicon.png?v=7", sizes: "32x32", type: "image/png" },
     ],
     apple: [
-      { url: "/favicon.png?v=6" },
+      { url: "/favicon.png?v=7" },
     ],
   },
   robots: {
