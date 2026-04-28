@@ -65,7 +65,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
                 <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => startTransition(() => markAllAsRead())}
+                    onClick={() => startTransition(async () => { await markAllAsRead(); })}
                     disabled={isPending}
                 >
                     Marcar todas como leídas
@@ -82,7 +82,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
                             <Link
                                 href={getLink(n)}
                                 className="text-sm hover:underline"
-                                onClick={() => !n.read_at && startTransition(() => markAsRead(n.id))}
+                                onClick={() => !n.read_at && startTransition(async () => { await markAsRead(n.id); })}
                             >
                                 {getMessage(n)}
                             </Link>
