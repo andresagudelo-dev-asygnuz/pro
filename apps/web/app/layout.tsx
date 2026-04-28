@@ -81,6 +81,23 @@ export default function RootLayout({
     >
       <head>
         <Script
+          id="gtm-consent-default"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('consent', 'default', {
+                'ad_storage': 'denied',
+                'ad_user_data': 'denied',
+                'ad_personalization': 'denied',
+                'analytics_storage': 'denied',
+                'wait_for_update': 500
+              });
+            `,
+          }}
+        />
+        <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-HNY2G15CH3"
           strategy="afterInteractive"
         />

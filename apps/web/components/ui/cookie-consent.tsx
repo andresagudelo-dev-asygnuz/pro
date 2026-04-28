@@ -14,11 +14,32 @@ export function CookieConsent() {
         setIsVisible(true)
       }, 2000)
       return () => clearTimeout(timer)
+    } else if (consent === "accepted") {
+      // Restore consent state for GTM if already accepted
+      if (typeof window !== "undefined" && (window as any).gtag) {
+        (window as any).gtag('consent', 'update', {
+          'ad_storage': 'granted',
+          'ad_user_data': 'granted',
+          'ad_personalization': 'granted',
+          'analytics_storage': 'granted'
+        });
+      }
     }
   }, [])
 
   const handleAccept = () => {
     localStorage.setItem("pro_cookie_consent", "accepted")
+    
+    // Push update to GTM
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag('consent', 'update', {
+        'ad_storage': 'granted',
+        'ad_user_data': 'granted',
+        'ad_personalization': 'granted',
+        'analytics_storage': 'granted'
+      });
+    }
+    
     setIsVisible(false)
   }
 
