@@ -34,7 +34,7 @@ export function HeroSection() {
         <source src="https://assets.mixkit.co/videos/preview/mixkit-football-player-running-on-the-grass-field-4011-large.mp4" type="video/mp4" />
       </video>
 
-      <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/65 to-black/55 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/20 z-10" />
 
       <FloatingBlobs className="z-20" />
 
