@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     locale: "es",
     images: [
       {
-        url: "https://pro-sport.app/og-image.png?v=5",
+        url: "https://pro-sport.app/og-image.png?v=6",
         width: 1200,
         height: 630,
         alt: "PRO — Comunidad deportiva",
@@ -55,15 +55,15 @@ export const metadata: Metadata = {
     title: "PRO — Comunidad deportiva",
     description:
       "Encontrá con quién jugar tu próximo partido. Organizá y sumate a partidos cerca tuyo.",
-    images: ["https://pro-sport.app/og-image.png?v=5"],
+    images: ["https://pro-sport.app/og-image.png?v=6"],
   },
   icons: {
     icon: [
-      { url: "/favicon.png?v=5" },
-      { url: "/favicon.png?v=5", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.png?v=6" },
+      { url: "/favicon.png?v=6", sizes: "32x32", type: "image/png" },
     ],
     apple: [
-      { url: "/favicon.png?v=5" },
+      { url: "/favicon.png?v=6" },
     ],
   },
   robots: {
