@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
-import { CookieConsent } from "@/components/ui/cookie-consent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://pro-sport.app",
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://pro-web.vercel.app",
   ),
   title: {
     default: "PRO — Comunidad deportiva",
@@ -41,30 +40,15 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "PRO",
     locale: "es",
-    images: [
-      {
-        url: "https://pro-sport.app/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "PRO — Comunidad deportiva",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "PRO — Comunidad deportiva",
     description:
       "Encontrá con quién jugar tu próximo partido. Organizá y sumate a partidos cerca tuyo.",
-    images: ["https://pro-sport.app/og-image.png"],
   },
   icons: {
-    icon: [
-      { url: "/favicon.png" },
-      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
-    ],
-    apple: [
-      { url: "/favicon.png" },
-    ],
+    icon: "/favicon.svg",
   },
   robots: {
     index: true,
@@ -80,7 +64,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <Script
@@ -138,7 +122,6 @@ export default function RootLayout({
           />
         </noscript>
         {children}
-        <CookieConsent />
         <Toaster />
       </body>
     </html>

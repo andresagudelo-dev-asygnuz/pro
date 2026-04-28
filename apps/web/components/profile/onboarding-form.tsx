@@ -86,11 +86,13 @@ export function OnboardingForm({
               <SelectValue placeholder="Elegí un deporte" />
             </SelectTrigger>
             <SelectContent>
-              {sports.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.icon} {s.name}
-                </SelectItem>
-              ))}
+              {sports
+                .filter((s) => s.id === "futbol")
+                .map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.icon} {s.name}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>

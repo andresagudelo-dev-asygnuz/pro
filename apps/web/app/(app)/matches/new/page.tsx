@@ -1,6 +1,7 @@
 import { MatchForm } from "@/components/match/match-form";
 import { requireCompleteProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { getVenuesWithCourts } from "@/lib/venues/queries";
 import type { Sport } from "@/lib/types/db";
 
 export const metadata = {
@@ -10,11 +11,12 @@ export const metadata = {
 export default async function NewMatchPage() {
   const profile = await requireCompleteProfile();
   const supabase = await createClient();
-  const { data: sportsRaw } = await supabase
-    .from("sports")
-    .select("*")
-    .order("name");
-  const sports = (sportsRaw ?? []) as Sport[];
+  const [sportsRes, venues] = await Promise.all([
+    supabase.from("sports").select("*").order("name"),
+    getVenuesWithCourts(),
+  ]);
+
+  const sports = (sportsRes.data ?? []) as Sport[];
 
   return (
     <div className="mx-auto max-w-3xl rounded-xl border bg-background p-6 shadow-sm">
@@ -27,7 +29,11 @@ export default async function NewMatchPage() {
           unirse.
         </p>
       </div>
-      <MatchForm sports={sports} defaultCity={profile.city ?? ""} />
+      <MatchForm
+        sports={sports}
+        venues={venues}
+        defaultCity={profile.city ?? ""}
+      />
     </div>
   );
 }
