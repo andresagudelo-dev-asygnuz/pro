@@ -19,12 +19,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://pro-sport.app",
   ),
-  title: "PRO. — Vive el deporte al siguiente nivel",
+  title: {
+    default: "PRO — Comunidad deportiva",
+    template: "%s · PRO",
+  },
   description:
-    "La plataforma definitiva para deportistas de élite. Organiza, compite y domina tu ciudad con PRO.",
+    "Encontrá con quién jugar tu próximo partido. Organizá, sumate y conocé deportistas de tu nivel y ciudad.",
+  applicationName: "PRO",
   keywords: [
-    "deporte",
-    "manizales",
+    "deportes",
     "fútbol",
     "pádel",
     "tenis",
@@ -32,35 +35,35 @@ export const metadata: Metadata = {
     "matching deportivo",
   ],
   openGraph: {
-    title: "PRO. — Vive el deporte al siguiente nivel",
+    title: "PRO — Comunidad deportiva",
     description:
-      "La plataforma definitiva para deportistas de élite. Organiza, compite y domina tu ciudad con PRO.",
+      "Encontrá con quién jugar tu próximo partido. Organizá, sumate y conocé deportistas de tu nivel y ciudad.",
     type: "website",
-    siteName: "PRO.",
+    siteName: "PRO",
     locale: "es",
     images: [
       {
-        url: "https://pro-sport.app/og-image.png?v=7",
+        url: "https://pro-sport.app/og-image.png?v=4",
         width: 1200,
         height: 630,
-        alt: "PRO. — Vive el deporte al siguiente nivel",
+        alt: "PRO — Comunidad deportiva",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PRO. — Vive el deporte al siguiente nivel",
+    title: "PRO — Comunidad deportiva",
     description:
-      "La plataforma definitiva para deportistas de élite. Organiza, compite y domina tu ciudad con PRO.",
-    images: ["https://pro-sport.app/og-image.png?v=7"],
+      "Encontrá con quién jugar tu próximo partido. Organizá y sumate a partidos cerca tuyo.",
+    images: ["https://pro-sport.app/og-image.png?v=4"],
   },
   icons: {
     icon: [
-      { url: "/favicon.png?v=7" },
-      { url: "/favicon.png?v=7", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.png?v=4" },
+      { url: "/favicon.png?v=4", sizes: "32x32", type: "image/png" },
     ],
     apple: [
-      { url: "/favicon.png?v=7" },
+      { url: "/favicon.png?v=4" },
     ],
   },
   robots: {
@@ -80,39 +83,6 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <head>
-        {/* GTM Consent Mode v2 Default State */}
-        <Script
-          id="gtm-consent-default"
-          strategy="afterInteractive"
-        >
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('consent', 'default', {
-              'ad_storage': 'denied',
-              'ad_user_data': 'denied',
-              'ad_personalization': 'denied',
-              'analytics_storage': 'denied',
-              'wait_for_update': 500
-            });
-          `}
-        </Script>
-
-        {/* Google Tag Manager */}
-        <Script
-          id="gtm-script"
-          strategy="afterInteractive"
-        >
-          {`
-            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-            })(window,document,'script','dataLayer','GTM-NFD8FPL5');
-          `}
-        </Script>
-
-        {/* Google Analytics (GA4) */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-HNY2G15CH3"
           strategy="afterInteractive"
@@ -120,14 +90,29 @@ export default function RootLayout({
         <Script
           id="google-analytics"
           strategy="afterInteractive"
-        >
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-HNY2G15CH3');
-          `}
-        </Script>
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+
+              gtag('config', 'G-HNY2G15CH3');
+            `,
+          }}
+        />
+        <Script
+          id="gtm-script"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+              })(window,document,'script','dataLayer','GTM-NFD8FPL5');
+            `,
+          }}
+        />
         <Script
           id="microsoft-clarity"
           strategy="afterInteractive"

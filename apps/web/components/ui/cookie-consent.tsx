@@ -9,42 +9,16 @@ export function CookieConsent() {
 
   useEffect(() => {
     const consent = localStorage.getItem("pro_cookie_consent")
-    console.log("[CookieConsent] Initializing, current consent:", consent);
-
     if (!consent) {
-      console.log("[CookieConsent] No consent found, showing banner in 2s...");
       const timer = setTimeout(() => {
         setIsVisible(true)
       }, 2000)
       return () => clearTimeout(timer)
-    } else if (consent === "accepted") {
-      console.log("[CookieConsent] Consent already accepted, updating GTM...");
-      // Restore consent state for GTM if already accepted
-      if (typeof window !== "undefined" && (window as any).gtag) {
-        (window as any).gtag('consent', 'update', {
-          'ad_storage': 'granted',
-          'ad_user_data': 'granted',
-          'ad_personalization': 'granted',
-          'analytics_storage': 'granted'
-        });
-      }
     }
   }, [])
 
   const handleAccept = () => {
-    console.log("[CookieConsent] Accept clicked");
     localStorage.setItem("pro_cookie_consent", "accepted")
-    
-    // Push update to GTM
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag('consent', 'update', {
-        'ad_storage': 'granted',
-        'ad_user_data': 'granted',
-        'ad_personalization': 'granted',
-        'analytics_storage': 'granted'
-      });
-    }
-    
     setIsVisible(false)
   }
 
@@ -62,34 +36,32 @@ export function CookieConsent() {
           <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
             <Cookie className="w-6 h-6 text-primary" />
           </div>
-          
+
           <div className="flex-1 text-center md:text-left">
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">Control de Privacidad</h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Utilizamos cookies para mejorar tu experiencia y analizar el tráfico de forma segura. 
+              Utilizamos cookies para mejorar tu experiencia y analizar el tráfico de forma segura.
               Al aceptar, nos ayudas a construir la comunidad deportiva más potente del Eje Cafetero.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            <Button 
-              id="cookie-decline-button"
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={handleDecline}
               className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-sm"
             >
               Configurar
             </Button>
-            <Button 
-              id="cookie-accept-button"
+            <Button
               onClick={handleAccept}
-              className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black uppercase tracking-tighter italic px-8 hover:scale-[1.02] active:scale-[0.95] transition-all"
+              className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black uppercase tracking-tighter italic px-8 hover:scale-105 active:scale-95 transition-all"
             >
               Aceptar Todo
             </Button>
           </div>
 
-          <button 
+          <button
             onClick={() => setIsVisible(false)}
             className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors"
           >

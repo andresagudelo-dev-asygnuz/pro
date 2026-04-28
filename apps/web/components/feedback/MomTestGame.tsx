@@ -236,7 +236,7 @@ export default function MomTestGame() {
     const handleStartChallenge = async () => {
       if (!data.email) return;
       setCheckingEmail(true);
-      
+
       try {
         const { data: existing, error } = await supabase
           .from("market_validation_responses")

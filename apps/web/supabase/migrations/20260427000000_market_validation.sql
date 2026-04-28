@@ -4,36 +4,36 @@
 CREATE TABLE IF NOT EXISTS public.market_validation_responses (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at timestamp with time zone DEFAULT now(),
-  
+
   -- Identificación
   name text,
   email text UNIQUE,
   age text,
   gender text,
-  
+
   -- Perfil Deportivo
   main_sport text,
   frequency text,
   role text,
   organizer_type text,
-  
+
   -- Problemas y Soluciones
   tools jsonb DEFAULT '[]'::jsonb,
   problems text,
   pain_intensity text,
-  
+
   -- Comportamiento (Booleans)
   lost_money boolean DEFAULT false,
   searched_solution boolean DEFAULT false,
   digital_payment boolean DEFAULT false,
   bad_experience_unknowns boolean DEFAULT false,
   limited_venues_knowledge boolean DEFAULT false,
-  
+
   -- Métricas
   coordination_time_hours int DEFAULT 0,
   beta_interest boolean DEFAULT false,
   price_point int DEFAULT 0,
-  
+
   -- Otros
   key_phrase text,
   signals jsonb DEFAULT '{}'::jsonb
