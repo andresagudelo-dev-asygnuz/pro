@@ -9,12 +9,16 @@ export function CookieConsent() {
 
   useEffect(() => {
     const consent = localStorage.getItem("pro_cookie_consent")
+    console.log("[CookieConsent] Initializing, current consent:", consent);
+
     if (!consent) {
+      console.log("[CookieConsent] No consent found, showing banner in 2s...");
       const timer = setTimeout(() => {
         setIsVisible(true)
       }, 2000)
       return () => clearTimeout(timer)
     } else if (consent === "accepted") {
+      console.log("[CookieConsent] Consent already accepted, updating GTM...");
       // Restore consent state for GTM if already accepted
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag('consent', 'update', {
@@ -28,6 +32,7 @@ export function CookieConsent() {
   }, [])
 
   const handleAccept = () => {
+    console.log("[CookieConsent] Accept clicked");
     localStorage.setItem("pro_cookie_consent", "accepted")
     
     // Push update to GTM
