@@ -2,9 +2,9 @@
  * Utilidades para el seguimiento de eventos en Google Analytics 4
  */
 
-type EventNames = 
-  | 'join_waitlist_click' 
-  | 'registration_submit' 
+type EventNames =
+  | 'join_waitlist_click'
+  | 'registration_submit'
   | 'feedback_banner_click'
   | 'game_start'
   | 'game_contact_submit'
@@ -17,12 +17,17 @@ type WindowWithGtag = Window & typeof globalThis & { gtag?: GtagFn };
 
 export const trackEvent = (eventName: EventNames, properties?: Record<string, unknown>) => {
   const w = typeof window !== 'undefined' ? (window as WindowWithGtag) : undefined;
-  if (w?.gtag) {
-    w.gtag('event', eventName, {
-      ...properties,
-      timestamp: new Date().toISOString(),
-    });
-  } else {
-    console.warn(`[Analytics] gtag no disponible para el evento: ${eventName}`);
+  if (w) {
+    // Console log for easier debugging
+    console.log(`[Analytics] Event: ${eventName}`, properties);
+
+    if (w.gtag) {
+      w.gtag('event', eventName, {
+        ...properties,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      console.warn(`[Analytics] gtag no disponible para el evento: ${eventName}`);
+    }
   }
 };

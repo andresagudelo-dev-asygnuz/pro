@@ -4,21 +4,52 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Cookie, X } from "lucide-react"
 
+type GtagFn = (command: string, action: string, params?: Record<string, unknown>) => void;
+type WindowWithGtag = Window & typeof globalThis & { gtag?: GtagFn };
+
 export function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
     const consent = localStorage.getItem("pro_cookie_consent")
+    console.log("[CookieConsent] Initializing, current consent:", consent);
+
     if (!consent) {
+      console.log("[CookieConsent] No consent found, showing banner in 2s...");
       const timer = setTimeout(() => {
         setIsVisible(true)
       }, 2000)
       return () => clearTimeout(timer)
+    } else if (consent === "accepted") {
+      console.log("[CookieConsent] Consent already accepted, updating GTM...");
+      // Restore consent state for GTM if already accepted
+      const w = typeof window !== "undefined" ? (window as WindowWithGtag) : undefined;
+      if (w?.gtag) {
+        w.gtag('consent', 'update', {
+          'ad_storage': 'granted',
+          'ad_user_data': 'granted',
+          'ad_personalization': 'granted',
+          'analytics_storage': 'granted'
+        });
+      }
     }
   }, [])
 
   const handleAccept = () => {
+    console.log("[CookieConsent] Accept clicked");
     localStorage.setItem("pro_cookie_consent", "accepted")
+    
+    // Push update to GTM
+    const w = typeof window !== "undefined" ? (window as WindowWithGtag) : undefined;
+    if (w?.gtag) {
+      w.gtag('consent', 'update', {
+        'ad_storage': 'granted',
+        'ad_user_data': 'granted',
+        'ad_personalization': 'granted',
+        'analytics_storage': 'granted'
+      });
+    }
+    
     setIsVisible(false)
   }
 
@@ -47,6 +78,7 @@ export function CookieConsent() {
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <Button 
+              id="cookie-decline-button"
               variant="ghost" 
               onClick={handleDecline}
               className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-bold text-sm"
@@ -54,8 +86,9 @@ export function CookieConsent() {
               Configurar
             </Button>
             <Button 
+              id="cookie-accept-button"
               onClick={handleAccept}
-              className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black uppercase tracking-tighter italic px-8 hover:scale-105 active:scale-95 transition-all"
+              className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black uppercase tracking-tighter italic px-8 hover:scale-[1.02] active:scale-[0.95] transition-all"
             >
               Aceptar Todo
             </Button>
