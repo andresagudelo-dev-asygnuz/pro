@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTournaments } from "@/lib/tournaments/api";
+import { getTournaments, type TournamentRow } from "@/lib/tournaments/api";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -39,7 +39,7 @@ export default async function TournamentsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {publicTournaments.map((t: any) => (
+          {publicTournaments.map((t: TournamentRow) => (
             <div key={t.id} className="border rounded-lg p-5 flex flex-col justify-between">
               <div>
                 <h3 className="font-semibold text-lg">{t.name}</h3>

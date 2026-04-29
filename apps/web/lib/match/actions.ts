@@ -88,7 +88,8 @@ export async function createMatch(
         .single();
 
       if (court) {
-        const venueName = (court.venue as any).name;
+        const venue = court.venue as { name: string } | { name: string }[] | null;
+        const venueName = Array.isArray(venue) ? venue[0]?.name : venue?.name;
         await supabase
           .from("matches")
           .update({

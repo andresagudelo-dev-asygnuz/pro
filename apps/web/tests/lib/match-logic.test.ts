@@ -17,7 +17,8 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/auth/with-auth", () => ({
-  withAuth: (cb: any) => cb({ user: { id: "organizer-1" }, supabase: mockSupabase }),
+  withAuth: (cb: (ctx: { user: { id: string }; supabase: typeof mockSupabase }) => unknown) =>
+    cb({ user: { id: "organizer-1" }, supabase: mockSupabase }),
 }));
 
 vi.mock("next/cache", () => ({

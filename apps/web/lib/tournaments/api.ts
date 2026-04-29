@@ -2,6 +2,27 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { tournamentCreateSchema, type Tournament } from "../validation/schemas";
 import { mapDbError } from "../errors/map-db-error";
 
+export type TournamentRow = {
+  id: string;
+  owner_id: string;
+  name: string;
+  format: "liga" | "eliminatoria" | "fase_grupos_eliminatoria";
+  slots: number;
+  slots_filled: number;
+  location: string;
+  start_date: string;
+  end_date: string;
+  status:
+    | "borrador"
+    | "abierto_inscripciones"
+    | "cerrado_inscripciones"
+    | "cancelado"
+    | "finalizado";
+  categories: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
 export async function createTournament(
   supabase: SupabaseClient,
   data: Omit<Tournament, "id">

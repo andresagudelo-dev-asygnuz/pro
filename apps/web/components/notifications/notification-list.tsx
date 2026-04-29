@@ -5,12 +5,17 @@ import { markAsRead, markAllAsRead } from "@/lib/notifications/actions";
 import { Button } from "@/components/ui/button";
 import { Bell, CheckCircle2, MessageSquare, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { formatMatchDate } from "@/lib/format";
+type NotificationData = {
+    player_name?: string;
+    player_id?: string;
+    match_id?: string;
+    [key: string]: unknown;
+};
 
 type Notification = {
     id: string;
     type: string;
-    data: any;
+    data: NotificationData;
     created_at: string;
     read_at: string | null;
 };
@@ -28,7 +33,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
     };
 
     const getMessage = (n: Notification) => {
-        const { player_name, player_id, match_id } = n.data;
+        const { player_name } = n.data;
         switch (n.type) {
             case "match_request":
                 return (

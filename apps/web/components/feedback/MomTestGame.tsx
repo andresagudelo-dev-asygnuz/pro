@@ -129,7 +129,7 @@ export default function MomTestGame() {
     }
   };
 
-  const handleSelection = (field: keyof GameData, value: any) => {
+  const handleSelection = (field: keyof GameData, value: GameData[keyof GameData]) => {
     setData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -202,9 +202,10 @@ export default function MomTestGame() {
       } else {
         nextStep("thanks");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error completo:", err);
-      alert(`Error al guardar: ${err.message || "Problema de conexión"}`);
+      const message = err instanceof Error ? err.message : "Problema de conexión";
+      alert(`Error al guardar: ${message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -433,7 +434,7 @@ export default function MomTestGame() {
           { id: "digital_payment", label: "Prefiero pagar todo digital (Nequi, Tarjeta)", icon: Zap },
           { id: "bad_experience_unknowns", label: "He jugado con desconocidos y fue mala experiencia", icon: AlertTriangle }
         ].map((item) => (
-          <div key={item.id} onClick={() => handleSelection(item.id as any, !data[item.id as keyof GameData])} className={cn("interactive-card game-card flex items-center gap-6 py-4", data[item.id as keyof GameData] && "selected")}>
+          <div key={item.id} onClick={() => handleSelection(item.id as keyof GameData, !data[item.id as keyof GameData])} className={cn("interactive-card game-card flex items-center gap-6 py-4", data[item.id as keyof GameData] && "selected")}>
             <item.icon className={cn("w-6 h-6", data[item.id as keyof GameData] ? "text-sport-neon" : "text-slate-500")} />
             <span className="font-bold text-sm">{item.label}</span>
           </div>
@@ -570,11 +571,10 @@ export default function MomTestGame() {
     </div>
   );
 
-  const renderThanks = () => {
+  const ThanksContent = () => {
     useEffect(() => {
       trackEvent('game_finish');
       fireConfetti();
-      // Disparar una segunda ráfaga un segundo después para más impacto
       const timer = setTimeout(fireConfetti, 1000);
       return () => clearTimeout(timer);
     }, []);
@@ -615,7 +615,7 @@ export default function MomTestGame() {
         {currentStep === "pz3" && renderPZ3()}
         {currentStep === "commitment" && renderCommitment()}
         {currentStep === "referral" && renderReferral()}
-        {currentStep === "thanks" && renderThanks()}
+        {currentStep === "thanks" && <ThanksContent />}
       </div>
       {showModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-6">
