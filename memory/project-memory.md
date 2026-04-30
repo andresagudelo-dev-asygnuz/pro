@@ -28,12 +28,21 @@
 - Plan oficial (`tasks/plan-desarrollo.md`) vs. realidad ejecutada divergen: HU-005 arrancó recién en Sprint 5 (ver abajo) después de que Sprint 3 se desviara al módulo lateral matches/venues/notifications y Sprint 4 al hardening + landing + restauración de HU-004. Queda **HU-006 Resultados/Standings** para Sprint 6 antes de poder cerrar G4 y transicionar a G5 QA.
 - El MVP v0 pickup matches (feed, matches, chat realtime) sigue conviviendo con el MVP "torneos" del PRD. Antes de G7 hay que decidir si se mantiene, se retira o se integra.
 
-## Sprint 5 (en curso) — HU-005 Inscripciones (RF-004)
+## Sprint 5 — HU-005 Inscripciones + HU-006 Resultados/Standings
 - **Modelado DB**: `teams`, `team_members` (con trigger `teams_add_captain_as_member` para autoenrolar al capitán), `tournament_registrations` con CHECK XOR entre `team_id` y `user_id`, UNIQUE parciales `tournament_id + team_id|user_id WHERE status <> 'cancelada'` para bloquear dobles inscripciones permitiendo re-inscribirse tras cancelar.
 - **Concurrencia de cupos**: trigger `enforce_tournament_capacity` replica el patrón probado en `enforce_match_capacity` (`SELECT ... FOR UPDATE` sobre `tournaments`, luego increment atómico de `slots_filled`). Se agregó `sync_tournament_slots_on_status_change` para liberar cupo al cancelar y reclamarlo si se vuelve a `confirmada`.
 - **Gate RF-007**: decidimos verificar la aprobación de edad **en TS antes del insert** (`findUnverifiedUsers`) en lugar de enforce sólo por RLS/trigger, para poder devolver mensajes claros ("Hay N miembro(s) sin verificación") en lugar de un error genérico `42501/P0001`. El helper `public.ensure_verification_aprobada` queda disponible para si en Sprint 6 preferimos mover el gate al DB.
 - **Frontend**: se mantuvo el patrón de HU-004 — rutas en `app/(app)/tournaments/[id]/...` que llaman directamente al wrapper `@/lib/supabase/client` desde client components (no Server Actions) aprovechando RLS. Cambio incidental: el botón "Gestionar" de `/tournaments/mine` apuntaba a `/tournaments/[id]/manage` (inexistente) — ahora apunta a `/tournaments/[id]`.
 - **Tests**: se agregaron 9 tests unitarios cubriendo validación, gate de RF-007, equipo sin miembros, mapping de `P0001/tournament_full`, e inserción exitosa. Suite total 139/139.
+- **Bug crítico RLS corregido** en el gate RF-007: la versión inicial consultaba `age_verifications` directamente desde el cliente, pero la RLS `age_verifications_read_self` solo permite `auth.uid() = user_id` → los demás miembros del equipo aparecían siempre como no verificados. **Fix**: función SQL `public.find_unverified_users(uuid[])` con `SECURITY DEFINER` (misma estrategia que `ensure_verification_aprobada`), invocada vía `supabase.rpc(...)`. El patrón queda como **regla general**: cualquier consulta cross-user sobre tablas con RLS por `auth.uid() = owner_id` debe ir vía RPC con `SECURITY DEFINER`.
+- **HU-006 Resultados + Standings (RF-005)**:
+  - `tournament_matches` con FKs a `tournament_registrations`, CHECK `home ≠ away` (null-safe), CHECK `scores ↔ status` coherente, `correction_window_ends_at` default +48h para editar resultados.
+  - `match_events` para goles/tarjetas/sustituciones, mapeable a `profiles_core` (stats Bloque 4) en Sprint 6.
+  - **Vista materializada `public.standings`** con `UNION ALL` (cada match cuenta 2 veces, una por lado) — índice único `standings_unique_row` obligatorio para `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
+  - `refresh_standings()` con `SECURITY DEFINER`; trigger `tm_after_finalize_refresh` que swallowa excepciones para no romper la transacción principal del promotor (si el refresh falla, el match igual queda guardado).
+  - Algoritmo puro `computeStandingFromMatches` en TS para tests y UI optimista.
+  - 4 rutas nuevas: `/tournaments/[id]/matches`, `/matches/new`, `/matches/[matchId]`, `/standings`.
+  - Tests: 13 nuevos. Suite total 153/153.
 
 ## Reglas del proyecto
 - **Toda migración SQL** vive en `apps/web/supabase/migrations/` con nombre `YYYYMMDDHHMMSS_descripcion.sql`. `db/migrations/` no se usa para producción.

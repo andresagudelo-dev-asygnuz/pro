@@ -61,8 +61,64 @@ Cerrar **HU-005 Inscripciones a torneos (RF-004)** dejando el MVP Opción A Acot
 - **Dobles inscripciones**: mitigado con UNIQUE parciales (`status <> 'cancelada'`).
 - **Cancelación maliciosa desde otro usuario**: mitigado vía RLS `tr_update_self_or_owner` (solo el que inscribió o el dueño del torneo pueden modificar).
 
+## HU-006 — Resultados y Tabla de Posiciones (RF-005)
+
+**Branch:** `devin/1777510000-hu006-standings-v2` (sale sobre HU-005; cuando se mergea HU-005 queda directo sobre `main`).
+
+### DB — `20260429140000_g4_sprint5_standings.sql`
+- Enums `match_status_v2 (programado|en_juego|finalizado|w_o|cancelado)` y `match_event_type (gol|auto_gol|amarilla|roja|sustitucion)`.
+- `tournament_matches (id, tournament_id, round, group_code, fixture_order, home_registration_id, away_registration_id, scheduled_at, venue, home_score, away_score, status, correction_window_ends_at, ...)`:
+  - CHECK `tm_home_away_distinct` (local ≠ visitante, null-safe).
+  - CHECK `tm_scores_coherent` (scores ↔ status — si está `finalizado`/`en_juego` los scores deben estar seteados; si está `programado`/`cancelado`, null).
+  - Índices `(tournament_id, round)`, `(scheduled_at)`, `(status)`.
+  - RLS: `select` público si el torneo es visible; `insert`/`update`/`delete` solo owner; `update` restringido a `correction_window_ends_at > now()` o match no finalizado.
+- `match_events (id, match_id, event_type, minute, player_id, team_side, notes, ...)` con RLS `all` solo para owner.
+- Vista materializada `public.standings` (PJ, G, E, P, GF, GC, DG, Pts) con `UNION ALL` (cada match cuenta dos veces, una por lado). Índice único `standings_unique_row (tournament_id, registration_id)` — requisito de `REFRESH MATERIALIZED VIEW CONCURRENTLY`.
+- Función `public.refresh_standings()` con `SECURITY DEFINER`, grant solo a `authenticated`.
+- Trigger `tm_before_*_enforce_finalize`: valida que el torneo esté en `cerrado_inscripciones` o `finalizado` al pasar un match a `finalizado`; setea `correction_window_ends_at = now()+48h` si no viene.
+- Trigger `tm_after_finalize_refresh`: llama a `refresh_standings()` después de insert/update relevantes. Swallowa excepciones para no romper la transacción principal del promotor.
+
+### Backend — `apps/web/lib/tournaments/matches.ts`
+- `createMatch`, `listMatches`, `getMatchById`, `recordResult`, `addMatchEvent`, `listMatchEvents`, `listStandings`.
+- `mapResultError` (P0001 `tournament_not_ready_for_results`, P0002 `tournament_not_found`, `42501/permission`).
+- Algoritmo puro `computeStandingFromMatches(tournament_id, registration_id, matches[])` — útil para tests unitarios y para UI que quiera calcular en vivo antes de que el refresh de la mat view termine.
+
+### Schemas — `apps/web/lib/validation/schemas.ts`
+- `matchStatusEnum`, `matchEventTypeEnum`.
+- `matchCreateSchema` (refine `home ≠ away`), `matchResultSchema` (scores 0–99), `matchEventSchema` (minute 0–130).
+
+### Frontend
+- `/tournaments/[id]/matches` — fixture público con badges de estado, acciones del promotor.
+- `/tournaments/[id]/matches/new` — form del promotor (requiere ≥2 inscripciones confirmadas).
+- `/tournaments/[id]/matches/[matchId]` — carga de resultado + eventos (goles, tarjetas, etc.) para el promotor.
+- `/tournaments/[id]/standings` — tabla de posiciones pública (PJ, G, E, P, GF, GC, DG, Pts).
+- `/tournaments/[id]` (detalle) con botones "Partidos" y "Tabla de posiciones" para cualquier viewer.
+
+### Tests — `apps/web/tests/lib/matches.test.ts`
+13 tests nuevos. Suite total: **153/153 PASS**.
+- Validación de forma: `home == away`, sin auth, score negativo, minuto > 130.
+- Mapping de errores: `P0001/tournament_not_ready_for_results`, `42501/permission`.
+- Algoritmo puro `computeStandingFromMatches`: victoria local (3pts), derrota visitante (0pts), empate (1pt cada lado), ignora no-finalizados, ignora otros torneos, ignora no-participantes, acumulado V+E+D.
+
+### Validación local
+| Check | Resultado |
+|---|---|
+| `pnpm lint` | 0 errors, 15 warnings (preexistentes) |
+| `pnpm typecheck` | OK |
+| `pnpm test` | 153/153 PASS (14 archivos) |
+| `pnpm build` | OK — rutas nuevas: `/tournaments/[id]/matches`, `/tournaments/[id]/matches/new`, `/tournaments/[id]/matches/[matchId]`, `/tournaments/[id]/standings` |
+
+### Riesgos y mitigaciones (HU-006)
+- **Refresh masivo en torneos grandes**: mitigado usando `REFRESH MATERIALIZED VIEW CONCURRENTLY` con índice único. Post-MVP evaluar tabla regular con triggers granulares.
+- **Cambio tardío de resultado después de cerrar el torneo**: mitigado con `correction_window_ends_at` (default 48h) chequeado en RLS del `update`.
+- **Marcador inconsistente (finalizado sin scores)**: mitigado con CHECK `tm_scores_coherent` en DB, no solo en UI.
+- **Refresh fallido bloquea transacción del promotor**: mitigado con `exception when others then null` dentro del trigger AFTER (el match se guarda aunque el refresh falle; se puede re-disparar vía RPC).
+
 ## Siguientes pasos (Sprint 6)
-- HU-006 Resultados + Standings (RF-005): tablas `tournament_matches`, `match_events`, vista materializada `standings` con `REFRESH CONCURRENTLY`.
 - Notificaciones automáticas al promotor cuando se inscribe/cancela un equipo.
 - Mover automáticamente de `lista_espera` a `confirmada` cuando se libera un cupo.
+- Proyección de stats al perfil del jugador (Bloque 4 técnico): agregar partidos jugados, goles, tarjetas por jugador a partir de `match_events.player_id`.
+- Hardening del trigger `sync_tournament_slots_on_status_change` (validar estado del torneo al re-confirmar).
+- Agregar `WITH CHECK` por rol en RLS `tr_update_self_or_owner` (restringir transiciones de status según role).
+- Generación automática de fixture (liga / grupos + eliminación).
 - Agregar campo `allows_solo` en `tournaments` para restringir formato al validar inscripción individual.

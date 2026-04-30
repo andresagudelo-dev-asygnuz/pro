@@ -742,3 +742,76 @@ export type TeamCreateInput = z.infer<typeof teamCreateSchema>;
 export type RegisterTeamInput = z.infer<typeof registerTeamSchema>;
 export type RegisterSoloInput = z.infer<typeof registerSoloSchema>;
 export type CancelRegistrationInput = z.infer<typeof cancelRegistrationSchema>;
+
+// --- Resultados y standings (HU-006 / RF-005) ---
+
+export const matchStatusEnum = z.enum([
+  "programado",
+  "en_juego",
+  "finalizado",
+  "w_o",
+  "cancelado",
+]);
+
+export const matchEventTypeEnum = z.enum([
+  "gol",
+  "auto_gol",
+  "amarilla",
+  "roja",
+  "sustitucion",
+]);
+
+export const matchCreateSchema = z
+  .object({
+    tournamentId: z.string().uuid("Torneo inválido"),
+    round: z.number().int().min(1, "La jornada debe ser >= 1").default(1),
+    groupCode: z.string().trim().max(20).optional().nullable(),
+    fixtureOrder: z.number().int().min(0).optional().nullable(),
+    homeRegistrationId: z.string().uuid("Inscripción local inválida"),
+    awayRegistrationId: z.string().uuid("Inscripción visitante inválida"),
+    scheduledAt: z.string().datetime({ offset: true }).optional().nullable(),
+    venue: z.string().trim().max(200).optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.homeRegistrationId === data.awayRegistrationId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Un equipo no puede enfrentarse a sí mismo",
+        path: ["awayRegistrationId"],
+      });
+    }
+  });
+
+export const matchResultSchema = z.object({
+  matchId: z.string().uuid("Partido inválido"),
+  homeScore: z
+    .number()
+    .int()
+    .min(0, "El marcador no puede ser negativo")
+    .max(99, "Marcador demasiado alto"),
+  awayScore: z
+    .number()
+    .int()
+    .min(0, "El marcador no puede ser negativo")
+    .max(99, "Marcador demasiado alto"),
+  status: matchStatusEnum.default("finalizado"),
+});
+
+export const matchEventSchema = z.object({
+  matchId: z.string().uuid("Partido inválido"),
+  eventType: matchEventTypeEnum,
+  minute: z
+    .number()
+    .int()
+    .min(0, "El minuto debe ser >= 0")
+    .max(130, "El minuto debe ser <= 130")
+    .optional()
+    .nullable(),
+  playerId: z.string().uuid("Jugador inválido").optional().nullable(),
+  teamSide: z.enum(["home", "away"]).optional().nullable(),
+  notes: z.string().trim().max(500).optional().nullable(),
+});
+
+export type MatchCreateInput = z.infer<typeof matchCreateSchema>;
+export type MatchResultInput = z.infer<typeof matchResultSchema>;
+export type MatchEventInput = z.infer<typeof matchEventSchema>;
