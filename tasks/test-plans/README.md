@@ -61,9 +61,9 @@ encuentren regresiones.
 | HU-001 Signup + roles | [HU-001.md](./HU-001.md) | N/A (auth flow) | `sql/hu001-*.sql` | pr-11 (2026-04-17) | **PASS baseline** |
 | HU-002 Verificación edad | [HU-002.md](./HU-002.md) | admin.ts 52% | `sql/hu002-*.sql` | pr-13 / pr-14 | **PASS baseline** |
 | HU-003 Perfil 4 bloques | [HU-003.md](./HU-003.md) | N/A (form flow) | `sql/hu003-visibility.sql` | pr-16 | **PASS baseline** |
-| HU-004 Torneos | [HU-004.md](./HU-004.md) | api.ts **91%** | `sql/hu004-tournaments.sql` | PENDING | **Unit OK** |
-| HU-005 Inscripciones | [HU-005.md](./HU-005.md) | registrations.ts **82%** | `sql/hu005-*.sql` (WITH CHECK post Sprint 6) | PENDING | **Unit OK** |
-| HU-006 Resultados + Standings | [HU-006.md](./HU-006.md) | matches.ts **94%** | `sql/hu006-*.sql` (mat view + refresh) | PENDING | **Unit OK** |
+| HU-004 Torneos | [HU-004.md](./HU-004.md) | api.ts **91%** | `sql/hu004-tournaments.sql` | PENDING | **PASS** |
+| HU-005 Inscripciones | [HU-005.md](./HU-005.md) | registrations.ts **82%** | `sql/hu005-*.sql` (WITH CHECK post Sprint 6) | PENDING | **PASS** |
+| HU-006 Resultados + Standings | [HU-006.md](./HU-006.md) | matches.ts **94%** | `sql/hu006-*.sql` (mat view + refresh) | PENDING | **PASS** |
 
 **Pendientes para cerrar G5:**
 

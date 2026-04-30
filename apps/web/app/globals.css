@@ -130,6 +130,7 @@
 
 .animate-float {
   animation: float 12s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 /* Glassmorphism utility */
@@ -162,6 +163,7 @@
 
 .animate-shimmer {
   animation: shimmer 2.5s infinite;
+  will-change: transform;
 }
 
 @keyframes pulse-slow {
@@ -171,6 +173,7 @@
 
 .animate-pulse-slow {
   animation: pulse-slow 4s ease-in-out infinite;
+  will-change: filter, opacity;
 }
 
 @keyframes bounce-subtle {
@@ -180,6 +183,7 @@
 
 .animate-bounce-subtle {
   animation: bounce-subtle 2s ease-in-out infinite;
+  will-change: transform;
 }
 
 @layer base {

@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 interface VideoBackgroundProps {
@@ -7,15 +8,25 @@ interface VideoBackgroundProps {
 }
 
 export function VideoBackground({ src, poster, overlayClassName }: VideoBackgroundProps) {
+  const defaultPoster = "https://images.unsplash.com/photo-1541252260730-0412e8e2108e?q=80&w=2000"
+  
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden z-0 bg-black">
+      {/* Optimized Poster for LCP */}
+      <Image
+        src={poster || defaultPoster}
+        alt="Background Poster"
+        fill
+        priority
+        className="object-cover opacity-30 grayscale-[50%] blur-[2px] z-0"
+      />
+      
       <video
         autoPlay
         loop
         muted
         playsInline
-        poster={poster || "https://images.unsplash.com/photo-1541252260730-0412e8e2108e?q=80&w=2000"}
-        className="object-cover w-full h-full opacity-30 grayscale-[50%] blur-[2px]"
+        className="object-cover w-full h-full opacity-30 grayscale-[50%] blur-[2px] relative z-10"
       >
         <source src={src} type="video/mp4" />
       </video>
