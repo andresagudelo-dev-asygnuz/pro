@@ -4,6 +4,10 @@ import {
   createMatch,
   recordResult,
   addMatchEvent,
+  listMatches,
+  getMatchById,
+  listMatchEvents,
+  listStandings,
   computeStandingFromMatches,
   type MatchRow,
 } from "@/lib/tournaments/matches";
@@ -122,6 +126,252 @@ describe("matches · recordResult error mapping", () => {
       status: "finalizado",
     });
     expect(res.error).toMatch(/no tenés permisos/i);
+  });
+});
+
+describe("matches · write paths happy", () => {
+  test("createMatch inserta con owner_id implícito y retorna fila", async () => {
+    const single = vi.fn().mockResolvedValue({
+      data: { id: MATCH_ID, tournament_id: TOURNAMENT_ID, round: 1 },
+      error: null,
+    });
+    const select = vi.fn().mockReturnValue({ single });
+    const insert = vi.fn().mockReturnValue({ select });
+    const supabase = {
+      ...mockAuthedClient(USER_ID),
+      from: vi.fn().mockReturnValue({ insert }),
+    } as unknown as SupabaseClient;
+
+    const res = await createMatch(supabase, {
+      tournamentId: TOURNAMENT_ID,
+      round: 1,
+      homeRegistrationId: REG_HOME,
+      awayRegistrationId: REG_AWAY,
+    });
+    expect(res.error).toBeNull();
+    expect(res.data?.id).toBe(MATCH_ID);
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tournament_id: TOURNAMENT_ID,
+        round: 1,
+        home_registration_id: REG_HOME,
+        away_registration_id: REG_AWAY,
+      }),
+    );
+  });
+
+  test("recordResult actualiza score + status del match", async () => {
+    const single = vi.fn().mockResolvedValue({
+      data: { id: MATCH_ID, home_score: 2, away_score: 1, status: "finalizado" },
+      error: null,
+    });
+    const select = vi.fn().mockReturnValue({ single });
+    const eq = vi.fn().mockReturnValue({ select });
+    const update = vi.fn().mockReturnValue({ eq });
+    const supabase = {
+      ...mockAuthedClient(USER_ID),
+      from: vi.fn().mockReturnValue({ update }),
+    } as unknown as SupabaseClient;
+
+    const res = await recordResult(supabase, {
+      matchId: MATCH_ID,
+      homeScore: 2,
+      awayScore: 1,
+      status: "finalizado",
+    });
+    expect(res.error).toBeNull();
+    expect(update).toHaveBeenCalledWith({
+      home_score: 2,
+      away_score: 1,
+      status: "finalizado",
+    });
+    expect(eq).toHaveBeenCalledWith("id", MATCH_ID);
+  });
+
+  test("addMatchEvent inserta evento con minute y team_side", async () => {
+    const single = vi.fn().mockResolvedValue({
+      data: { id: "ev-1", match_id: MATCH_ID, event_type: "gol" },
+      error: null,
+    });
+    const select = vi.fn().mockReturnValue({ single });
+    const insert = vi.fn().mockReturnValue({ select });
+    const supabase = {
+      ...mockAuthedClient(USER_ID),
+      from: vi.fn().mockReturnValue({ insert }),
+    } as unknown as SupabaseClient;
+
+    const res = await addMatchEvent(supabase, {
+      matchId: MATCH_ID,
+      eventType: "gol",
+      minute: 45,
+      teamSide: "home",
+      playerId: null,
+      notes: "de penal",
+    });
+    expect(res.error).toBeNull();
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        match_id: MATCH_ID,
+        event_type: "gol",
+        minute: 45,
+        team_side: "home",
+        notes: "de penal",
+      }),
+    );
+  });
+
+  test("addMatchEvent falla sin auth", async () => {
+    const supabase = mockAuthedClient(null) as unknown as SupabaseClient;
+    const res = await addMatchEvent(supabase, {
+      matchId: MATCH_ID,
+      eventType: "gol",
+      minute: 10,
+      teamSide: "home",
+      playerId: null,
+      notes: null,
+    });
+    expect(res.error).toBe("No autenticado");
+  });
+
+  test("recordResult falla sin auth", async () => {
+    const supabase = mockAuthedClient(null) as unknown as SupabaseClient;
+    const res = await recordResult(supabase, {
+      matchId: MATCH_ID,
+      homeScore: 1,
+      awayScore: 0,
+      status: "finalizado",
+    });
+    expect(res.error).toBe("No autenticado");
+  });
+});
+
+describe("matches · read paths", () => {
+  test("listMatches pide order por round/fixture_order/scheduled_at", async () => {
+    const orderCalls: Array<[string, unknown]> = [];
+    // Cadena real: eq -> order(1) -> order(2) -> order(3, resuelve).
+    const order3 = vi.fn().mockImplementation((col: string, opts) => {
+      orderCalls.push([col, opts]);
+      return Promise.resolve({
+        data: [{ id: MATCH_ID, round: 1 }],
+        error: null,
+      });
+    });
+    const order2 = vi.fn().mockImplementation((col: string, opts) => {
+      orderCalls.push([col, opts]);
+      return { order: order3 };
+    });
+    const order1 = vi.fn().mockImplementation((col: string, opts) => {
+      orderCalls.push([col, opts]);
+      return { order: order2 };
+    });
+    const eq = vi.fn().mockReturnValue({ order: order1 });
+    const from = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({ eq }),
+    });
+    const supabase = { from } as unknown as SupabaseClient;
+
+    const res = await listMatches(supabase, TOURNAMENT_ID);
+    expect(res.error).toBeNull();
+    expect(res.data).toHaveLength(1);
+    expect(orderCalls.map((c) => c[0])).toEqual([
+      "round",
+      "fixture_order",
+      "scheduled_at",
+    ]);
+    expect(eq).toHaveBeenCalledWith("tournament_id", TOURNAMENT_ID);
+  });
+
+  test("listMatches retorna array vacío en error (no null)", async () => {
+    // eq -> order -> order -> order (el último resuelve con error)
+    const order3 = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: "permission" },
+    });
+    const order2 = vi.fn().mockReturnValue({ order: order3 });
+    const order1 = vi.fn().mockReturnValue({ order: order2 });
+    const eq = vi.fn().mockReturnValue({ order: order1 });
+    const from = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({ eq }),
+    });
+    const supabase = { from } as unknown as SupabaseClient;
+    const res = await listMatches(supabase, TOURNAMENT_ID);
+    expect(res.data).toEqual([]);
+    expect(res.error).toMatch(/no tenés permisos/i);
+  });
+
+  test("getMatchById usa maybeSingle (null si no existe)", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const supabase = {
+      from: () => ({
+        select: () => ({ eq: () => ({ maybeSingle }) }),
+      }),
+    } as unknown as SupabaseClient;
+    const res = await getMatchById(supabase, MATCH_ID);
+    expect(res.error).toBeNull();
+    expect(res.data).toBeNull();
+  });
+
+  test("listMatchEvents ordena por minute y created_at", async () => {
+    const order2 = vi.fn().mockResolvedValue({
+      data: [{ id: "ev-1" }, { id: "ev-2" }],
+      error: null,
+    });
+    const order1 = vi.fn().mockReturnValue({ order: order2 });
+    const eq = vi.fn().mockReturnValue({ order: order1 });
+    const supabase = {
+      from: () => ({ select: () => ({ eq }) }),
+    } as unknown as SupabaseClient;
+    const res = await listMatchEvents(supabase, MATCH_ID);
+    expect(res.error).toBeNull();
+    expect(res.data).toHaveLength(2);
+    expect(eq).toHaveBeenCalledWith("match_id", MATCH_ID);
+  });
+
+  test("listStandings ordena por points/goal_difference/goals_for descending", async () => {
+    const orderCalls: Array<[string, unknown]> = [];
+    const order3 = vi.fn().mockImplementation((col: string, opts) => {
+      orderCalls.push([col, opts]);
+      return Promise.resolve({
+        data: [{ tournament_id: TOURNAMENT_ID, registration_id: REG_HOME, points: 9 }],
+        error: null,
+      });
+    });
+    const order2 = vi.fn().mockImplementation((col: string, opts) => {
+      orderCalls.push([col, opts]);
+      return { order: order3 };
+    });
+    const order1 = vi.fn().mockImplementation((col: string, opts) => {
+      orderCalls.push([col, opts]);
+      return { order: order2 };
+    });
+    const eq = vi.fn().mockReturnValue({ order: order1 });
+    const supabase = {
+      from: () => ({ select: () => ({ eq }) }),
+    } as unknown as SupabaseClient;
+    const res = await listStandings(supabase, TOURNAMENT_ID);
+    expect(res.error).toBeNull();
+    expect(res.data).toHaveLength(1);
+    expect(orderCalls).toEqual([
+      ["points", { ascending: false }],
+      ["goal_difference", { ascending: false }],
+      ["goals_for", { ascending: false }],
+    ]);
+  });
+
+  test("listStandings retorna array vacío en error", async () => {
+    const order3 = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "42P01", message: "relation does not exist" },
+    });
+    const order2 = vi.fn().mockReturnValue({ order: order3 });
+    const order1 = vi.fn().mockReturnValue({ order: order2 });
+    const eq = vi.fn().mockReturnValue({ order: order1 });
+    const supabase = {
+      from: () => ({ select: () => ({ eq }) }),
+    } as unknown as SupabaseClient;
+    const res = await listStandings(supabase, TOURNAMENT_ID);
+    expect(res.data).toEqual([]);
+    expect(res.error).toBeTruthy();
   });
 });
 
