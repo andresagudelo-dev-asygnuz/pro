@@ -60,6 +60,8 @@ export async function createMatch(
         starts_at: input.starts_at,
         duration_minutes: input.duration_minutes,
         max_players: input.max_players,
+        is_public: input.is_public,
+        venue_id: input.venue_id,
       })
       .select("id")
       .single();
@@ -373,6 +375,22 @@ export async function sendMessage(
       return { ok: false, error: mapDbError(error, "sendMessage") };
     }
     // No revalidamos — el chat recibe por Realtime en el cliente.
+    return { ok: true };
+  });
+}
+
+export async function confirmAttendance(matchId: string): Promise<JoinResult> {
+  return withAuth(async ({ user, supabase }) => {
+    const { error } = await supabase
+      .from("match_participants")
+      .update({ confirmed_at: new Date().toISOString() })
+      .eq("match_id", matchId)
+      .eq("user_id", user.id)
+      .eq("status", "joined");
+
+    if (error) return { ok: false, error: mapDbError(error, "confirmAttendance") };
+
+    revalidatePath(`/matches/${matchId}`);
     return { ok: true };
   });
 }

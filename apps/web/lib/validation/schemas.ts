@@ -209,6 +209,8 @@ export const createMatchSchema = z
         }
         return d.toISOString();
       }),
+    is_public: checkboxToBoolean.default(true),
+    venue_id: z.string().uuid("ID de cancha inválido").optional().nullable(),
   })
   .superRefine((val, ctx) => {
     // Si no hay court_id (o es manual), location es obligatorio.

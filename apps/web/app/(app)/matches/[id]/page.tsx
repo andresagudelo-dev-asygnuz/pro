@@ -4,7 +4,10 @@ import { JoinForm } from "@/components/match/join-form";
 import { MatchChat } from "@/components/match/match-chat";
 import { RequestManagement } from "@/components/match/request-management";
 import { InviteUser } from "@/components/match/invite-user";
+import { ConfirmButton } from "@/components/match/confirm-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2, Clock, MapPin, Globe, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { requireCompleteProfile } from "@/lib/auth/session";
@@ -74,11 +77,20 @@ export default async function MatchPage({
   const isJoined = participantRows.some(
     (p) => p.user_id === profile.id && p.status === "joined",
   );
+  const isConfirmed = participantRows.some(
+    (p) => p.user_id === profile.id && p.status === "joined" && p.confirmed_at,
+  );
   const isRequested = participantRows.some(
     (p) => p.user_id === profile.id && p.status === "requested",
   );
   const isOrganizer = match.organizer_id === profile.id;
   const isFull = joinedCount >= match.max_players && !isJoined;
+
+  // Lógica de Lobby: 3 horas antes del partido
+  const matchTime = new Date(match.starts_at).getTime();
+  const threeHoursBefore = matchTime - (3 * 60 * 60 * 1000);
+  const isLobbyActive = Date.now() > (matchTime - (24 * 60 * 60 * 1000)); // Lobby visible 24h antes
+  const isNearStart = Date.now() > threeHoursBefore;
 
   const { data: messagesRaw } = await supabase
     .from("messages")
@@ -136,6 +148,15 @@ export default async function MatchPage({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {match.is_public ? (
+              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                <Globe className="mr-1 h-3 w-3" /> Abierto
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">
+                <Lock className="mr-1 h-3 w-3" /> Cerrado
+              </Badge>
+            )}
             {isOrganizer && <Badge variant="secondary">Organizás</Badge>}
             <JoinForm
               matchId={match.id}
@@ -145,6 +166,18 @@ export default async function MatchPage({
             />
           </div>
         </div>
+
+        {isJoined && !isConfirmed && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <Clock className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 flex items-center justify-between gap-4">
+              <span>
+                <strong>¡Confirmá tu asistencia!</strong> Si no confirmás 3 horas antes del partido, podrías perder tu cupo.
+              </span>
+              <ConfirmButton matchId={match.id} />
+            </AlertDescription>
+          </Alert>
+        )}
 
         {match.description && (
           <p className="text-sm text-foreground/90">{match.description}</p>
@@ -157,7 +190,10 @@ export default async function MatchPage({
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               Dónde
             </p>
-            <p className="text-sm">{match.location}</p>
+            <p className="text-sm flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-primary" />
+              {match.location}
+            </p>
           </div>
           <div className="flex flex-col gap-1">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -209,10 +245,10 @@ export default async function MatchPage({
               const pp = profilesById.get(p.user_id);
               if (!pp) return null;
               return (
-                <li key={p.user_id}>
+                <li key={p.user_id} className="flex items-center justify-between pr-2">
                   <Link
                     href={`/profile/${pp.id}`}
-                    className="flex items-center gap-3 rounded-md p-2 hover:bg-muted"
+                    className="flex flex-1 items-center gap-3 rounded-md p-2 hover:bg-muted"
                   >
                     <Avatar className="size-8">
                       {pp.avatar_url && (
@@ -233,6 +269,17 @@ export default async function MatchPage({
                       )}
                     </div>
                   </Link>
+                  {p.confirmed_at ? (
+                    <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Confirmado
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      Pendiente
+                    </div>
+                  )}
                 </li>
               );
           })}

@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   createMatch,
   type MatchFormState,
@@ -116,15 +117,15 @@ export function MatchForm({
               <SelectValue placeholder="Elegí una cancha" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="manual">Ingresar manualmente</SelectItem>
+              <SelectItem value="manual">📍 Ingresar manualmente / Otros</SelectItem>
               {venues.map((v) => (
                 <div key={v.id}>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30">
-                    {v.name} ({v.city})
+                  <div className="px-2 py-1.5 text-xs font-bold text-primary bg-primary/5 uppercase tracking-wider">
+                    🏢 {v.name} ({v.city})
                   </div>
                   {v.venue_courts?.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.name} (Cap: {c.capacity_players})
+                      ⚽ {c.name} (Cap: {c.capacity_players})
                     </SelectItem>
                   ))}
                 </div>
@@ -134,7 +135,7 @@ export function MatchForm({
           <Input
             id="location"
             name="location"
-            placeholder="O ingresá ubicación manual..."
+            placeholder="O escribí el lugar exacto..."
             className="mt-1"
             aria-invalid={Boolean(err.location) || undefined}
           />
@@ -142,6 +143,16 @@ export function MatchForm({
             <p className="text-xs text-destructive">{err.location}</p>
           )}
         </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <Label htmlFor="is_public">Partido Abierto</Label>
+          <p className="text-sm text-muted-foreground">
+            Cualquier persona puede encontrarlo y unirse.
+          </p>
+        </div>
+        <Switch id="is_public" name="is_public" defaultChecked />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
