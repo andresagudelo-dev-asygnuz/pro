@@ -3,17 +3,23 @@
 
 begin;
 
-insert into auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+insert into auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
 values
-  ('00000000-0000-4000-8000-000000006001', 'mv_owner@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000006002', 'mv_p1@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000006003', 'mv_p2@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
+  ('00000000-0000-4000-8000-000000006001', '00000000-0000-0000-0000-000000000000', 'mv_owner@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000006002', '00000000-0000-0000-0000-000000000000', 'mv_p1@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000006003', '00000000-0000-0000-0000-000000000000', 'mv_p2@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
-insert into public.age_verifications (user_id, status) values
-  ('00000000-0000-4000-8000-000000006002', 'aprobada'),
-  ('00000000-0000-4000-8000-000000006003', 'aprobada')
-on conflict (user_id) do update set status = excluded.status;
+-- age_verifications no tiene UNIQUE sobre user_id. Limpiar y sembrar.
+-- Status 'aprobada' requiere reviewed_at/reviewed_by por check constraint.
+delete from public.age_verifications
+  where user_id in (
+    '00000000-0000-4000-8000-000000006002',
+    '00000000-0000-4000-8000-000000006003'
+  );
+insert into public.age_verifications (user_id, status, reviewed_at, reviewed_by) values
+  ('00000000-0000-4000-8000-000000006002', 'aprobada', now(), '00000000-0000-4000-8000-000000006001'),
+  ('00000000-0000-4000-8000-000000006003', 'aprobada', now(), '00000000-0000-4000-8000-000000006001');
 
 insert into public.tournaments(id, owner_id, name, format, slots, location, start_date, end_date, status)
 values (

@@ -5,14 +5,16 @@
 
 do $$
 declare
-  ispopulated boolean;
+  v_ispopulated boolean;
 begin
-  select ispopulated into ispopulated from pg_matviews
+  -- Rename local var para evitar colisión con pg_matviews.ispopulated
+  -- (plpgsql.variable_conflict default = error).
+  select pg_matviews.ispopulated into v_ispopulated from pg_matviews
   where schemaname = 'public' and matviewname = 'standings';
 
-  if ispopulated is null then
+  if v_ispopulated is null then
     raise notice '[FAIL] mat view public.standings no existe';
-  elsif ispopulated then
+  elsif v_ispopulated then
     raise notice '[PASS] mat view public.standings está populada (REFRESH CONCURRENTLY habilitado)';
   else
     raise notice '[FAIL] mat view public.standings existe pero NO está populada — CONCURRENTLY fallará';

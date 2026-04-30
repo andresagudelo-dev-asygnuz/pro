@@ -1,9 +1,11 @@
--- HU-003 · Catálogo visibility_fields presente + override por user.
--- Verifica que profile_field_visibility respeta la constraint de visibility.
+-- HU-003 · Catálogo visibility_fields + override por usuario.
+-- Valida que profile_field_visibility respeta:
+--   · FK contra visibility_fields(field_key)
+--   · enum visibility_level (publico | promotores | privado)
 
 begin;
 
--- Catálogo debe estar seedeado por la migración.
+-- 1) El catálogo público está seedeado por la migración.
 do $$
 declare cnt int;
 begin
@@ -15,47 +17,75 @@ begin
   end if;
 end $$;
 
-insert into auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+insert into auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
 values
-  ('00000000-0000-4000-8000-000000000f01', 'vis_a@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
+  ('00000000-0000-4000-8000-000000000f01', '00000000-0000-0000-0000-000000000000', 'vis_a@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"00000000-0000-4000-8000-000000000f01","role":"authenticated"}';
 
--- Insertar override válido.
-insert into public.profile_field_visibility(user_id, field, visibility)
-values ('00000000-0000-4000-8000-000000000f01', 'phone', 'promotores')
-on conflict (user_id, field) do update set visibility = excluded.visibility;
+-- 2) Override válido sobre un field_key del catálogo.
+insert into public.profile_field_visibility(user_id, field_key, level)
+values ('00000000-0000-4000-8000-000000000f01', 'identity.full_name', 'promotores')
+on conflict (user_id, field_key) do update set level = excluded.level;
 
 do $$
 declare v text;
 begin
-  select visibility into v from public.profile_field_visibility
-  where user_id = '00000000-0000-4000-8000-000000000f01' and field = 'phone';
+  select level::text into v from public.profile_field_visibility
+  where user_id = '00000000-0000-4000-8000-000000000f01'
+    and field_key = 'identity.full_name';
   if v = 'promotores' then
-    raise notice '[PASS] override phone=promotores guardado';
+    raise notice '[PASS] override identity.full_name=promotores guardado';
   else
-    raise notice '[FAIL] override phone visibility = %', v;
+    raise notice '[FAIL] override level = %', v;
   end if;
 end $$;
 
--- Insertar con visibility inválido → debe fallar por CHECK/enum.
+-- 3) level inválido → enum visibility_level rechaza.
 do $$
 declare ok boolean;
 begin
   begin
-    insert into public.profile_field_visibility(user_id, field, visibility)
-    values ('00000000-0000-4000-8000-000000000f01', 'dob', 'invalid_value');
+    insert into public.profile_field_visibility(user_id, field_key, level)
+    values (
+      '00000000-0000-4000-8000-000000000f01',
+      'identity.city',
+      'invalid_value'
+    );
     ok := true;
   exception when others then
     ok := false;
   end;
 
   if ok then
-    raise notice '[FAIL] visibility invalid_value aceptado — constraint laxa';
+    raise notice '[FAIL] level invalid_value aceptado — enum laxo';
   else
-    raise notice '[PASS] visibility inválido rechazado';
+    raise notice '[PASS] level inválido rechazado por enum';
+  end if;
+end $$;
+
+-- 4) field_key inexistente → FK a visibility_fields rechaza.
+do $$
+declare ok boolean;
+begin
+  begin
+    insert into public.profile_field_visibility(user_id, field_key, level)
+    values (
+      '00000000-0000-4000-8000-000000000f01',
+      'nonexistent.field',
+      'publico'
+    );
+    ok := true;
+  exception when others then
+    ok := false;
+  end;
+
+  if ok then
+    raise notice '[FAIL] field_key inexistente aceptado — FK rota';
+  else
+    raise notice '[PASS] field_key fuera del catálogo rechazado por FK';
   end if;
 end $$;
 

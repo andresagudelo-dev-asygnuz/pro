@@ -6,17 +6,23 @@
 
 begin;
 
-insert into auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+insert into auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
 values
-  ('00000000-0000-4000-8000-000000002001', 'cap_owner@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000002002', 'cap_u1@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000002003', 'cap_u2@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
+  ('00000000-0000-4000-8000-000000002001', '00000000-0000-0000-0000-000000000000', 'cap_owner@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000002002', '00000000-0000-0000-0000-000000000000', 'cap_u1@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000002003', '00000000-0000-0000-0000-000000000000', 'cap_u2@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
-insert into public.age_verifications (user_id, status) values
-  ('00000000-0000-4000-8000-000000002002', 'aprobada'),
-  ('00000000-0000-4000-8000-000000002003', 'aprobada')
-on conflict (user_id) do update set status = excluded.status;
+-- age_verifications no tiene UNIQUE sobre user_id. Status 'aprobada'
+-- requiere reviewed_at/reviewed_by por check constraint.
+delete from public.age_verifications
+  where user_id in (
+    '00000000-0000-4000-8000-000000002002',
+    '00000000-0000-4000-8000-000000002003'
+  );
+insert into public.age_verifications (user_id, status, reviewed_at, reviewed_by) values
+  ('00000000-0000-4000-8000-000000002002', 'aprobada', now(), '00000000-0000-4000-8000-000000002001'),
+  ('00000000-0000-4000-8000-000000002003', 'aprobada', now(), '00000000-0000-4000-8000-000000002001');
 
 -- Torneo borrador con slots=1.
 insert into public.tournaments(id, owner_id, name, format, slots, location, start_date, end_date, status)

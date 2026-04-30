@@ -3,20 +3,26 @@
 
 begin;
 
-insert into auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+insert into auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
 values
-  ('00000000-0000-4000-8000-000000000d01', 'fuv_captain@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000000d02', 'fuv_a@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000000d03', 'fuv_b@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000000d04', 'fuv_c@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
+  ('00000000-0000-4000-8000-000000000d01', '00000000-0000-0000-0000-000000000000', 'fuv_captain@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000000d02', '00000000-0000-0000-0000-000000000000', 'fuv_a@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000000d03', '00000000-0000-0000-0000-000000000000', 'fuv_b@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000000d04', '00000000-0000-0000-0000-000000000000', 'fuv_c@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
-insert into public.age_verifications (user_id, status)
-values
-  ('00000000-0000-4000-8000-000000000d02', 'aprobada'),
-  ('00000000-0000-4000-8000-000000000d03', 'pendiente')
-  -- d04 sin fila → no verificado
-on conflict (user_id) do update set status = excluded.status;
+-- d02 aprobada, d03 pendiente, d04 sin fila → find_unverified_users debe
+-- retornar [d03, d04]. Status 'aprobada' requiere reviewed_at/reviewed_by
+-- no nulos por el check constraint.
+delete from public.age_verifications
+  where user_id in (
+    '00000000-0000-4000-8000-000000000d02',
+    '00000000-0000-4000-8000-000000000d03'
+  );
+insert into public.age_verifications (user_id, status, reviewed_at, reviewed_by) values
+  ('00000000-0000-4000-8000-000000000d02', 'aprobada', now(), '00000000-0000-4000-8000-000000000d01');
+insert into public.age_verifications (user_id, status) values
+  ('00000000-0000-4000-8000-000000000d03', 'pendiente');
 
 -- Impersonar al capitán (d01) — no admin, y NO puede leer las filas de los members.
 set local role authenticated;

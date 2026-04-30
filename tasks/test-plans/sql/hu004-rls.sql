@@ -1,19 +1,18 @@
--- HU-004 · RLS tournaments_owner_write_self + lectura pública no-borrador
--- 1) user ajeno no puede modificar torneo de otro
--- 2) borrador ajeno no se lista en lecturas públicas
+-- HU-004 · RLS tournaments
+-- Valida:
+--   1) Borrador ajeno NO se lista a stranger (policy SELECT WHERE status IN(...)).
+--   2) Stranger no puede UPDATE tournament ajeno (USING owner_id = auth.uid()).
+--   3) Torneo publicado SÍ es visible a stranger (status ∈ abierto/cerrado/finalizado).
 
 begin;
 
-insert into auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+insert into auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
 values
-  ('00000000-0000-4000-8000-000000001001', 'trn_owner@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000001002', 'trn_stranger@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
+  ('00000000-0000-4000-8000-000000001001', '00000000-0000-0000-0000-000000000000', 'trn_owner@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000001002', '00000000-0000-0000-0000-000000000000', 'trn_stranger@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
--- Crear torneo como owner.
-set local role authenticated;
-set local "request.jwt.claims" = '{"sub":"00000000-0000-4000-8000-000000001001","role":"authenticated"}';
-
+-- Setup como superuser: crear torneo borrador del owner (bypass RLS).
 insert into public.tournaments(id, owner_id, name, format, slots, location, start_date, end_date, status)
 values (
   '00000000-0000-4000-8000-000000001111',
@@ -22,41 +21,37 @@ values (
 );
 
 -- Impersonar stranger.
-reset role;
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"00000000-0000-4000-8000-000000001002","role":"authenticated"}';
 
 do $$
-declare affected int;
+declare affected int; cnt int;
 begin
+  -- Borrador ajeno oculto en SELECT.
+  select count(*) into cnt from public.tournaments where id = '00000000-0000-4000-8000-000000001111';
+  if cnt = 0 then
+    raise notice '[PASS] borrador ajeno oculto en SELECT';
+  else
+    raise notice '[FAIL] borrador ajeno visible (% filas)', cnt;
+  end if;
+
+  -- UPDATE ajeno bloqueado.
   update public.tournaments set name = 'Hackeado' where id = '00000000-0000-4000-8000-000000001111';
   get diagnostics affected = row_count;
   if affected = 0 then
-    raise notice '[PASS] stranger no puede updatear tournaments ajenos (0 filas)';
+    raise notice '[PASS] stranger no puede UPDATE tournaments ajenos (0 filas)';
   else
     raise notice '[FAIL] stranger updateó % filas', affected;
   end if;
-
-  -- Borrador ajeno no debe aparecer en SELECT.
-  perform id from public.tournaments where id = '00000000-0000-4000-8000-000000001111';
-  if found then
-    raise notice '[FAIL] borrador ajeno visible en SELECT';
-  else
-    raise notice '[PASS] borrador ajeno oculto en SELECT';
-  end if;
 end $$;
 
--- Publicar el torneo desde owner.
+-- Publicar el torneo como superuser (evitamos la policy de UPDATE owner-only).
 reset role;
-set local role authenticated;
-set local "request.jwt.claims" = '{"sub":"00000000-0000-4000-8000-000000001001","role":"authenticated"}';
-
 update public.tournaments
   set status = 'abierto_inscripciones'
   where id = '00000000-0000-4000-8000-000000001111';
 
--- Ahora el stranger debe poder LEERLO (no-borrador es público).
-reset role;
+-- Ahora el stranger debe poder LEER el torneo publicado.
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"00000000-0000-4000-8000-000000001002","role":"authenticated"}';
 

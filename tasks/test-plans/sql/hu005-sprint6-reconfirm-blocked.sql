@@ -5,15 +5,16 @@
 
 begin;
 
-insert into auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
+insert into auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, aud, role)
 values
-  ('00000000-0000-4000-8000-000000004001', 'rc_owner@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
-  ('00000000-0000-4000-8000-000000004002', 'rc_player@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
+  ('00000000-0000-4000-8000-000000004001', '00000000-0000-0000-0000-000000000000', 'rc_owner@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated'),
+  ('00000000-0000-4000-8000-000000004002', '00000000-0000-0000-0000-000000000000', 'rc_player@test.local', '', now(), '{"provider":"email"}', '{}', 'authenticated', 'authenticated')
 on conflict (id) do nothing;
 
-insert into public.age_verifications (user_id, status) values
-  ('00000000-0000-4000-8000-000000004002', 'aprobada')
-on conflict (user_id) do update set status = excluded.status;
+delete from public.age_verifications
+  where user_id = '00000000-0000-4000-8000-000000004002';
+insert into public.age_verifications (user_id, status, reviewed_at, reviewed_by) values
+  ('00000000-0000-4000-8000-000000004002', 'aprobada', now(), '00000000-0000-4000-8000-000000004001');
 
 insert into public.tournaments(id, owner_id, name, format, slots, location, start_date, end_date, status)
 values (
