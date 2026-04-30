@@ -33,15 +33,61 @@ create trigger set_teams_updated_at
 
 alter table public.teams enable row level security;
 
+-- ---------------------------------------------------------------------------
+-- 3. team_members
+-- ---------------------------------------------------------------------------
+create table public.team_members (
+  team_id    uuid not null references public.teams(id) on delete cascade,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  role       text not null default 'player' check (role in ('captain','player')),
+  joined_at  timestamptz not null default now(),
+  primary key (team_id, user_id)
+);
+
+create index team_members_user_idx on public.team_members (user_id);
+
+alter table public.team_members enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- 4. Helpers (Security Definer to break RLS recursion)
+-- ---------------------------------------------------------------------------
+
+-- Check if a user is the captain of a team without triggering teams RLS.
+create or replace function public.is_team_captain(p_team_id uuid, p_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.teams
+    where id = p_team_id and captain_id = p_user_id
+  );
+$$;
+
+-- Check if a user is a member of a team without triggering team_members RLS.
+create or replace function public.is_team_member(p_team_id uuid, p_user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.team_members
+    where team_id = p_team_id and user_id = p_user_id
+  );
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 2. teams policies (depend on team_members)
+-- ---------------------------------------------------------------------------
+
 -- Read: capitán o cualquiera que sea miembro del equipo.
 create policy "teams_select_members_and_captain"
   on public.teams for select
   using (
     captain_id = auth.uid()
-    or exists (
-      select 1 from public.team_members tm
-      where tm.team_id = teams.id and tm.user_id = auth.uid()
-    )
+    or public.is_team_member(id, auth.uid())
   );
 
 -- Insert: solo el propio capitán se auto-asigna.
@@ -58,51 +104,25 @@ create policy "teams_delete_captain"
   on public.teams for delete
   using (captain_id = auth.uid());
 
--- ---------------------------------------------------------------------------
--- 3. team_members
--- ---------------------------------------------------------------------------
-create table public.team_members (
-  team_id    uuid not null references public.teams(id) on delete cascade,
-  user_id    uuid not null references auth.users(id) on delete cascade,
-  role       text not null default 'player' check (role in ('captain','player')),
-  joined_at  timestamptz not null default now(),
-  primary key (team_id, user_id)
-);
-
-create index team_members_user_idx on public.team_members (user_id);
-
-alter table public.team_members enable row level security;
-
 -- Read: el propio miembro o el capitán del equipo.
 create policy "team_members_select_self_or_captain"
   on public.team_members for select
   using (
     user_id = auth.uid()
-    or exists (
-      select 1 from public.teams t
-      where t.id = team_members.team_id and t.captain_id = auth.uid()
-    )
+    or public.is_team_captain(team_id, auth.uid())
   );
 
 -- Insert: solo el capitán del equipo puede sumar miembros.
 create policy "team_members_insert_by_captain"
   on public.team_members for insert
-  with check (
-    exists (
-      select 1 from public.teams t
-      where t.id = team_members.team_id and t.captain_id = auth.uid()
-    )
-  );
+  with check (public.is_team_captain(team_id, auth.uid()));
 
 -- Delete: capitán (cualquier miembro) o el propio miembro (sale del equipo).
 create policy "team_members_delete_by_captain_or_self"
   on public.team_members for delete
   using (
     user_id = auth.uid()
-    or exists (
-      select 1 from public.teams t
-      where t.id = team_members.team_id and t.captain_id = auth.uid()
-    )
+    or public.is_team_captain(team_id, auth.uid())
   );
 
 -- Trigger: cuando se crea un team, agregar al capitán como member con role=captain.
@@ -171,10 +191,7 @@ create policy "tr_select_stakeholders"
   using (
     registered_by = auth.uid()
     or user_id = auth.uid()
-    or exists (
-      select 1 from public.teams t
-      where t.id = tournament_registrations.team_id and t.captain_id = auth.uid()
-    )
+    or public.is_team_captain(team_id, auth.uid())
     or exists (
       select 1 from public.tournaments tr
       where tr.id = tournament_registrations.tournament_id and tr.owner_id = auth.uid()
@@ -190,10 +207,7 @@ create policy "tr_insert_self"
     registered_by = auth.uid()
     and (
       -- Caso equipo: solo el capitán puede inscribir a su equipo.
-      (team_id is not null and exists (
-        select 1 from public.teams t
-        where t.id = team_id and t.captain_id = auth.uid()
-      ))
+      (team_id is not null and public.is_team_captain(team_id, auth.uid()))
       -- Caso individual: solo se inscribe a sí mismo.
       or (user_id is not null and user_id = auth.uid())
     )

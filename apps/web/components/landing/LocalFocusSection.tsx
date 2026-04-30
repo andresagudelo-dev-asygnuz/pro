@@ -59,7 +59,7 @@ export function LocalFocusSection() {
           </div>
 
           {/* Column 2: Map of Manizales */}
-          <div className="relative group perspective-1000 w-full h-full min-h-[500px]">
+          <div className="relative group perspective-1000 w-full aspect-video lg:aspect-square lg:h-full min-h-[400px] lg:min-h-[500px]">
             {/* Map pings for Manizales locations */}
             <div className="absolute top-[40%] left-[45%] w-4 h-4 bg-brand-secondary rounded-full animate-ping z-20 shadow-[0_0_15px_#00B5D8]" />
             <div className="absolute top-[55%] left-[60%] w-4 h-4 bg-brand-primary rounded-full animate-ping z-20 delay-700 shadow-[0_0_15px_#6B46C1]" />
