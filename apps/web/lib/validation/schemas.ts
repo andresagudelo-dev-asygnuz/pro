@@ -704,3 +704,41 @@ export const tournamentCreateSchema = tournamentBaseSchema.omit({ id: true }).su
 });
 
 export type Tournament = z.infer<typeof tournamentSchema>;
+
+// --- Inscripciones a torneos (HU-005 / RF-004) ---
+
+export const registrationStatusEnum = z.enum([
+  "confirmada",
+  "cancelada",
+  "lista_espera",
+]);
+
+export const teamCreateSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "El nombre del equipo debe tener al menos 2 caracteres")
+    .max(80, "El nombre del equipo es demasiado largo"),
+  memberUserIds: z
+    .array(z.string().uuid("ID de jugador inválido"))
+    .max(30, "Un equipo no puede tener más de 30 miembros")
+    .default([]),
+});
+
+export const registerTeamSchema = z.object({
+  tournamentId: z.string().uuid("Torneo inválido"),
+  teamId: z.string().uuid("Equipo inválido"),
+});
+
+export const registerSoloSchema = z.object({
+  tournamentId: z.string().uuid("Torneo inválido"),
+});
+
+export const cancelRegistrationSchema = z.object({
+  registrationId: z.string().uuid("Inscripción inválida"),
+});
+
+export type TeamCreateInput = z.infer<typeof teamCreateSchema>;
+export type RegisterTeamInput = z.infer<typeof registerTeamSchema>;
+export type RegisterSoloInput = z.infer<typeof registerSoloSchema>;
+export type CancelRegistrationInput = z.infer<typeof cancelRegistrationSchema>;

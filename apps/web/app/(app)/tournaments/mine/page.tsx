@@ -63,7 +63,7 @@ export default async function MyTournamentsPage() {
               </div>
               <div className="mt-4 flex gap-2">
                 <Button variant="default" size="sm" className="w-full" >
-                  <Link href={`/tournaments/${t.id}/manage`}>Gestionar</Link>
+                  <Link href={`/tournaments/${t.id}`}>Gestionar</Link>
                 </Button>
               </div>
             </div>

@@ -69,6 +69,20 @@ export async function createTournament(
   return { error: null, data: result };
 }
 
+export async function getTournamentById(
+  supabase: SupabaseClient,
+  id: string,
+) {
+  const { data, error } = await supabase
+    .from("tournaments")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data };
+}
+
 export async function getTournaments(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("tournaments")

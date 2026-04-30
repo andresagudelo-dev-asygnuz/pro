@@ -25,8 +25,15 @@
 - **CI corre `pnpm lint` y falla con errores, no warnings.** El equipo acumuló 14 errores ESLint en `main` que CI debió haber bloqueado — investigar por qué pasó (posible push directo a `main` sin PR, o cache de CI).
 
 ## Riesgos recurrentes
-- Plan oficial (`tasks/plan-desarrollo.md`) vs. realidad ejecutada divergen: HU-005 y HU-006 nunca se empezaron y el equipo se desvió a un Sprint 3 lateral (matches/venues/notifications) y un Sprint 4 de hardening + landing. Riesgo de no cerrar G4 a tiempo si no se prioriza HU-005 + HU-006 en Sprint 5.
+- Plan oficial (`tasks/plan-desarrollo.md`) vs. realidad ejecutada divergen: HU-005 arrancó recién en Sprint 5 (ver abajo) después de que Sprint 3 se desviara al módulo lateral matches/venues/notifications y Sprint 4 al hardening + landing + restauración de HU-004. Queda **HU-006 Resultados/Standings** para Sprint 6 antes de poder cerrar G4 y transicionar a G5 QA.
 - El MVP v0 pickup matches (feed, matches, chat realtime) sigue conviviendo con el MVP "torneos" del PRD. Antes de G7 hay que decidir si se mantiene, se retira o se integra.
+
+## Sprint 5 (en curso) — HU-005 Inscripciones (RF-004)
+- **Modelado DB**: `teams`, `team_members` (con trigger `teams_add_captain_as_member` para autoenrolar al capitán), `tournament_registrations` con CHECK XOR entre `team_id` y `user_id`, UNIQUE parciales `tournament_id + team_id|user_id WHERE status <> 'cancelada'` para bloquear dobles inscripciones permitiendo re-inscribirse tras cancelar.
+- **Concurrencia de cupos**: trigger `enforce_tournament_capacity` replica el patrón probado en `enforce_match_capacity` (`SELECT ... FOR UPDATE` sobre `tournaments`, luego increment atómico de `slots_filled`). Se agregó `sync_tournament_slots_on_status_change` para liberar cupo al cancelar y reclamarlo si se vuelve a `confirmada`.
+- **Gate RF-007**: decidimos verificar la aprobación de edad **en TS antes del insert** (`findUnverifiedUsers`) en lugar de enforce sólo por RLS/trigger, para poder devolver mensajes claros ("Hay N miembro(s) sin verificación") en lugar de un error genérico `42501/P0001`. El helper `public.ensure_verification_aprobada` queda disponible para si en Sprint 6 preferimos mover el gate al DB.
+- **Frontend**: se mantuvo el patrón de HU-004 — rutas en `app/(app)/tournaments/[id]/...` que llaman directamente al wrapper `@/lib/supabase/client` desde client components (no Server Actions) aprovechando RLS. Cambio incidental: el botón "Gestionar" de `/tournaments/mine` apuntaba a `/tournaments/[id]/manage` (inexistente) — ahora apunta a `/tournaments/[id]`.
+- **Tests**: se agregaron 9 tests unitarios cubriendo validación, gate de RF-007, equipo sin miembros, mapping de `P0001/tournament_full`, e inserción exitosa. Suite total 139/139.
 
 ## Reglas del proyecto
 - **Toda migración SQL** vive en `apps/web/supabase/migrations/` con nombre `YYYYMMDDHHMMSS_descripcion.sql`. `db/migrations/` no se usa para producción.
