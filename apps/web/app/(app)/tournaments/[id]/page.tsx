@@ -75,6 +75,14 @@ export default async function TournamentDetailPage({ params }: PageProps) {
           </Button>
         )}
 
+        <Button variant="outline">
+          <Link href={`/tournaments/${t.id}/matches`}>Partidos</Link>
+        </Button>
+
+        <Button variant="outline">
+          <Link href={`/tournaments/${t.id}/standings`}>Tabla de posiciones</Link>
+        </Button>
+
         {!isOwner && isOpen && hasSlots && userAuth.user && (
           <Button>
             <Link href={`/tournaments/${t.id}/register`}>Inscribirme</Link>
