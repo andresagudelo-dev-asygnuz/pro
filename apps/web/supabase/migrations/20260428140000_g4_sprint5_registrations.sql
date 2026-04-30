@@ -312,3 +312,38 @@ $$;
 create trigger tr_before_update_sync_slots
   before update of status on public.tournament_registrations
   for each row execute function public.sync_tournament_slots_on_status_change();
+
+-- ---------------------------------------------------------------------------
+-- 7. Helper: find_unverified_users
+--    SECURITY DEFINER bypasea la RLS `age_verifications_read_self` (que sólo
+--    permite leer el propio registro) y devuelve los user_ids del arreglo
+--    recibido que NO tienen una verificación `aprobada`. Se usa desde el
+--    cliente (vía `supabase.rpc(...)`) para bloquear inscripciones de equipo
+--    con miembros sin RF-007 aprobado y poder dar un mensaje UX claro.
+--
+--    Devolvemos un arreglo en lugar de un setof para simplificar el binding
+--    en TS (el postgrest client mapea `uuid[]` a `string[]` sin boilerplate).
+--    Mismo patrón que `ensure_verification_aprobada` (migración Sprint 1).
+-- ---------------------------------------------------------------------------
+create or replace function public.find_unverified_users(p_user_ids uuid[])
+returns uuid[]
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    array_agg(u)
+      filter (
+        where not exists (
+          select 1 from public.age_verifications av
+          where av.user_id = u and av.status = 'aprobada'
+        )
+      ),
+    array[]::uuid[]
+  )
+  from unnest(p_user_ids) as u;
+$$;
+
+revoke all on function public.find_unverified_users(uuid[]) from public;
+grant execute on function public.find_unverified_users(uuid[]) to authenticated;

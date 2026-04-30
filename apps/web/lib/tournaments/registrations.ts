@@ -62,6 +62,14 @@ async function getAuthUserId(
 /**
  * Verifica que un conjunto de user_ids tienen `age_verifications.status = 'aprobada'`.
  * Retorna los IDs que NO están aprobados (en caso vacío: todos ok).
+ *
+ * IMPORTANTE: la tabla `age_verifications` tiene RLS `read_self` (solo podés
+ * leer tu propia fila). Consultarla directamente desde el browser client
+ * ocultaría los registros de los demás miembros del equipo y haría que
+ * aparecieran como "no verificados" aunque sí lo estén. Por eso delegamos
+ * en la función SQL `public.find_unverified_users(uuid[])` que corre con
+ * `SECURITY DEFINER` y bypasea la RLS (mismo patrón que
+ * `ensure_verification_aprobada` en la migración Sprint 1).
  */
 export async function findUnverifiedUsers(
   supabase: SupabaseClient,
@@ -69,16 +77,13 @@ export async function findUnverifiedUsers(
 ): Promise<{ error: string | null; unverified: string[] }> {
   if (userIds.length === 0) return { error: null, unverified: [] };
 
-  const { data, error } = await supabase
-    .from("age_verifications")
-    .select("user_id,status")
-    .in("user_id", userIds)
-    .eq("status", "aprobada");
+  const { data, error } = await supabase.rpc("find_unverified_users", {
+    p_user_ids: userIds,
+  });
 
   if (error) return { error: mapDbError(error, "find_unverified"), unverified: [] };
 
-  const approved = new Set((data ?? []).map((r) => r.user_id as string));
-  const unverified = userIds.filter((id) => !approved.has(id));
+  const unverified = Array.isArray(data) ? (data as string[]) : [];
   return { error: null, unverified };
 }
 

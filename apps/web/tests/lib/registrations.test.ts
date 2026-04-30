@@ -52,41 +52,34 @@ describe("registrations · validation", () => {
 
 describe("registrations · age verification gate", () => {
   test("findUnverifiedUsers retorna lista vacía cuando todos aprobados", async () => {
-    const from = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        in: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({
-            data: [
-              { user_id: MEMBER_A, status: "aprobada" },
-              { user_id: MEMBER_B, status: "aprobada" },
-            ],
-            error: null,
-          }),
-        }),
-      }),
-    });
-    const supabase = { from } as unknown as SupabaseClient;
+    const rpc = vi.fn().mockResolvedValue({ data: [], error: null });
+    const supabase = { rpc } as unknown as SupabaseClient;
 
     const res = await findUnverifiedUsers(supabase, [MEMBER_A, MEMBER_B]);
     expect(res.error).toBeNull();
     expect(res.unverified).toEqual([]);
+    expect(rpc).toHaveBeenCalledWith("find_unverified_users", {
+      p_user_ids: [MEMBER_A, MEMBER_B],
+    });
   });
 
   test("findUnverifiedUsers devuelve los IDs faltantes", async () => {
-    const from = vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        in: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({
-            data: [{ user_id: MEMBER_A, status: "aprobada" }],
-            error: null,
-          }),
-        }),
-      }),
-    });
-    const supabase = { from } as unknown as SupabaseClient;
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: [MEMBER_B], error: null });
+    const supabase = { rpc } as unknown as SupabaseClient;
 
     const res = await findUnverifiedUsers(supabase, [MEMBER_A, MEMBER_B]);
     expect(res.unverified).toEqual([MEMBER_B]);
+  });
+
+  test("findUnverifiedUsers corto-circuita con lista vacía sin llamar RPC", async () => {
+    const rpc = vi.fn();
+    const supabase = { rpc } as unknown as SupabaseClient;
+
+    const res = await findUnverifiedUsers(supabase, []);
+    expect(res.unverified).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
 
@@ -105,18 +98,6 @@ describe("registrations · registerTeamToTournament", () => {
           }),
         };
       }
-      if (table === "age_verifications") {
-        return {
-          select: vi.fn().mockReturnValue({
-            in: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({
-                data: [{ user_id: MEMBER_A, status: "aprobada" }],
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
       // No debería llegar al insert de tournament_registrations
       return {
         insert: vi.fn().mockReturnValue({
@@ -126,10 +107,15 @@ describe("registrations · registerTeamToTournament", () => {
         }),
       };
     });
+    // RPC responde con MEMBER_B no verificado.
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: [MEMBER_B], error: null });
 
     const supabase = {
       ...mockAuthedClient(USER_ID),
       from,
+      rpc,
     } as unknown as SupabaseClient;
 
     const res = await registerTeamToTournament(supabase, {
@@ -139,7 +125,10 @@ describe("registrations · registerTeamToTournament", () => {
 
     expect(res.data).toBeNull();
     expect(res.error).toMatch(/verificación de edad/);
-    expect(calls).toEqual(["team_members", "age_verifications"]);
+    expect(calls).toEqual(["team_members"]);
+    expect(rpc).toHaveBeenCalledWith("find_unverified_users", {
+      p_user_ids: [MEMBER_A, MEMBER_B],
+    });
   });
 
   test("bloquea si el equipo no tiene miembros", async () => {
@@ -195,30 +184,17 @@ describe("registrations · registerTeamToTournament", () => {
           }),
         };
       }
-      if (table === "age_verifications") {
-        return {
-          select: vi.fn().mockReturnValue({
-            in: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({
-                data: [
-                  { user_id: MEMBER_A, status: "aprobada" },
-                  { user_id: MEMBER_B, status: "aprobada" },
-                ],
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
       if (table === "tournament_registrations") {
         return { insert: insertMock };
       }
       throw new Error(`unexpected table ${table}`);
     });
+    const rpc = vi.fn().mockResolvedValue({ data: [], error: null });
 
     const supabase = {
       ...mockAuthedClient(USER_ID),
       from,
+      rpc,
     } as unknown as SupabaseClient;
 
     const res = await registerTeamToTournament(supabase, {
@@ -260,27 +236,17 @@ describe("registrations · registerTeamToTournament", () => {
           }),
         };
       }
-      if (table === "age_verifications") {
-        return {
-          select: vi.fn().mockReturnValue({
-            in: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({
-                data: [{ user_id: MEMBER_A, status: "aprobada" }],
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
       if (table === "tournament_registrations") {
         return { insert: insertMock };
       }
       throw new Error(`unexpected table ${table}`);
     });
+    const rpc = vi.fn().mockResolvedValue({ data: [], error: null });
 
     const supabase = {
       ...mockAuthedClient(USER_ID),
       from,
+      rpc,
     } as unknown as SupabaseClient;
 
     const res = await registerTeamToTournament(supabase, {
