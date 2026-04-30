@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { gsap } from "gsap";
 import {
   Trophy,
@@ -30,6 +30,35 @@ import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 
 type Step = "intro" | "contact" | "basics" | "role" | "pz1" | "pains" | "behavior" | "pz2" | "pz3" | "commitment" | "referral" | "thanks" | "final";
+
+type ThanksContentProps = {
+  contentWrapperRef: React.RefObject<HTMLDivElement | null>;
+  fireConfetti: () => void;
+};
+
+function ThanksContent({ contentWrapperRef, fireConfetti }: ThanksContentProps) {
+  useEffect(() => {
+    trackEvent('game_finish');
+    fireConfetti();
+    const timer = setTimeout(fireConfetti, 1000);
+    return () => clearTimeout(timer);
+  }, [fireConfetti]);
+
+  return (
+    <div ref={contentWrapperRef} className="flex flex-col items-center text-center space-y-8 z-10">
+      <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center">
+        <CheckCircle2 className="w-12 h-12 text-sport-neon" />
+      </div>
+      <h2 className="text-4xl font-black uppercase">¡GRACIAS POR TU TIEMPO!</h2>
+      <p className="text-slate-300 max-w-md">
+        Tus comentarios son invaluables para nosotros. Nos ayudarán a construir la mejor plataforma para los deportistas de Manizales.
+      </p>
+      <button onClick={() => window.location.href = "/"} className="sport-button font-black uppercase">
+        VOLVER AL INICIO
+      </button>
+    </div>
+  );
+}
 
 interface GameData {
   name: string;
@@ -129,11 +158,11 @@ export default function MomTestGame() {
     }
   };
 
-  const handleSelection = (field: keyof GameData, value: any) => {
+  const handleSelection = (field: keyof GameData, value: GameData[keyof GameData]) => {
     setData(prev => ({ ...prev, [field]: value }));
   };
 
-  const fireConfetti = () => {
+  const fireConfetti = useCallback(() => {
     if (!confettiContainerRef.current) return;
     const colors = ["#00B5D8", "#6B46C1", "#9F7AEA", "#ffffff"];
     for (let i = 0; i < 150; i++) {
@@ -153,7 +182,7 @@ export default function MomTestGame() {
         }
       );
     }
-  };
+  }, []);
 
   const handleSubmit = async (isFinal: boolean = false) => {
     setIsSubmitting(true);
@@ -202,9 +231,10 @@ export default function MomTestGame() {
       } else {
         nextStep("thanks");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error completo:", err);
-      alert(`Error al guardar: ${err.message || "Problema de conexión"}`);
+      const message = err instanceof Error ? err.message : "Problema de conexión";
+      alert(`Error al guardar: ${message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -433,7 +463,7 @@ export default function MomTestGame() {
           { id: "digital_payment", label: "Prefiero pagar todo digital (Nequi, Tarjeta)", icon: Zap },
           { id: "bad_experience_unknowns", label: "He jugado con desconocidos y fue mala experiencia", icon: AlertTriangle }
         ].map((item) => (
-          <div key={item.id} onClick={() => handleSelection(item.id as any, !data[item.id as keyof GameData])} className={cn("interactive-card game-card flex items-center gap-6 py-4", data[item.id as keyof GameData] && "selected")}>
+          <div key={item.id} onClick={() => handleSelection(item.id as keyof GameData, !data[item.id as keyof GameData])} className={cn("interactive-card game-card flex items-center gap-6 py-4", data[item.id as keyof GameData] && "selected")}>
             <item.icon className={cn("w-6 h-6", data[item.id as keyof GameData] ? "text-sport-neon" : "text-slate-500")} />
             <span className="font-bold text-sm">{item.label}</span>
           </div>
@@ -570,30 +600,7 @@ export default function MomTestGame() {
     </div>
   );
 
-  const renderThanks = () => {
-    useEffect(() => {
-      trackEvent('game_finish');
-      fireConfetti();
-      // Disparar una segunda ráfaga un segundo después para más impacto
-      const timer = setTimeout(fireConfetti, 1000);
-      return () => clearTimeout(timer);
-    }, []);
 
-    return (
-      <div ref={contentWrapperRef} className="flex flex-col items-center text-center space-y-8 z-10">
-        <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center">
-          <CheckCircle2 className="w-12 h-12 text-sport-neon" />
-        </div>
-        <h2 className="text-4xl font-black uppercase">¡GRACIAS POR TU TIEMPO!</h2>
-        <p className="text-slate-300 max-w-md">
-          Tus comentarios son invaluables para nosotros. Nos ayudarán a construir la mejor plataforma para los deportistas de Manizales.
-        </p>
-        <button onClick={() => window.location.href = "/"} className="sport-button font-black uppercase">
-          VOLVER AL INICIO
-        </button>
-      </div>
-    );
-  };
 
   return (
     <div ref={containerRef} className="feedback-container flex flex-col items-center justify-center p-6 md:p-12 relative min-h-screen">
@@ -615,7 +622,12 @@ export default function MomTestGame() {
         {currentStep === "pz3" && renderPZ3()}
         {currentStep === "commitment" && renderCommitment()}
         {currentStep === "referral" && renderReferral()}
-        {currentStep === "thanks" && renderThanks()}
+        {currentStep === "thanks" && (
+          <ThanksContent
+            contentWrapperRef={contentWrapperRef}
+            fireConfetti={fireConfetti}
+          />
+        )}
       </div>
       {showModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center p-6">

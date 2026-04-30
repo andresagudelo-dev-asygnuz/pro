@@ -43,7 +43,7 @@ export default async function AdminVenuesPage() {
                         <div className="flex flex-col gap-4">
                             <h4 className="font-semibold text-sm">Canchas en este complejo:</h4>
                             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                {v.venue_courts?.map((c: any) => (
+                                {v.venue_courts?.map((c: { id: string; name: string; capacity_players: number }) => (
                                     <div key={c.id} className="p-3 border rounded-md bg-muted/50">
                                         <p className="font-medium">{c.name}</p>
                                         <p className="text-xs text-muted-foreground">Capacidad: {c.capacity_players} jugadores</p>

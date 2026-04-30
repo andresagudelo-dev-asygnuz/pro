@@ -4,6 +4,9 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Cookie, X } from "lucide-react"
 
+type GtagFn = (command: string, action: string, params?: Record<string, unknown>) => void;
+type WindowWithGtag = Window & typeof globalThis & { gtag?: GtagFn };
+
 export function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false)
 
@@ -20,8 +23,9 @@ export function CookieConsent() {
     } else if (consent === "accepted") {
       console.log("[CookieConsent] Consent already accepted, updating GTM...");
       // Restore consent state for GTM if already accepted
-      if (typeof window !== "undefined" && (window as any).gtag) {
-        (window as any).gtag('consent', 'update', {
+      const w = typeof window !== "undefined" ? (window as WindowWithGtag) : undefined;
+      if (w?.gtag) {
+        w.gtag('consent', 'update', {
           'ad_storage': 'granted',
           'ad_user_data': 'granted',
           'ad_personalization': 'granted',
@@ -36,8 +40,9 @@ export function CookieConsent() {
     localStorage.setItem("pro_cookie_consent", "accepted")
     
     // Push update to GTM
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag('consent', 'update', {
+    const w = typeof window !== "undefined" ? (window as WindowWithGtag) : undefined;
+    if (w?.gtag) {
+      w.gtag('consent', 'update', {
         'ad_storage': 'granted',
         'ad_user_data': 'granted',
         'ad_personalization': 'granted',

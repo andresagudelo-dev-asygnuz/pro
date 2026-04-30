@@ -88,13 +88,20 @@ export async function createMatch(
         .single();
 
       if (court) {
-        const venueName = (court.venue as any).name;
-        await supabase
-          .from("matches")
-          .update({
-            location: `${venueName} - ${court.name}`,
-          })
-          .eq("id", data.id);
+        const venue = court.venue as { name: string } | { name: string }[] | null;
+        const venueName = Array.isArray(venue) ? venue[0]?.name : venue?.name;
+        if (venueName) {
+          await supabase
+            .from("matches")
+            .update({
+              location: `${venueName} - ${court.name}`,
+            })
+            .eq("id", data.id);
+        } else {
+          console.warn(
+            `[createMatch] venue name unavailable for court ${courtId}; keeping original match.location`,
+          );
+        }
       }
     }
 
