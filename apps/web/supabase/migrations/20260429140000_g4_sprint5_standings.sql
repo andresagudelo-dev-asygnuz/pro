@@ -241,6 +241,14 @@ from played
 group by tournament_id, registration_id
 with no data;
 
+-- Población inicial obligatoria: REFRESH MATERIALIZED VIEW CONCURRENTLY falla
+-- con "This option may not be used when the materialized view is not yet
+-- populated." hasta que se pobla al menos una vez. Como la mat view se crea
+-- vacía (with no data) para permitir crear el índice único primero, hacemos
+-- un refresh no-concurrente acá. A partir de la segunda vez, el trigger
+-- `tm_refresh_standings_after` puede usar CONCURRENTLY sin problemas.
+refresh materialized view public.standings;
+
 -- Índice único obligatorio para REFRESH MATERIALIZED VIEW CONCURRENTLY.
 create unique index standings_unique_row
   on public.standings (tournament_id, registration_id);
