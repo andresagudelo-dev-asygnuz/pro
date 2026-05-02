@@ -11,6 +11,7 @@ interface Tournament {
   name: string;
   format: string;
   slots: number;
+  slots_filled: number;
   location: string;
   start_date: string;
   end_date: string;
@@ -35,7 +36,7 @@ const statusVariants: Record<string, "default" | "secondary" | "outline" | "dest
 };
 
 export default function TournamentsPage() {
-  useAuth();
+  const { roles } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -58,11 +59,13 @@ export default function TournamentsPage() {
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <h1 className="text-lg font-bold text-zinc-900 dark:text-white">Torneos</h1>
-          <Link href="/tournaments/new">
-            <Button size="sm">
-              <Plus className="size-4 mr-1" /> Crear
-            </Button>
-          </Link>
+          {roles?.is_promoter && (
+            <Link href="/tournaments/new">
+              <Button size="sm">
+                <Plus className="size-4 mr-1" /> Crear
+              </Button>
+            </Link>
+          )}
         </div>
       </header>
 
@@ -75,9 +78,11 @@ export default function TournamentsPage() {
           <div className="text-center py-12">
             <Trophy className="size-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">No hay torneos disponibles.</p>
-            <Link href="/tournaments/new">
-              <Button>Crear el primero</Button>
-            </Link>
+            {roles?.is_promoter && (
+              <Link href="/tournaments/new">
+                <Button>Crear el primero</Button>
+              </Link>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -93,7 +98,7 @@ export default function TournamentsPage() {
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <span>📍 {t.location}</span>
                     <span>·</span>
-                    <span>{t.slots} cupos</span>
+                    <span>{t.slots_filled ?? 0}/{t.slots} cupos</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(t.start_date).toLocaleDateString("es-CO")} – {new Date(t.end_date).toLocaleDateString("es-CO")}

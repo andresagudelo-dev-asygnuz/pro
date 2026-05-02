@@ -90,6 +90,30 @@ export async function getMyTournaments(supabase: SupabaseClient, userId: string)
   return { error: null, data };
 }
 
+export type RegistrationWithTournament = {
+  id: string;
+  status: string;
+  tournament_id: string;
+  tournaments: TournamentRow;
+};
+
+export async function getRegisteredTournaments(
+  supabase: SupabaseClient,
+  userId: string,
+) {
+  const { data, error } = await supabase
+    .from("tournament_registrations")
+    .select("id, status, tournament_id, tournaments(*)")
+    .eq("user_id", userId)
+    .neq("status", "cancelada")
+    .order("created_at", { ascending: false });
+
+  if (error) return { error: mapDbError(error), data: null };
+  const rows = (data ?? []) as RegistrationWithTournament[];
+  const tournaments = rows.map((r) => r.tournaments).filter(Boolean) as TournamentRow[];
+  return { error: null, data: tournaments };
+}
+
 export async function publishTournament(supabase: SupabaseClient, id: string, userId: string) {
   const { data, error } = await supabase
     .from("tournaments")
