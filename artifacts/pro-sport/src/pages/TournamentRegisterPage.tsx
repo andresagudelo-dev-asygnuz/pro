@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { createTeam, getMyTeams, registerSoloToTournament, registerTeamToTournament, type TeamRow } from "@/lib/tournaments/registrations";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
 
 const supabase = createClient();
 
 export default function TournamentRegisterPage() {
+  const { user } = useAuth();
   const { id: tournamentId } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
 
@@ -19,37 +21,40 @@ export default function TournamentRegisterPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data } = await getMyTeams(supabase);
+      const { data } = await getMyTeams(supabase, user.id);
       const rows = data ?? [];
       setTeams(rows);
       if (rows.length > 0) setSelectedTeamId(rows[0].id);
     })();
-  }, []);
+  }, [user]);
 
   async function handleSolo() {
+    if (!user) return;
     setError(null);
     setLoading(true);
-    const { error: err } = await registerSoloToTournament(supabase, { tournamentId });
+    const { error: err } = await registerSoloToTournament(supabase, { tournamentId }, user.id);
     setLoading(false);
     if (err) { setError(err); return; }
     navigate(`/tournaments/${tournamentId}`);
   }
 
   async function handleTeam() {
+    if (!user) return;
     setError(null);
     setLoading(true);
     let teamId = selectedTeamId;
 
     if (!teamId && newTeamName.trim().length > 0) {
-      const { data, error: err } = await createTeam(supabase, { name: newTeamName.trim(), memberUserIds: [] });
+      const { data, error: err } = await createTeam(supabase, { name: newTeamName.trim(), memberUserIds: [] }, user.id);
       if (err || !data) { setLoading(false); setError(err ?? "No se pudo crear el equipo."); return; }
       teamId = data.id;
     }
 
     if (!teamId) { setLoading(false); setError("Elegí un equipo existente o creá uno nuevo."); return; }
 
-    const { error: err } = await registerTeamToTournament(supabase, { tournamentId, teamId });
+    const { error: err } = await registerTeamToTournament(supabase, { tournamentId, teamId }, user.id);
     setLoading(false);
     if (err) { setError(err); return; }
     navigate(`/tournaments/${tournamentId}`);

@@ -4,16 +4,19 @@ import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
 import { createClient } from "@/lib/supabase/client";
 import { createTournament } from "@/lib/tournaments/api";
+import { useAuth } from "@/context/AuthContext";
 
 const supabase = createClient();
 
 export default function NewTournamentPage() {
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!user) return;
     setLoading(true);
     setError(null);
 
@@ -29,7 +32,7 @@ export default function NewTournamentPage() {
       categories: [],
     };
 
-    const result = await createTournament(supabase, data);
+    const result = await createTournament(supabase, data, user.id);
 
     if (result.error) {
       setError(result.error);

@@ -16,8 +16,9 @@ export default function MyTournamentsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data, error: err } = await getMyTournaments(supabase);
+      const { data, error: err } = await getMyTournaments(supabase, user.id);
       if (err) setError(err);
       else setTournaments((data ?? []) as TournamentRow[]);
       setLoading(false);

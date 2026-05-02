@@ -36,14 +36,12 @@ type TournamentCreateInput = {
 export async function createTournament(
   supabase: SupabaseClient,
   data: TournamentCreateInput,
+  userId: string,
 ) {
-  const { data: userAuth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !userAuth.user) return { error: "No autenticado", data: null };
-
   const { data: result, error } = await supabase
     .from("tournaments")
     .insert({
-      owner_id: userAuth.user.id,
+      owner_id: userId,
       name: data.name,
       format: data.format,
       slots: data.slots,
@@ -81,29 +79,23 @@ export async function getTournaments(supabase: SupabaseClient) {
   return { error: null, data };
 }
 
-export async function getMyTournaments(supabase: SupabaseClient) {
-  const { data: userAuth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !userAuth.user) return { error: "No autenticado", data: null };
-
+export async function getMyTournaments(supabase: SupabaseClient, userId: string) {
   const { data, error } = await supabase
     .from("tournaments")
     .select("*")
-    .eq("owner_id", userAuth.user.id)
+    .eq("owner_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) return { error: mapDbError(error), data: null };
   return { error: null, data };
 }
 
-export async function publishTournament(supabase: SupabaseClient, id: string) {
-  const { data: userAuth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !userAuth.user) return { error: "No autenticado", data: null };
-
+export async function publishTournament(supabase: SupabaseClient, id: string, userId: string) {
   const { data, error } = await supabase
     .from("tournaments")
     .update({ status: "abierto_inscripciones" })
     .eq("id", id)
-    .eq("owner_id", userAuth.user.id)
+    .eq("owner_id", userId)
     .eq("status", "borrador")
     .select()
     .single();

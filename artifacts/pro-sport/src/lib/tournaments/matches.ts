@@ -89,9 +89,6 @@ export async function createMatch(
     venue?: string | null;
   },
 ): Promise<{ error: string | null; data: MatchRow | null }> {
-  const { data: userAuth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !userAuth.user) return { error: "No autenticado", data: null };
-
   const { data, error } = await supabase
     .from("tournament_matches")
     .insert({
@@ -150,9 +147,6 @@ export async function recordResult(
     status: MatchStatus;
   },
 ): Promise<{ error: string | null; data: MatchRow | null }> {
-  const { data: userAuth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !userAuth.user) return { error: "No autenticado", data: null };
-
   const { data, error } = await supabase
     .from("tournament_matches")
     .update({
@@ -179,9 +173,6 @@ export async function addMatchEvent(
     notes?: string | null;
   },
 ): Promise<{ error: string | null; data: MatchEventRow | null }> {
-  const { data: userAuth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !userAuth.user) return { error: "No autenticado", data: null };
-
   const { data, error } = await supabase
     .from("match_events")
     .insert({

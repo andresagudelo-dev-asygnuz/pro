@@ -29,14 +29,6 @@ export type RegistrationRow = {
 
 type ApiResult<T> = { error: string | null; data: T | null };
 
-async function getAuthUserId(
-  supabase: SupabaseClient,
-): Promise<{ userId: string | null; error: string | null }> {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return { userId: null, error: "No autenticado" };
-  return { userId: data.user.id, error: null };
-}
-
 export async function findUnverifiedUsers(
   supabase: SupabaseClient,
   userIds: string[],
@@ -53,10 +45,8 @@ export async function findUnverifiedUsers(
 export async function createTeam(
   supabase: SupabaseClient,
   input: { name: string; memberUserIds: string[] },
+  userId: string,
 ): Promise<ApiResult<TeamRow>> {
-  const { userId, error: authErr } = await getAuthUserId(supabase);
-  if (!userId) return { error: authErr, data: null };
-
   const { data: team, error } = await supabase
     .from("teams")
     .insert({ name: input.name, captain_id: userId })
@@ -81,10 +71,8 @@ export async function createTeam(
 
 export async function getMyTeams(
   supabase: SupabaseClient,
+  userId: string,
 ): Promise<ApiResult<TeamRow[]>> {
-  const { userId, error: authErr } = await getAuthUserId(supabase);
-  if (!userId) return { error: authErr, data: null };
-
   const { data, error } = await supabase
     .from("teams")
     .select("*")
@@ -98,10 +86,8 @@ export async function getMyTeams(
 export async function registerTeamToTournament(
   supabase: SupabaseClient,
   input: { tournamentId: string; teamId: string },
+  userId: string,
 ): Promise<ApiResult<RegistrationRow>> {
-  const { userId, error: authErr } = await getAuthUserId(supabase);
-  if (!userId) return { error: authErr, data: null };
-
   const { data: members, error: memErr } = await supabase
     .from("team_members")
     .select("user_id")
@@ -143,10 +129,8 @@ export async function registerTeamToTournament(
 export async function registerSoloToTournament(
   supabase: SupabaseClient,
   input: { tournamentId: string },
+  userId: string,
 ): Promise<ApiResult<RegistrationRow>> {
-  const { userId, error: authErr } = await getAuthUserId(supabase);
-  if (!userId) return { error: authErr, data: null };
-
   const { error: verifyErr, unverified } = await findUnverifiedUsers(supabase, [userId]);
   if (verifyErr) return { error: verifyErr, data: null };
   if (unverified.length > 0) {
@@ -200,10 +184,8 @@ export async function listRegistrations(
 
 export async function getMyRegistrations(
   supabase: SupabaseClient,
+  userId: string,
 ): Promise<ApiResult<RegistrationRow[]>> {
-  const { userId, error: authErr } = await getAuthUserId(supabase);
-  if (!userId) return { error: authErr, data: null };
-
   const { data, error } = await supabase
     .from("tournament_registrations")
     .select("*")
