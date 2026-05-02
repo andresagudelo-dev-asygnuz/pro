@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import { listMatches, type MatchRow, type MatchStatus } from "@/lib/tournaments/matches";
 import { listRegistrations, type RegistrationRow } from "@/lib/tournaments/registrations";
@@ -34,6 +35,7 @@ function displayRegistration(regId: string | null, registrations: RegistrationRo
 }
 
 export default function TournamentMatchesPage() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [tournament, setTournament] = useState<TournamentRow | null>(null);
   const [matches, setMatches] = useState<MatchRow[]>([]);
@@ -44,16 +46,15 @@ export default function TournamentMatchesPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
       const { data: t } = await getTournamentById(supabase, id);
       if (!t) { setError("Torneo no encontrado"); setLoading(false); return; }
       const tRow = t as TournamentRow;
       setTournament(tRow);
-      setIsOwner(!!auth.user && auth.user.id === tRow.owner_id);
+      setIsOwner(!!user && user.id === tRow.owner_id);
 
       const [{ data: ms, error: matchErr }, { data: regs }] = await Promise.all([
         listMatches(supabase, id),
-        auth.user ? listRegistrations(supabase, id) : { data: [] as RegistrationRow[] },
+        user ? listRegistrations(supabase, id) : { data: [] as RegistrationRow[] },
       ]);
       if (matchErr) setError(matchErr);
       setMatches(ms ?? []);

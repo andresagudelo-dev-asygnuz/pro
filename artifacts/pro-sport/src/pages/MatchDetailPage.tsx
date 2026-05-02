@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { formatMatchDate, initialsFromName } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,16 +14,14 @@ import type { Match, MatchParticipant, Profile, Sport } from "@/lib/types/db";
 const supabase = createClient();
 
 export default function MatchDetailPage() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
-
   const [match, setMatch] = useState<Match | null>(null);
   const [sport, setSport] = useState<Sport | null>(null);
   const [organizer, setOrganizer] = useState<Profile | null>(null);
   const [participants, setParticipants] = useState<MatchParticipant[]>([]);
   const [profilesById, setProfilesById] = useState<Map<string, Profile>>(new Map());
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [chatMessage, setChatMessage] = useState("");
   const [messages, setMessages] = useState<Array<{ id: string; sender_id: string; content: string; created_at: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -32,14 +31,8 @@ export default function MatchDetailPage() {
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData.user) {
-        navigate("/login");
-        return;
-      }
-      setCurrentUserId(authData.user.id);
-
       const { data: matchRaw } = await supabase.from("matches").select("*").eq("id", id).maybeSingle();
       if (!matchRaw) { setError("Partido no encontrado"); setLoading(false); return; }
       const m = matchRaw as Match;
@@ -50,7 +43,7 @@ export default function MatchDetailPage() {
         supabase.from("profiles").select("*").eq("id", m.organizer_id).maybeSingle(),
         supabase.from("match_participants").select("*").eq("match_id", m.id).order("joined_at"),
         supabase.from("messages").select("*").eq("match_id", m.id).order("created_at", { ascending: true }).limit(200),
-        supabase.from("profiles").select("*").eq("id", authData.user.id).maybeSingle(),
+        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       ]);
 
       setSport(sportData as Sport | null);
@@ -69,35 +62,35 @@ export default function MatchDetailPage() {
 
       setLoading(false);
     })();
-  }, [id, navigate]);
+  }, [id, user]);
 
   async function handleJoin() {
-    if (!match || !currentUserId) return;
+    if (!match || !user) return;
     setJoining(true);
-    const myPart = participants.find((p) => p.user_id === currentUserId);
+    const myPart = participants.find((p) => p.user_id === user.id);
     if (myPart) {
-      await supabase.from("match_participants").delete().eq("match_id", match.id).eq("user_id", currentUserId);
-      setParticipants((prev) => prev.filter((p) => p.user_id !== currentUserId));
+      await supabase.from("match_participants").delete().eq("match_id", match.id).eq("user_id", user.id);
+      setParticipants((prev) => prev.filter((p) => p.user_id !== user.id));
     } else {
-      const { data: newPart } = await supabase.from("match_participants").insert({ match_id: match.id, user_id: currentUserId, status: "joined" }).select().single();
+      const { data: newPart } = await supabase.from("match_participants").insert({ match_id: match.id, user_id: user.id, status: "joined" }).select().single();
       if (newPart) setParticipants((prev) => [...prev, newPart as MatchParticipant]);
     }
     setJoining(false);
   }
 
   async function handleConfirm() {
-    if (!match || !currentUserId) return;
+    if (!match || !user) return;
     setConfirming(true);
-    await supabase.from("match_participants").update({ confirmed_at: new Date().toISOString() }).eq("match_id", match.id).eq("user_id", currentUserId);
-    setParticipants((prev) => prev.map((p) => p.user_id === currentUserId ? { ...p, confirmed_at: new Date().toISOString() } : p));
+    await supabase.from("match_participants").update({ confirmed_at: new Date().toISOString() }).eq("match_id", match.id).eq("user_id", user.id);
+    setParticipants((prev) => prev.map((p) => p.user_id === user.id ? { ...p, confirmed_at: new Date().toISOString() } : p));
     setConfirming(false);
   }
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
-    if (!chatMessage.trim() || !match || !currentUserId) return;
+    if (!chatMessage.trim() || !match || !user) return;
     setSendingMsg(true);
-    const { data: msg } = await supabase.from("messages").insert({ match_id: match.id, sender_id: currentUserId, content: chatMessage.trim() }).select().single();
+    const { data: msg } = await supabase.from("messages").insert({ match_id: match.id, sender_id: user.id, content: chatMessage.trim() }).select().single();
     if (msg) setMessages((prev) => [...prev, msg as typeof messages[0]]);
     setChatMessage("");
     setSendingMsg(false);
@@ -108,10 +101,10 @@ export default function MatchDetailPage() {
 
   const joinedParts = participants.filter((p) => p.status === "joined");
   const joinedCount = joinedParts.length;
-  const myPart = participants.find((p) => p.user_id === currentUserId);
+  const myPart = participants.find((p) => p.user_id === user?.id);
   const isJoined = !!myPart && myPart.status === "joined";
   const isConfirmed = isJoined && !!myPart?.confirmed_at;
-  const isOrganizer = match.organizer_id === currentUserId;
+  const isOrganizer = match.organizer_id === user?.id;
   const isFull = joinedCount >= match.max_players && !isJoined;
   const canChat = isJoined || isOrganizer;
 
@@ -220,7 +213,7 @@ export default function MatchDetailPage() {
               {messages.length === 0 && <p className="text-muted-foreground">Sin mensajes aún.</p>}
               {messages.map((msg) => {
                 const author = profilesById.get(msg.sender_id);
-                const isMe = msg.sender_id === currentUserId;
+                const isMe = msg.sender_id === user?.id;
                 return (
                   <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
                     <Avatar className="size-6 shrink-0">

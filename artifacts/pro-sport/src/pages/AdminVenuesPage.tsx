@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppLayout } from "@/components/AppLayout";
@@ -11,20 +12,17 @@ type Court = { id: string; name: string; capacity_players: number };
 type Venue = { id: string; name: string; address: string; city: string; venue_courts?: Court[] };
 
 export default function AdminVenuesPage() {
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { navigate("/login"); return; }
-      setUserId(auth.user.id);
-
-      const { data } = await supabase.from("venues").select("*, venue_courts(*)").eq("owner_id", auth.user.id);
+      const { data } = await supabase.from("venues").select("*, venue_courts(*)").eq("owner_id", user.id);
       setVenues((data ?? []) as Venue[]);
       setLoading(false);
     })();
@@ -32,12 +30,12 @@ export default function AdminVenuesPage() {
 
   async function handleCreateVenue(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!userId) return;
+    if (!user) return;
     setCreating(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
     const { data, error: err } = await supabase.from("venues").insert({
-      owner_id: userId,
+      owner_id: user.id,
       name: fd.get("name") as string,
       city: fd.get("city") as string,
       address: fd.get("address") as string,

@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,23 +16,16 @@ import {
 import { SKILL_LEVELS } from "@/lib/types/db";
 
 export default function OnboardingPage() {
+  const { user } = useAuth();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [userId, setUserId] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const supabase = createClient();
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) setLocation("/login");
-      else setUserId(user.id);
-    });
-  }, []);
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!userId) return;
+    if (!user) return;
     setError(null);
     setFieldErrors({});
     setPending(true);
@@ -57,7 +51,7 @@ export default function OnboardingPage() {
     const { error } = await supabase
       .from("profiles")
       .upsert({
-        id: userId,
+        id: user.id,
         username,
         full_name,
         city,

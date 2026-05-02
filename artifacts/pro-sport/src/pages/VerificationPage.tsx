@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
@@ -37,6 +38,7 @@ function formatDate(iso: string) {
 }
 
 export default function VerificationPage() {
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const [av, setAv] = useState<AgeVerification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,11 +47,9 @@ export default function VerificationPage() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { navigate("/login"); return; }
-
-      const { data } = await supabase.from("age_verifications").select("*").eq("user_id", auth.user.id).maybeSingle();
+      const { data } = await supabase.from("age_verifications").select("*").eq("user_id", user.id).maybeSingle();
       setAv(data as AgeVerification | null);
       setLoading(false);
     })();
@@ -66,17 +66,16 @@ export default function VerificationPage() {
     setUploading(true);
     setUploadError(null);
 
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) { setUploadError("No autenticado."); setUploading(false); return; }
+    if (!user) { setUploadError("No autenticado."); setUploading(false); return; }
 
     const ext = file.name.split(".").pop() ?? "bin";
-    const path = `${auth.user.id}/${Date.now()}.${ext}`;
+    const path = `${user.id}/${Date.now()}.${ext}`;
 
     const { error: storageErr } = await supabase.storage.from("age-verifications").upload(path, file, { upsert: true });
     if (storageErr) { setUploadError("Error al subir el archivo. Intentá de nuevo."); setUploading(false); return; }
 
     const { error: dbErr } = await supabase.from("age_verifications").upsert({
-      user_id: auth.user.id,
+      user_id: user.id,
       storage_path: path,
       mime_type: file.type,
       file_size_bytes: file.size,

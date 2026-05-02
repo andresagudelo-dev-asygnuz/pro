@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import { listRegistrations, type RegistrationRow } from "@/lib/tournaments/registrations";
 import { createMatch } from "@/lib/tournaments/matches";
@@ -12,6 +13,7 @@ import { AppLayout } from "@/components/AppLayout";
 const supabase = createClient();
 
 export default function TournamentNewMatchPage() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
 
@@ -29,15 +31,13 @@ export default function TournamentNewMatchPage() {
   const [venue, setVenue] = useState("");
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { navigate("/login"); return; }
-
       const { data: t } = await getTournamentById(supabase, id);
       if (!t) { setError("Torneo no encontrado"); setLoading(false); return; }
       const tRow = t as TournamentRow;
 
-      if (tRow.owner_id !== auth.user.id) {
+      if (tRow.owner_id !== user.id) {
         setError("Solo el promotor del torneo puede crear partidos.");
         setTournament(tRow);
         setLoading(false);

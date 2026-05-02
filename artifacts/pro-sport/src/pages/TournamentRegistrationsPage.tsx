@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import { listRegistrations, type RegistrationRow } from "@/lib/tournaments/registrations";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ function Section({ title, rows }: { title: string; rows: RegistrationRow[] }) {
 }
 
 export default function TournamentRegistrationsPage() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const [tournament, setTournament] = useState<TournamentRow | null>(null);
@@ -41,15 +43,13 @@ export default function TournamentRegistrationsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { navigate("/login"); return; }
-
       const { data: t } = await getTournamentById(supabase, id);
       if (!t) { setError("Torneo no encontrado"); setLoading(false); return; }
       const tRow = t as TournamentRow;
 
-      if (tRow.owner_id !== auth.user.id) {
+      if (tRow.owner_id !== user.id) {
         setError("Solo el promotor del torneo puede ver las inscripciones.");
         setTournament(tRow);
         setLoading(false);

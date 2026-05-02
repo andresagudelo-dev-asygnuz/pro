@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Bell, CheckCircle2, MessageSquare, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,16 +21,15 @@ type Notification = {
 };
 
 export default function NotificationsPage() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [, setLocation] = useLocation();
   const supabase = createClient();
 
   useEffect(() => {
+    if (!user) return;
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLocation("/login"); return; }
-
       const { data } = await supabase
         .from("notifications")
         .select("*")
@@ -41,10 +41,9 @@ export default function NotificationsPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [user]);
 
   const markAllRead = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     await supabase
       .from("notifications")

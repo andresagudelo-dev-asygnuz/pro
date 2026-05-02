@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import { listRegistrations, type RegistrationRow } from "@/lib/tournaments/registrations";
 import { Button } from "@/components/ui/button";
@@ -18,30 +19,27 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export default function TournamentDetailPage() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [tournament, setTournament] = useState<TournamentRow | null>(null);
   const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      setUserId(authData.user?.id ?? null);
-
       const { data, error: err } = await getTournamentById(supabase, id);
       if (err) { setError(err); setLoading(false); return; }
       if (!data) { setError("Torneo no encontrado"); setLoading(false); return; }
       setTournament(data as TournamentRow);
 
-      if (authData.user) {
+      if (user) {
         const { data: regs } = await listRegistrations(supabase, id);
         setRegistrations((regs ?? []) as RegistrationRow[]);
       }
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, user]);
 
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
   if (error || !tournament) {
@@ -53,7 +51,7 @@ export default function TournamentDetailPage() {
   }
 
   const t = tournament;
-  const isOwner = !!userId && userId === t.owner_id;
+  const isOwner = !!user && user.id === t.owner_id;
   const confirmed = registrations.filter((r) => r.status === "confirmada");
   const isOpen = t.status === "abierto_inscripciones";
   const hasSlots = t.slots_filled < t.slots;
@@ -93,7 +91,7 @@ export default function TournamentDetailPage() {
             <Link href={`/tournaments/${t.id}/standings`}>Tabla de posiciones</Link>
           </Button>
 
-          {!isOwner && isOpen && hasSlots && userId && (
+          {!isOwner && isOpen && hasSlots && user && (
             <Button asChild>
               <Link href={`/tournaments/${t.id}/register`}>Inscribirme</Link>
             </Button>
@@ -107,7 +105,7 @@ export default function TournamentDetailPage() {
             <span className="text-sm text-muted-foreground">Cupos agotados.</span>
           )}
 
-          {!userId && isOpen && (
+          {!user && isOpen && (
             <Button asChild>
               <Link href="/login">Ingresá para inscribirte</Link>
             </Button>

@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,17 +17,12 @@ import { SKILL_LEVELS } from "@/lib/types/db";
 import { ArrowLeft } from "lucide-react";
 
 export default function NewMatchPage() {
+  const { user } = useAuth();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [, setLocation] = useLocation();
   const supabase = createClient();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) setLocation("/login");
-    });
-  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,7 +30,6 @@ export default function NewMatchPage() {
     setFieldErrors({});
     setPending(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLocation("/login"); return; }
 
     const form = e.currentTarget;

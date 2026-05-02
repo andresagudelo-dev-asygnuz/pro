@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useLocation } from "wouter";
+import { Link, useParams } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { formatMatchDate, initialsFromName } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -11,21 +12,16 @@ import type { Match, Profile, Sport } from "@/lib/types/db";
 const supabase = createClient();
 
 export default function UserProfilePage() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sport, setSport] = useState<Sport | null>(null);
   const [upcoming, setUpcoming] = useState<Match[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { navigate("/login"); return; }
-      setCurrentUserId(auth.user.id);
-
       const { data: profileRaw } = await supabase.from("profiles").select("*").eq("id", id).maybeSingle();
       if (!profileRaw) { setError("Perfil no encontrado"); setLoading(false); return; }
       const p = profileRaw as Profile;
@@ -41,12 +37,12 @@ export default function UserProfilePage() {
       setUpcoming((matchesRes.data ?? []) as Match[]);
       setLoading(false);
     })();
-  }, [id, navigate]);
+  }, [id]);
 
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
   if (error || !profile) return <div className="p-6 bg-destructive/15 text-destructive rounded-xl">{error ?? "Perfil no encontrado"}</div>;
 
-  const isMe = currentUserId === profile.id;
+  const isMe = user?.id === profile.id;
 
   return (
     <AppLayout>

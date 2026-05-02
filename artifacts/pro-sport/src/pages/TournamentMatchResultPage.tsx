@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import {
   getMatchById, recordResult, listMatchEvents, addMatchEvent,
@@ -19,6 +20,7 @@ const eventLabels: Record<MatchEventType, string> = {
 };
 
 export default function TournamentMatchResultPage() {
+  const { user } = useAuth();
   const { id, matchId } = useParams<{ id: string; matchId: string }>();
 
   const [tournament, setTournament] = useState<TournamentRow | null>(null);
@@ -41,7 +43,6 @@ export default function TournamentMatchResultPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
       const [{ data: t }, { data: m }, { data: regs }, { data: evs }] = await Promise.all([
         getTournamentById(supabase, id),
         getMatchById(supabase, matchId),
@@ -55,7 +56,7 @@ export default function TournamentMatchResultPage() {
       setMatch(mRow);
       setRegistrations((regs ?? []) as RegistrationRow[]);
       setEvents((evs ?? []) as MatchEventRow[]);
-      setIsOwner(!!auth.user && auth.user.id === tRow.owner_id);
+      setIsOwner(!!user && user.id === tRow.owner_id);
       setHomeScore(mRow.home_score ?? 0);
       setAwayScore(mRow.away_score ?? 0);
       setLoading(false);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { getMyTournaments, type TournamentRow } from "@/lib/tournaments/api";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
@@ -8,6 +9,7 @@ import { AppLayout } from "@/components/AppLayout";
 const supabase = createClient();
 
 export default function MyTournamentsPage() {
+  useAuth();
   const [, navigate] = useLocation();
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,9 +17,6 @@ export default function MyTournamentsPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { navigate("/login"); return; }
-
       const { data, error: err } = await getMyTournaments(supabase);
       if (err) setError(err);
       else setTournaments((data ?? []) as TournamentRow[]);

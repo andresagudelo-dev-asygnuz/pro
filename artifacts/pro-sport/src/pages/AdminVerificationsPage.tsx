@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
@@ -72,15 +72,11 @@ function VerificationActions({
 }
 
 export default function AdminVerificationsPage() {
-  const [, navigate] = useLocation();
   const [rows, setRows] = useState<QueueRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) { navigate("/login"); return; }
-
       const { data } = await supabase
         .from("age_verifications")
         .select("*, profile:profiles(full_name, username)")
@@ -99,7 +95,7 @@ export default function AdminVerificationsPage() {
       setRows(rowsWithUrls);
       setLoading(false);
     })();
-  }, [navigate]);
+  }, []);
 
   async function handleReview(verificationId: string, decision: "aprobada" | "rechazada", reason?: string) {
     const update: Record<string, unknown> = {
