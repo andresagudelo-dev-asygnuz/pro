@@ -86,6 +86,22 @@ pnpm workspace monorepo using TypeScript. Migration from Vercel/Next.js → Repl
 - **AdminVerificationsPage** — Admin review of age verifications
 - **FeedbackPage** — Survey form (dark gradient design, public)
 
+## Vercel Deployment
+
+The project deploys via Vercel. The `vercel.json` at `artifacts/pro-sport/vercel.json` configures the build:
+
+- **Build Command**: `cd ../.. && pnpm --filter @workspace/pro-sport run build`
+- **Install Command**: `cd ../.. && pnpm install`
+- **Output Directory**: `dist/public`
+- **Framework**: vite
+
+**Important — Vercel Dashboard Setting (must be set manually):**
+In Vercel → Project → Settings → General → **Root Directory**, set it to:
+```
+artifacts/pro-sport
+```
+This was migrated from `apps/web` (old Next.js setup). If this setting is wrong, deploys will fail with "The specified Root Directory does not exist".
+
 ## Key Commands
 
 - `pnpm --filter @workspace/pro-sport run dev` — run frontend dev server
