@@ -107,5 +107,6 @@ export default function FeedbackPage() {
         </div>
       </div>
     </div>
+    </AppLayout>
   );
 }

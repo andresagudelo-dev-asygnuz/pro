@@ -88,5 +88,6 @@ export default function TournamentRegistrationsPage() {
       <Section title={`Lista de espera (${waiting.length})`} rows={waiting} />
       <Section title={`Canceladas (${cancelled.length})`} rows={cancelled} />
     </div>
+    </AppLayout>
   );
 }

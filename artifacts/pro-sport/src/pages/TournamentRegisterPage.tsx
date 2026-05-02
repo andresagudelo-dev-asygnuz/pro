@@ -108,5 +108,6 @@ export default function TournamentRegisterPage() {
         </section>
       )}
     </div>
+    </AppLayout>
   );
 }

@@ -171,5 +171,6 @@ export default function AdminVerificationsPage() {
         </ul>
       )}
     </div>
+    </AppLayout>
   );
 }

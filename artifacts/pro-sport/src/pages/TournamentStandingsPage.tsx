@@ -101,5 +101,6 @@ export default function TournamentStandingsPage() {
         </div>
       )}
     </div>
+    </AppLayout>
   );
 }

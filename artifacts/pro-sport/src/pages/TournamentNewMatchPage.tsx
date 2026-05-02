@@ -142,5 +142,6 @@ export default function TournamentNewMatchPage() {
         </form>
       )}
     </div>
+    </AppLayout>
   );
 }

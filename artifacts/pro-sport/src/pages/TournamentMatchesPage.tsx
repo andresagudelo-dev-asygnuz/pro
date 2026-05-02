@@ -115,5 +115,6 @@ export default function TournamentMatchesPage() {
         ))}
       </div>
     </div>
+    </AppLayout>
   );
 }
