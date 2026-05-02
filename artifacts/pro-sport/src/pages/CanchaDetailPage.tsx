@@ -181,12 +181,17 @@ export default function CanchaDetailPage() {
 
         {/* Booking section */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border p-5 shadow-sm space-y-4">
-          <h3 className="font-semibold text-base">Reservar cancha</h3>
+          <div>
+            <h3 className="font-semibold text-base">Solicitar turno</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              La solicitud queda pendiente hasta que el dueño la apruebe. El horario se reserva para vos (nadie más puede pedirlo mientras esté pendiente).
+            </p>
+          </div>
 
           {booked && (
-            <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 rounded-lg p-3 text-sm">
+            <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 rounded-lg p-3 text-sm">
               <CheckCircle2 className="size-5 shrink-0" />
-              <span>¡Reserva enviada! El dueño confirmará en breve. Podés hacer otra reserva abajo.</span>
+              <span>¡Solicitud enviada! El dueño recibirá tu pedido y lo confirmará en breve.</span>
             </div>
           )}
 
@@ -266,7 +271,7 @@ export default function CanchaDetailPage() {
                 </Link>
               ) : (
                 <Button className="w-full" onClick={handleBook} disabled={booking}>
-                  {booking ? "Enviando reserva…" : "Confirmar reserva"}
+                  {booking ? "Enviando solicitud…" : "Solicitar turno"}
                 </Button>
               )}
             </div>

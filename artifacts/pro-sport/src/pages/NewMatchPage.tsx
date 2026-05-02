@@ -323,13 +323,14 @@ export default function NewMatchPage() {
                             ))}
                           </div>
                           {selectedSlot && (
-                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg px-3 py-2 text-sm text-green-700 dark:text-green-300">
-                              Reserva: {selectedSlot.start}–{selectedSlot.end} en {selectedCancha.name}
-                              {" · "}$
-                              {(selectedCancha.discount_percent > 0
-                                ? selectedCancha.price_per_hour * (1 - selectedCancha.discount_percent / 100)
-                                : selectedCancha.price_per_hour
-                              ).toLocaleString("es-CO")}
+                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 text-sm text-amber-700 dark:text-amber-300 space-y-0.5">
+                              <p className="font-medium">Solicitud de turno: {selectedSlot.start}–{selectedSlot.end} en {selectedCancha.name}</p>
+                              <p className="text-xs opacity-80">
+                                ${(selectedCancha.discount_percent > 0
+                                  ? selectedCancha.price_per_hour * (1 - selectedCancha.discount_percent / 100)
+                                  : selectedCancha.price_per_hour
+                                ).toLocaleString("es-CO")} · Queda pendiente hasta que el dueño apruebe
+                              </p>
                             </div>
                           )}
                         </>

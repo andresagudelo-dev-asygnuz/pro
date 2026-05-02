@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppLayout } from "@/components/AppLayout";
-import { CheckCircle2, Clock, MapPin, Globe, Lock } from "lucide-react";
-import type { Match, MatchParticipant, Profile, Sport } from "@/lib/types/db";
+import { CheckCircle2, Clock, MapPin, Globe, Lock, Building2, AlertCircle } from "lucide-react";
+import type { Match, MatchParticipant, Profile, Sport, CanchaBooking } from "@/lib/types/db";
 
 const supabase = createClient();
 
@@ -29,6 +29,7 @@ export default function MatchDetailPage() {
   const [joining, setJoining] = useState(false);
   const [sendingMsg, setSendingMsg] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [canchaBooking, setCanchaBooking] = useState<CanchaBooking & { canchas?: { name: string } } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -38,13 +39,17 @@ export default function MatchDetailPage() {
       const m = matchRaw as Match;
       setMatch(m);
 
-      const [{ data: sportData }, { data: orgData }, { data: partsData }, { data: messagesData }, { data: profileRaw }] = await Promise.all([
+      const [{ data: sportData }, { data: orgData }, { data: partsData }, { data: messagesData }, { data: profileRaw }, bookingRes] = await Promise.all([
         supabase.from("sports").select("*").eq("id", m.sport_id).maybeSingle(),
         supabase.from("profiles").select("*").eq("id", m.organizer_id).maybeSingle(),
         supabase.from("match_participants").select("*").eq("match_id", m.id).order("joined_at"),
         supabase.from("messages").select("*").eq("match_id", m.id).order("created_at", { ascending: true }).limit(200),
         supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        m.cancha_booking_id
+          ? supabase.from("cancha_bookings").select("*, canchas(name)").eq("id", m.cancha_booking_id).maybeSingle()
+          : Promise.resolve({ data: null }),
       ]);
+      if (bookingRes.data) setCanchaBooking(bookingRes.data as typeof canchaBooking);
 
       setSport(sportData as Sport | null);
       setOrganizer(orgData as Profile | null);
@@ -138,6 +143,37 @@ export default function MatchDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Cancha booking status banner */}
+        {canchaBooking && (
+          <div className={`rounded-lg p-3 flex items-center gap-3 text-sm border ${
+            canchaBooking.status === "pendiente"
+              ? "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300"
+              : canchaBooking.status === "confirmada"
+              ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-700 dark:text-green-300"
+              : "bg-muted border-border text-muted-foreground"
+          }`}>
+            {canchaBooking.status === "pendiente" ? (
+              <AlertCircle className="size-4 shrink-0" />
+            ) : canchaBooking.status === "confirmada" ? (
+              <CheckCircle2 className="size-4 shrink-0" />
+            ) : (
+              <Building2 className="size-4 shrink-0" />
+            )}
+            <div>
+              <p className="font-medium">
+                {canchaBooking.status === "pendiente" && "Cancha pendiente de aprobación"}
+                {canchaBooking.status === "confirmada" && "Cancha confirmada"}
+                {canchaBooking.status === "cancelada" && "Reserva de cancha cancelada"}
+              </p>
+              <p className="text-xs opacity-80">
+                {(canchaBooking as { canchas?: { name: string } }).canchas?.name}
+                {" · "}{canchaBooking.start_time?.substring(0, 5)}–{canchaBooking.end_time?.substring(0, 5)}
+                {" · "}{canchaBooking.booking_date}
+              </p>
+            </div>
+          </div>
+        )}
 
         {isJoined && !isConfirmed && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between gap-4">
