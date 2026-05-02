@@ -116,6 +116,7 @@ export default function MatchDetailPage() {
   const canChat = isJoined || isOrganizer;
 
   return (
+    <AppLayout>
     <div className="flex flex-col gap-6 max-w-3xl mx-auto px-4 py-6">
       <header className="flex flex-col gap-3 rounded-xl border bg-background p-6 shadow-sm">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

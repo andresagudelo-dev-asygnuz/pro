@@ -42,6 +42,7 @@ export default function NewTournamentPage() {
   const inputCls = "w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
   return (
+    <AppLayout>
     <div className="container py-8 max-w-xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Crear Torneo</h1>
