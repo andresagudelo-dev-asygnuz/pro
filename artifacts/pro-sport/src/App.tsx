@@ -32,6 +32,11 @@ import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import FeedbackPage from "@/pages/FeedbackPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import CanchasPage from "@/pages/CanchasPage";
+import CanchaDetailPage from "@/pages/CanchaDetailPage";
+import MisCanchasPage from "@/pages/MisCanchasPage";
+import NuevaCanchaPage from "@/pages/NuevaCanchaPage";
+import CanchaAgendaPage from "@/pages/CanchaAgendaPage";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +52,7 @@ function Router() {
       <Route path="/nueva-contrasena" component={ResetPasswordPage} />
       <Route path="/feedback" component={FeedbackPage} />
       <Route path="/u/:slug" component={PublicProfilePage} />
+      <Route path="/canchas" component={CanchasPage} />
 
       {/* Protected routes */}
       <Route path="/feed">
@@ -105,6 +111,19 @@ function Router() {
       <Route path="/tournaments/:id/registrations">
         <ProtectedRoute component={TournamentRegistrationsPage} />
       </Route>
+
+      {/* Canchas (protected management) */}
+      <Route path="/mis-canchas">
+        <ProtectedRoute component={MisCanchasPage} />
+      </Route>
+      <Route path="/canchas/nueva">
+        <ProtectedRoute component={NuevaCanchaPage} />
+      </Route>
+      <Route path="/canchas/:id/agenda">
+        <ProtectedRoute component={CanchaAgendaPage} />
+      </Route>
+      {/* Public cancha detail — must come AFTER /canchas/nueva and /canchas/:id/agenda */}
+      <Route path="/canchas/:id" component={CanchaDetailPage} />
 
       <Route path="/profile/:id">
         <ProtectedRoute component={UserProfilePage} />

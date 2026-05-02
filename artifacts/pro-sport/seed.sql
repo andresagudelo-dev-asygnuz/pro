@@ -182,6 +182,14 @@ UPDATE public.tournaments SET slots_filled = 1 WHERE id = tid_3;
 END $$;
 
 -- =============================================================================
+-- ACTUALIZAR CONSTRAINT user_roles si aún no existe is_cancha
+-- (ejecutar SOLO si ya corriste canchas_migration.sql primero)
+-- =============================================================================
+-- Si el campo is_cancha ya existe (corriste canchas_migration.sql), los
+-- INSERT de user_roles abajo incluyen la columna. Si no lo corriste aún,
+-- comentá la columna is_cancha en los VALUES y correlo después.
+
+-- =============================================================================
 -- RESUMEN DE USUARIOS DE PRUEBA
 -- =============================================================================
 SELECT

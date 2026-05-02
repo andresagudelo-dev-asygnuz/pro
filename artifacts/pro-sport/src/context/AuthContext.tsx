@@ -6,6 +6,7 @@ import type { Profile } from "@/lib/types/db";
 export type UserRoles = {
   is_player: boolean;
   is_promoter: boolean;
+  is_cancha: boolean;
 } | null;
 
 interface AuthContextValue {
@@ -16,6 +17,7 @@ interface AuthContextValue {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshRoles: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -40,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadRoles(userId: string) {
     const { data } = await supabase
       .from("user_roles")
-      .select("is_player, is_promoter")
+      .select("is_player, is_promoter, is_cancha")
       .eq("user_id", userId)
       .maybeSingle();
     setRoles(data as UserRoles | null);
@@ -48,6 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function refreshProfile() {
     if (user) await loadProfile(user.id);
+  }
+
+  async function refreshRoles() {
+    if (user) await loadRoles(user.id);
   }
 
   useEffect(() => {
@@ -84,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, loading, signOut, refreshProfile, refreshRoles }}>
       {children}
     </AuthContext.Provider>
   );

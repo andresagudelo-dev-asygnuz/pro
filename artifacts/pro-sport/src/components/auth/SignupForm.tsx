@@ -37,6 +37,7 @@ export function SignupForm() {
 
     const is_player = (form.elements.namedItem("is_player") as HTMLInputElement).checked;
     const is_promoter = (form.elements.namedItem("is_promoter") as HTMLInputElement).checked;
+    const is_cancha = (form.elements.namedItem("is_cancha") as HTMLInputElement).checked;
 
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
@@ -45,8 +46,9 @@ export function SignupForm() {
       options: {
         data: {
           full_name,
-          is_player: is_player || !is_promoter,
+          is_player: is_player || (!is_promoter && !is_cancha),
           is_promoter,
+          is_cancha,
         },
       },
     });
@@ -136,7 +138,20 @@ export function SignupForm() {
           <span className="flex flex-col gap-0.5">
             <span className="font-medium">Promotor</span>
             <span className="text-xs text-muted-foreground">
-              Crear y gestionar torneos. Podés combinarlo con el rol de jugador.
+              Crear y gestionar torneos. Podés combinarlo con otros roles.
+            </span>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 rounded-md border border-input p-3 text-sm hover:bg-accent/50 cursor-pointer">
+          <input
+            type="checkbox"
+            name="is_cancha"
+            className="mt-0.5 size-4 rounded border-input text-primary"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="font-medium">Administrador de Cancha</span>
+            <span className="text-xs text-muted-foreground">
+              Registrá tus canchas, configurá horarios y aceptá reservas.
             </span>
           </span>
         </label>

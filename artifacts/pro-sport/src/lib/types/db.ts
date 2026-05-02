@@ -194,3 +194,97 @@ export const VISIBILITY_LEVELS: { value: VisibilityLevel; label: string; descrip
   { value: "promotores", label: "Promotores", description: "Solo organizadores." },
   { value: "privado", label: "Privado", description: "Solo vos." },
 ];
+
+// ─── Canchas ────────────────────────────────────────────────────────────────
+
+export type CanchaSportType =
+  | "futbol_11" | "futbol_9" | "futbol_5" | "futbol_sala"
+  | "padel" | "tenis" | "basket" | "voleibol" | "otro";
+
+export type BookingStatus = "pendiente" | "confirmada" | "cancelada";
+
+export interface Cancha {
+  id: string;
+  owner_id: string;
+  name: string;
+  description: string | null;
+  sport_type: CanchaSportType;
+  capacity: number;
+  address: string;
+  city: string;
+  price_per_hour: number;
+  discount_percent: number;
+  is_active: boolean;
+  phone: string | null;
+  whatsapp: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CanchaSchedule {
+  id: string;
+  cancha_id: string;
+  day_of_week: number;
+  opens_at: string;
+  closes_at: string;
+  is_available: boolean;
+}
+
+export interface CanchaBooking {
+  id: string;
+  cancha_id: string;
+  booked_by: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  status: BookingStatus;
+  match_id: string | null;
+  total_price: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type TimeSlot = {
+  start: string;
+  end: string;
+  isAvailable: boolean;
+};
+
+export const SPORT_TYPE_LABELS: Record<CanchaSportType, string> = {
+  futbol_11: "Fútbol 11",
+  futbol_9: "Fútbol 9",
+  futbol_5: "Fútbol 5",
+  futbol_sala: "Fútbol Sala",
+  padel: "Pádel",
+  tenis: "Tenis",
+  basket: "Básquet",
+  voleibol: "Vóleibol",
+  otro: "Otro",
+};
+
+export const SPORT_TYPE_ICONS: Record<CanchaSportType, string> = {
+  futbol_11: "⚽",
+  futbol_9: "⚽",
+  futbol_5: "⚽",
+  futbol_sala: "⚽",
+  padel: "🎾",
+  tenis: "🎾",
+  basket: "🏀",
+  voleibol: "🏐",
+  otro: "🏟️",
+};
+
+export const CANCHAS_SPORT_OPTIONS: { value: CanchaSportType; label: string }[] = [
+  { value: "futbol_5", label: "Fútbol 5" },
+  { value: "futbol_9", label: "Fútbol 9" },
+  { value: "futbol_11", label: "Fútbol 11" },
+  { value: "futbol_sala", label: "Fútbol Sala" },
+  { value: "padel", label: "Pádel" },
+  { value: "tenis", label: "Tenis" },
+  { value: "basket", label: "Básquet" },
+  { value: "voleibol", label: "Vóleibol" },
+  { value: "otro", label: "Otro" },
+];
+
+export const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
