@@ -71,6 +71,7 @@ export interface Match {
   status: MatchStatus;
   venue_id: string | null;
   is_public: boolean;
+  cancha_booking_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -288,3 +289,26 @@ export const CANCHAS_SPORT_OPTIONS: { value: CanchaSportType; label: string }[] 
 ];
 
 export const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+export const ENABLED_CITIES: string[] = [
+  "Manizales",
+  "Bogotá",
+  "Medellín",
+  "Cali",
+  "Barranquilla",
+  "Cartagena",
+  "Bucaramanga",
+  "Pereira",
+  "Santa Marta",
+  "Ibagué",
+  "Cúcuta",
+  "Villavicencio",
+  "Armenia",
+  "Pasto",
+  "Montería",
+  "Valledupar",
+  "Neiva",
+  "Popayán",
+  "Tunja",
+  "Sincelejo",
+];
