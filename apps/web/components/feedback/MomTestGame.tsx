@@ -85,7 +85,6 @@ interface GameData {
 
 export default function MomTestGame() {
   const [currentStep, setCurrentStep] = useState<Step>("intro");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [data, setData] = useState<GameData>({
@@ -185,11 +184,10 @@ export default function MomTestGame() {
   }, []);
 
   const handleSubmit = async (isFinal: boolean = false) => {
-    setIsSubmitting(true);
     console.log("Intentando guardar datos:", data);
 
     try {
-      const { error, data: insertedData } = await supabase
+      const { error } = await supabase
         .from("market_validation_responses")
         .insert([{
           name: data.name,
@@ -236,7 +234,6 @@ export default function MomTestGame() {
       const message = err instanceof Error ? err.message : "Problema de conexión";
       alert(`Error al guardar: ${message}`);
     } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -268,7 +265,7 @@ export default function MomTestGame() {
       setCheckingEmail(true);
       
       try {
-        const { data: existing, error } = await supabase
+        const { data: existing } = await supabase
           .from("market_validation_responses")
           .select("id")
           .eq("email", data.email)
@@ -282,7 +279,7 @@ export default function MomTestGame() {
 
         trackEvent('game_contact_submit');
         nextStep();
-      } catch (err) {
+      } catch {
         // Si no se encuentra (error PGRST116), podemos continuar
         nextStep();
       } finally {

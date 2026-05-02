@@ -2,7 +2,6 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import {
@@ -34,7 +33,6 @@ const eventLabels: Record<MatchEventType, string> = {
 
 export default function MatchResultPage({ params }: PageProps) {
   const { id, matchId } = use(params);
-  const router = useRouter();
   const supabase = createClient();
 
   const [tournament, setTournament] = useState<TournamentRow | null>(null);

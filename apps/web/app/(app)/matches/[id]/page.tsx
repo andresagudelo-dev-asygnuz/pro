@@ -86,11 +86,6 @@ export default async function MatchPage({
   const isOrganizer = match.organizer_id === profile.id;
   const isFull = joinedCount >= match.max_players && !isJoined;
 
-  // Lógica de Lobby: 3 horas antes del partido
-  const matchTime = new Date(match.starts_at).getTime();
-  const threeHoursBefore = matchTime - (3 * 60 * 60 * 1000);
-  const isLobbyActive = Date.now() > (matchTime - (24 * 60 * 60 * 1000)); // Lobby visible 24h antes
-  const isNearStart = Date.now() > threeHoursBefore;
 
   const { data: messagesRaw } = await supabase
     .from("messages")
