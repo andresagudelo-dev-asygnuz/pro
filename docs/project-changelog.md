@@ -12,7 +12,7 @@ Bitácora **del producto** (negocio, alcance, gates y hitos de entrega). Mantene
 
 ## Unreleased
 
-- `[Construcción]` **Estabilización de despliegue**: Resueltos 15 problemas de ESLint (2 errores, 13 advertencias) que bloqueaban el despliegue en Vercel. Incluye limpieza de variables no utilizadas, corrección de impurezas en Server Components (`Date.now()`) y optimización de imports en componentes de landing, feedback y gestión de partidos.
+- `[Construcción]` **Estabilización de despliegue**: Resueltos 15 problemas de ESLint, errores de TypeScript por tipos desincronizados (`Match`, `MatchParticipant`, `Profile`) y componentes UI faltantes (`alert`, `switch`). Todos los tests (188) y `typecheck` pasando satisfactoriamente.
 - `[Construcción]` **G4 Sprint 3 finalizado (MVP Fútbol)**: Sistema completo de aprobación de jugadores e invitaciones. Centro de notificaciones en tiempo real. Gestión de canchas y reservas automáticas integrado en la creación de partidos. Garantía de funcionamiento y estabilidad con +125 tests.
 - `[Construcción]` **G4 Sprint 2 finalizado**: Perfil tipo ficha con visibilidad configurable (HU-003). Implementados los 4 bloques del perfil, selector de visibilidad, vista previa por audiencia y vista pública `/u/[slug]` con filtrado de seguridad server-side.
 - `[Gate]` **G3 aprobado** vía merge de PR #9 (arquitectura + modelo de datos + 4 ADRs, con correcciones de Devin Review incluidas). `tasks/current-gate.txt` = `4`.

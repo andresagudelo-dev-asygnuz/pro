@@ -57,6 +57,8 @@ export interface Profile {
   rating_avg: number;
   rating_count: number;
   matches_played: number;
+  tournament_goals: number;
+  tournament_matches: number;
   created_at: string;
   updated_at: string;
 }
@@ -74,6 +76,8 @@ export interface Match {
   duration_minutes: number;
   max_players: number;
   status: MatchStatus;
+  venue_id: string | null;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -83,6 +87,7 @@ export interface MatchParticipant {
   user_id: string;
   status: ParticipantStatus;
   joined_at: string;
+  confirmed_at: string | null;
 }
 
 export interface Rating {

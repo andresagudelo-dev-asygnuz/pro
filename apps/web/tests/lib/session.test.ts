@@ -14,6 +14,8 @@ const base: Profile = {
   rating_avg: 0,
   rating_count: 0,
   matches_played: 0,
+  tournament_goals: 0,
+  tournament_matches: 0,
   created_at: "",
   updated_at: "",
 };
