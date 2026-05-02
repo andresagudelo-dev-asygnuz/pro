@@ -66,7 +66,6 @@ export default function NewMatchPage() {
       max_players,
       skill_level: skill_level || null,
       status: "open",
-      is_public: true,
     }).select().single();
 
     if (error) {
