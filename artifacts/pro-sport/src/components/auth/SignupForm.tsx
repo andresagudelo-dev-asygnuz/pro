@@ -36,7 +36,7 @@ export function SignupForm() {
     }
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -47,8 +47,10 @@ export function SignupForm() {
     if (error) {
       setError(error.message);
       setPending(false);
+    } else if (data.session) {
+      setLocation("/onboarding");
     } else {
-      setMessage("¡Cuenta creada! Revisá tu email para confirmar tu cuenta.");
+      setMessage("¡Cuenta creada! Revisá tu email para confirmar tu cuenta y luego iniciá sesión.");
       setPending(false);
     }
   }
@@ -139,7 +141,7 @@ export function SignupForm() {
         </p>
       )}
       {message && (
-        <p role="status" className="text-sm text-foreground">
+        <p role="status" className="text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md p-3">
           {message}
         </p>
       )}

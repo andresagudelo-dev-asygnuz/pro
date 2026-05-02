@@ -1,37 +1,26 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { formatMatchDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Plus, LogOut, User } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Match } from "@/lib/types/db";
 
 export default function FeedPage() {
+  const { profile, signOut } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username, full_name")
-          .eq("id", user.id)
-          .single();
-        setUserName(profile?.username || profile?.full_name || user.email || null);
-      }
-
       const { data } = await supabase
         .from("matches")
         .select("*")
         .eq("status", "open")
         .order("starts_at", { ascending: true })
         .limit(20);
-
       setMatches(data || []);
       setLoading(false);
     }
@@ -39,7 +28,7 @@ export default function FeedPage() {
   }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     window.location.href = "/";
   };
 
@@ -50,21 +39,25 @@ export default function FeedPage() {
           <Link href="/" className="text-xl font-black italic tracking-tighter text-zinc-900 dark:text-white uppercase">
             PRO<span className="text-brand-primary">.</span>
           </Link>
-          <div className="flex items-center gap-2">
-            {userName && <span className="text-sm text-muted-foreground hidden sm:block">Hola, {userName}</span>}
+          <div className="flex items-center gap-3">
+            {profile?.full_name && (
+              <span className="text-sm text-muted-foreground hidden sm:block">
+                Hola, {profile.full_name.split(" ")[0]}
+              </span>
+            )}
             <Link href="/perfil">
-              <Button variant="ghost" size="icon">
-                <User className="size-4" />
-              </Button>
+              <div className="w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center text-xs font-bold text-brand-primary cursor-pointer">
+                {profile?.full_name?.charAt(0) || "?"}
+              </div>
             </Link>
-            <Button variant="ghost" size="icon" onClick={handleSignOut}>
-              <LogOut className="size-4" />
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={handleSignOut}>
+              Salir
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main className="container mx-auto px-4 py-8 max-w-2xl pb-24">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Partidos</h1>
           <Link href="/matches/new">

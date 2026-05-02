@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trophy } from "lucide-react";
@@ -34,6 +35,7 @@ const statusVariants: Record<string, "default" | "secondary" | "outline" | "dest
 };
 
 export default function TournamentsPage() {
+  useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();

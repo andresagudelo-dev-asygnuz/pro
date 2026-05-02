@@ -1,38 +1,15 @@
-import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { initialsFromName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { LogOut, Settings } from "lucide-react";
-import type { Profile } from "@/lib/types/db";
+import { LogOut, Pencil, Shield, Trophy, Zap } from "lucide-react";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { profile, loading, signOut } = useAuth();
   const [, setLocation] = useLocation();
-  const supabase = createClient();
-
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLocation("/login");
-        return;
-      }
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      setProfile(data);
-      setLoading(false);
-    }
-    load();
-  }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     setLocation("/");
   };
 
@@ -54,10 +31,12 @@ export default function ProfilePage() {
             PRO<span className="text-brand-primary">.</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
-              <Settings className="size-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+            <Link href="/perfil/editar">
+              <Button variant="ghost" size="icon" title="Editar perfil">
+                <Pencil className="size-4" />
+              </Button>
+            </Link>
+            <Button variant="ghost" size="icon" onClick={handleSignOut} title="Cerrar sesión">
               <LogOut className="size-4" />
             </Button>
           </div>
@@ -70,7 +49,7 @@ export default function ProfilePage() {
             <div className="w-16 h-16 rounded-full bg-brand-primary/20 flex items-center justify-center text-xl font-black text-brand-primary shrink-0">
               {initials}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold text-zinc-900 dark:text-white">
                 {profile?.full_name || "Sin nombre"}
               </h1>
@@ -79,6 +58,11 @@ export default function ProfilePage() {
               )}
               {profile?.city && (
                 <p className="text-sm text-muted-foreground mt-1">📍 {profile.city}</p>
+              )}
+              {profile?.primary_skill_level && (
+                <p className="text-xs text-muted-foreground mt-1 capitalize">
+                  Nivel: {profile.primary_skill_level}
+                </p>
               )}
               {profile?.bio && (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">{profile.bio}</p>
@@ -92,7 +76,9 @@ export default function ProfilePage() {
               <p className="text-xs text-muted-foreground">Partidos</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-black text-zinc-900 dark:text-white">{profile?.rating_avg?.toFixed(1) ?? "—"}</p>
+              <p className="text-2xl font-black text-zinc-900 dark:text-white">
+                {profile?.rating_avg ? profile.rating_avg.toFixed(1) : "—"}
+              </p>
               <p className="text-xs text-muted-foreground">Rating</p>
             </div>
             <div className="text-center">
@@ -105,19 +91,35 @@ export default function ProfilePage() {
         {!profile?.username && (
           <div className="bg-brand-primary/10 border border-brand-primary/30 rounded-xl p-4 mb-6">
             <p className="text-sm font-medium text-brand-primary mb-2">Completá tu perfil</p>
-            <p className="text-xs text-muted-foreground mb-3">Añade tu username y datos deportivos para empezar.</p>
+            <p className="text-xs text-muted-foreground mb-3">Añadí tu username y datos deportivos para empezar.</p>
             <Link href="/onboarding">
               <Button size="sm">Completar perfil</Button>
             </Link>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 mb-3">
           <Link href="/matches/new">
-            <Button variant="outline" className="w-full">Crear partido</Button>
+            <Button variant="outline" className="w-full gap-2">
+              <Zap className="size-4" /> Crear partido
+            </Button>
           </Link>
           <Link href="/tournaments">
-            <Button variant="outline" className="w-full">Ver torneos</Button>
+            <Button variant="outline" className="w-full gap-2">
+              <Trophy className="size-4" /> Ver torneos
+            </Button>
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/tournaments/mine">
+            <Button variant="outline" className="w-full gap-2">
+              <Trophy className="size-4" /> Mis torneos
+            </Button>
+          </Link>
+          <Link href="/verificacion">
+            <Button variant="outline" className="w-full gap-2">
+              <Shield className="size-4" /> Verificación
+            </Button>
           </Link>
         </div>
       </main>
