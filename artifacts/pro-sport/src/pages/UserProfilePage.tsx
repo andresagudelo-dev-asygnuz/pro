@@ -5,6 +5,7 @@ import { formatMatchDate, initialsFromName } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AppLayout } from "@/components/AppLayout";
 import type { Match, Profile, Sport } from "@/lib/types/db";
 
 const supabase = createClient();

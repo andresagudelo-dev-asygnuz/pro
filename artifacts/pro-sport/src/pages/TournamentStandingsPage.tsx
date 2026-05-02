@@ -5,6 +5,7 @@ import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import { listStandings, type StandingRow } from "@/lib/tournaments/matches";
 import { listRegistrations, type RegistrationRow } from "@/lib/tournaments/registrations";
 import { Button } from "@/components/ui/button";
+import { AppLayout } from "@/components/AppLayout";
 
 const supabase = createClient();
 

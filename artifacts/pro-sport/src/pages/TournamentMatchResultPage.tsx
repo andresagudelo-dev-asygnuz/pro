@@ -10,6 +10,7 @@ import { listRegistrations, type RegistrationRow } from "@/lib/tournaments/regis
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AppLayout } from "@/components/AppLayout";
 
 const supabase = createClient();
 

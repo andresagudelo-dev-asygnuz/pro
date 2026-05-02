@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { getMyTournaments, type TournamentRow } from "@/lib/tournaments/api";
 import { Button } from "@/components/ui/button";
+import { AppLayout } from "@/components/AppLayout";
 
 const supabase = createClient();
 

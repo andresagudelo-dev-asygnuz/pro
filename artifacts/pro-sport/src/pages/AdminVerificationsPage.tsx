@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AppLayout } from "@/components/AppLayout";
 
 const supabase = createClient();
 

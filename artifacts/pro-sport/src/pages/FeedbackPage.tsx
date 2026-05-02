@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { AppLayout } from "@/components/AppLayout";
 
 const supabase = createClient();
 

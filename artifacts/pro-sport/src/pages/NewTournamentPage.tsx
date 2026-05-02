@@ -96,5 +96,6 @@ export default function NewTournamentPage() {
         </div>
       </form>
     </div>
+    </AppLayout>
   );
 }

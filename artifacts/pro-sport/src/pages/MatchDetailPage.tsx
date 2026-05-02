@@ -252,5 +252,6 @@ export default function MatchDetailPage() {
         )}
       </section>
     </div>
+    </AppLayout>
   );
 }
