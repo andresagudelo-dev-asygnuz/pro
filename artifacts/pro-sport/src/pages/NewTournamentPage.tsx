@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
 import { createClient } from "@/lib/supabase/client";
@@ -9,10 +9,32 @@ import { useAuth } from "@/context/AuthContext";
 const supabase = createClient();
 
 export default function NewTournamentPage() {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const [, navigate] = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (!roles?.is_promoter) {
+    return (
+      <AppLayout>
+        <div className="container py-16 max-w-xl mx-auto text-center space-y-4">
+          <h1 className="text-2xl font-bold">Se requiere rol de Promotor</h1>
+          <p className="text-muted-foreground">
+            Para crear torneos necesitás el rol de Promotor. Podés activarlo
+            desde tu perfil, o registrarte con ese rol si aún no lo tenés.
+          </p>
+          <div className="flex gap-3 justify-center pt-2">
+            <Button variant="outline" asChild>
+              <Link href="/profile">Ir a mi perfil</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/tournaments">Ver torneos</Link>
+            </Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -35,12 +35,19 @@ export function SignupForm() {
       return;
     }
 
+    const is_player = (form.elements.namedItem("is_player") as HTMLInputElement).checked;
+    const is_promoter = (form.elements.namedItem("is_promoter") as HTMLInputElement).checked;
+
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name },
+        data: {
+          full_name,
+          is_player: is_player || !is_promoter,
+          is_promoter,
+        },
       },
     });
 

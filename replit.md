@@ -26,9 +26,17 @@ pnpm workspace monorepo using TypeScript. Migration from Vercel/Next.js → Repl
 ## Key Architecture
 
 ### Auth
-- `src/context/AuthContext.tsx` — `AuthProvider` + `useAuth()` hook. Single shared Supabase session across app.
+- `src/context/AuthContext.tsx` — `AuthProvider` + `useAuth()` hook. Exposes `user`, `session`, `profile`, `roles` (is_player/is_promoter from `user_roles` table), `loading`, `signOut`, `refreshProfile`.
 - `src/components/ProtectedRoute.tsx` — Wraps authenticated routes; redirects to `/login` if no session.
 - All protected routes in `App.tsx` use `<ProtectedRoute component={Page} />`.
+- **Roles**: `user_roles` table seeded at signup via DB trigger `handle_new_user_roles()`. SignupForm sends `is_player`/`is_promoter` booleans in `options.data` to Supabase. Tournament creation requires `is_promoter = true` (RLS policy).
+
+### Tournament Creation Guard
+- `NewTournamentPage` checks `roles?.is_promoter` before rendering the form. Non-promoters see a "Se requiere rol de Promotor" screen with a link to their profile.
+- `ProfilePage` shows role badges (Jugador/Promotor) and a banner allowing existing users to self-upgrade to the Promotor role via `user_roles` UPDATE.
+
+### Error Handling
+- `src/lib/errors/map-db-error.ts` — maps Supabase/PostgREST error codes to Spanish messages. `PGRST205` (schema cache/permissions) maps to "No tenés permisos para hacer esto."
 
 ### Routes
 | Path | Component | Auth |

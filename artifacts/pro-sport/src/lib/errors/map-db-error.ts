@@ -31,6 +31,7 @@ export function mapDbError(err: unknown, context?: string): string {
     case "P0002":
       return "No encontramos el recurso.";
     case "42501":
+    case "PGRST205":
       return "No tenés permisos para hacer esto.";
     default:
       return GENERIC;

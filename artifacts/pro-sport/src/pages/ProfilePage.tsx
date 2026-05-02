@@ -1,17 +1,39 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { initialsFromName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import { LogOut, Pencil, Shield, Trophy, Zap } from "lucide-react";
+import { toast } from "sonner";
+
+const supabase = createClient();
 
 export default function ProfilePage() {
-  const { profile, loading, signOut } = useAuth();
+  const { user, profile, roles, loading, signOut } = useAuth();
   const [, setLocation] = useLocation();
+  const [upgradingRole, setUpgradingRole] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
     setLocation("/");
   };
+
+  async function handleEnablePromoter() {
+    if (!user) return;
+    setUpgradingRole(true);
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ is_promoter: true })
+      .eq("user_id", user.id);
+    if (error) {
+      toast.error("No se pudo activar el rol. Intentá de nuevo.");
+    } else {
+      toast.success("¡Rol de Promotor activado! Recargá la página para continuar.");
+      setTimeout(() => window.location.reload(), 1200);
+    }
+    setUpgradingRole(false);
+  }
 
   if (loading) {
     return (
@@ -67,6 +89,20 @@ export default function ProfilePage() {
               {profile?.bio && (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">{profile.bio}</p>
               )}
+              {roles && (
+                <div className="flex gap-1.5 mt-2 flex-wrap">
+                  {roles.is_player && (
+                    <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                      Jugador
+                    </span>
+                  )}
+                  {roles.is_promoter && (
+                    <span className="text-xs font-medium bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">
+                      Promotor
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -95,6 +131,20 @@ export default function ProfilePage() {
             <Link href="/onboarding">
               <Button size="sm">Completar perfil</Button>
             </Link>
+          </div>
+        )}
+
+        {roles && !roles.is_promoter && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 mb-6">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
+              ¿Querés organizar torneos?
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+              Activá el rol de Promotor para crear y gestionar torneos.
+            </p>
+            <Button size="sm" onClick={handleEnablePromoter} disabled={upgradingRole}>
+              {upgradingRole ? "Activando…" : "Activar rol de Promotor"}
+            </Button>
           </div>
         )}
 

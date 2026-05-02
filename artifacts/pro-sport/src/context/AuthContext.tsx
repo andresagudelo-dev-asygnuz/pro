@@ -3,10 +3,16 @@ import type { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types/db";
 
+export type UserRoles = {
+  is_player: boolean;
+  is_promoter: boolean;
+} | null;
+
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  roles: UserRoles;
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -18,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [roles, setRoles] = useState<UserRoles>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -30,6 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(data as Profile | null);
   }
 
+  async function loadRoles(userId: string) {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("is_player, is_promoter")
+      .eq("user_id", userId)
+      .maybeSingle();
+    setRoles(data as UserRoles | null);
+  }
+
   async function refreshProfile() {
     if (user) await loadProfile(user.id);
   }
@@ -39,7 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        loadProfile(session.user.id).finally(() => setLoading(false));
+        Promise.all([
+          loadProfile(session.user.id),
+          loadRoles(session.user.id),
+        ]).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -50,8 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         loadProfile(session.user.id);
+        loadRoles(session.user.id);
       } else {
         setProfile(null);
+        setRoles(null);
       }
     });
 
@@ -63,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
