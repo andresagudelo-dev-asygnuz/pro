@@ -49,6 +49,7 @@ export default function UserProfilePage() {
   const isMe = currentUserId === profile.id;
 
   return (
+    <AppLayout>
     <div className="flex flex-col gap-6 max-w-3xl mx-auto px-4 py-6">
       <header className="flex flex-col gap-4 rounded-xl border bg-background p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">

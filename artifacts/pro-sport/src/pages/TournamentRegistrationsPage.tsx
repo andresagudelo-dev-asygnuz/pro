@@ -72,6 +72,7 @@ export default function TournamentRegistrationsPage() {
   const cancelled = registrations.filter((r) => r.status === "cancelada");
 
   return (
+    <AppLayout>
     <div className="container py-8 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>

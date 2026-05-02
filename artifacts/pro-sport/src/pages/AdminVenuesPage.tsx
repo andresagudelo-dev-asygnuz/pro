@@ -64,6 +64,7 @@ export default function AdminVenuesPage() {
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
 
   return (
+    <AppLayout>
     <div className="flex flex-col gap-8 max-w-4xl mx-auto px-4 py-6">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Administración de Canchas</h1>
@@ -117,5 +118,6 @@ export default function AdminVenuesPage() {
         )}
       </div>
     </div>
+    </AppLayout>
   );
 }

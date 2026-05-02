@@ -28,6 +28,7 @@ export default function MyTournamentsPage() {
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
 
   return (
+    <AppLayout>
     <div className="container py-8 max-w-4xl mx-auto space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -72,5 +73,6 @@ export default function MyTournamentsPage() {
         </div>
       )}
     </div>
+    </AppLayout>
   );
 }

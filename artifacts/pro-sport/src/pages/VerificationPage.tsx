@@ -93,6 +93,7 @@ export default function VerificationPage() {
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
 
   return (
+    <AppLayout>
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Verificación de edad</h1>
@@ -155,5 +156,6 @@ export default function VerificationPage() {
         </div>
       )}
     </div>
+    </AppLayout>
   );
 }

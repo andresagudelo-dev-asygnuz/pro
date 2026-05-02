@@ -66,6 +66,7 @@ export default function TournamentMatchesPage() {
   if (!tournament) return <div className="container py-8 max-w-4xl mx-auto"><div className="bg-destructive/15 text-destructive p-4 rounded-md">{error ?? "Torneo no encontrado"}</div></div>;
 
   return (
+    <AppLayout>
     <div className="container py-8 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>

@@ -114,6 +114,7 @@ export default function AdminVerificationsPage() {
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
 
   return (
+    <AppLayout>
     <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 py-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Cola de verificaciones</h1>
