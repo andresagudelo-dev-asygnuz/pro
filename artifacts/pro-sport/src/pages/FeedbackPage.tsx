@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
-
 const supabase = createClient();
 
 type Question = { id: string; text: string; type: "choice" | "open"; options?: string[] };
@@ -107,6 +105,5 @@ export default function FeedbackPage() {
         </div>
       </div>
     </div>
-    </AppLayout>
   );
 }
