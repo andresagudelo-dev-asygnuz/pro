@@ -36,6 +36,7 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={SignupPage} />
+      <Route path="/registro" component={SignupPage} />
       <Route path="/feed" component={FeedPage} />
       <Route path="/perfil" component={ProfilePage} />
       <Route path="/onboarding" component={OnboardingPage} />
