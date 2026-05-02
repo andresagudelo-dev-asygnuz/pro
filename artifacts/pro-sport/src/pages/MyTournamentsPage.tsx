@@ -9,7 +9,7 @@ import { AppLayout } from "@/components/AppLayout";
 const supabase = createClient();
 
 export default function MyTournamentsPage() {
-  useAuth();
+  const { user } = useAuth();
   const [, navigate] = useLocation();
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +23,7 @@ export default function MyTournamentsPage() {
       else setTournaments((data ?? []) as TournamentRow[]);
       setLoading(false);
     })();
-  }, [navigate]);
+  }, [user]);
 
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
 
