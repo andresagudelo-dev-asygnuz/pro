@@ -28,6 +28,8 @@ import AdminVenuesPage from "@/pages/AdminVenuesPage";
 import AdminVerificationsPage from "@/pages/AdminVerificationsPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import PublicProfilePage from "@/pages/PublicProfilePage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import FeedbackPage from "@/pages/FeedbackPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
@@ -41,6 +43,8 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={SignupPage} />
       <Route path="/registro" component={SignupPage} />
+      <Route path="/recuperar-contrasena" component={ForgotPasswordPage} />
+      <Route path="/nueva-contrasena" component={ResetPasswordPage} />
       <Route path="/feedback" component={FeedbackPage} />
       <Route path="/u/:slug" component={PublicProfilePage} />
 

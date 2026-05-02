@@ -65,6 +65,15 @@ export function LoginForm() {
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
+        <Link
+          href="/recuperar-contrasena"
+          className="font-medium text-foreground underline"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </p>
+
+      <p className="text-center text-sm text-muted-foreground">
         ¿Todavía no tenés cuenta?{" "}
         <Link href="/registro" className="font-medium text-foreground underline">
           Creá una
