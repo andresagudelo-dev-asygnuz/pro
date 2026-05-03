@@ -152,6 +152,28 @@ export async function updateTeamLogo(teamId: string, logoUrl: string): Promise<v
   if (error) throw new Error(friendlyError(error));
 }
 
+export async function updateTeamColors(teamId: string, headerColor: string, jerseyColor: string): Promise<void> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ header_color: headerColor, jersey_color: jerseyColor, updated_at: new Date().toISOString() })
+    .eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
+/* ── localStorage helpers (used as fallback before DB migration) ── */
+const PREFS_KEY = (id: string) => `team_prefs_${id}`;
+
+export function getLocalTeamPrefs(teamId: string): { header_color: string; jersey_color: string } | null {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY(teamId));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+export function setLocalTeamPrefs(teamId: string, prefs: { header_color: string; jersey_color: string }): void {
+  try { localStorage.setItem(PREFS_KEY(teamId), JSON.stringify(prefs)); } catch { }
+}
+
 export function generateSlug(name: string): string {
   return name
     .toLowerCase()

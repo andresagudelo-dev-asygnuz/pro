@@ -76,6 +76,8 @@ export interface Team {
   owner_id: string;
   is_public: boolean;
   max_members: number;
+  header_color: string | null;
+  jersey_color: string | null;
   created_at: string;
   updated_at: string;
 }
