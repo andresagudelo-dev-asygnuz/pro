@@ -3,7 +3,8 @@ import { Link } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifCount } from "@/context/NotifContext";
-import { formatMatchDate, initialsFromName } from "@/lib/format";
+import { formatMatchDate } from "@/lib/format";
+import { initialsFromName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,25 +17,113 @@ import {
 } from "@/components/ui/select";
 import {
   Calendar,
-  Users,
   MapPin,
   Bell,
   Plus,
   SlidersHorizontal,
   X,
+  Clock,
+  Users,
+  Flame,
+  ChevronRight,
 } from "lucide-react";
 import type { Match, Sport } from "@/lib/types/db";
 import { ENABLED_CITIES } from "@/lib/types/db";
 
 const supabase = createClient();
 
-const STATUS_LABEL: Record<string, string> = {
-  open: "Abierto",
-  full: "Lleno",
-  in_progress: "En juego",
-  completed: "Finalizado",
-  cancelled: "Cancelado",
-};
+function getSportTheme(sportName: string | undefined): {
+  accent: string;
+  bg: string;
+  iconBg: string;
+  pill: string;
+  bar: string;
+} {
+  const n = (sportName ?? "").toLowerCase();
+  if (n.includes("fut") || n.includes("soccer"))
+    return {
+      accent: "border-l-emerald-500",
+      bg: "from-emerald-50 to-white dark:from-emerald-950/30 dark:to-zinc-900",
+      iconBg: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
+      pill: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+      bar: "bg-emerald-500",
+    };
+  if (n.includes("pad"))
+    return {
+      accent: "border-l-amber-500",
+      bg: "from-amber-50 to-white dark:from-amber-950/30 dark:to-zinc-900",
+      iconBg: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
+      pill: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+      bar: "bg-amber-500",
+    };
+  if (n.includes("basket") || n.includes("básquet"))
+    return {
+      accent: "border-l-orange-500",
+      bg: "from-orange-50 to-white dark:from-orange-950/30 dark:to-zinc-900",
+      iconBg: "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300",
+      pill: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+      bar: "bg-orange-500",
+    };
+  if (n.includes("tenis"))
+    return {
+      accent: "border-l-lime-500",
+      bg: "from-lime-50 to-white dark:from-lime-950/30 dark:to-zinc-900",
+      iconBg: "bg-lime-100 dark:bg-lime-900/40 text-lime-700 dark:text-lime-300",
+      pill: "bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-300",
+      bar: "bg-lime-500",
+    };
+  if (n.includes("volei") || n.includes("vólei"))
+    return {
+      accent: "border-l-blue-500",
+      bg: "from-blue-50 to-white dark:from-blue-950/30 dark:to-zinc-900",
+      iconBg: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+      pill: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+      bar: "bg-blue-500",
+    };
+  return {
+    accent: "border-l-violet-500",
+    bg: "from-violet-50 to-white dark:from-violet-950/30 dark:to-zinc-900",
+    iconBg: "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300",
+    pill: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    bar: "bg-violet-500",
+  };
+}
+
+function getUrgencyInfo(
+  joinedCount: number,
+  maxPlayers: number,
+): { label: string; color: string; urgent: boolean } {
+  const remaining = maxPlayers - joinedCount;
+  const pct = joinedCount / maxPlayers;
+  if (remaining <= 0)
+    return { label: "Lleno", color: "bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300", urgent: false };
+  if (remaining === 1)
+    return { label: "¡Último cupo!", color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300", urgent: true };
+  if (pct >= 0.75)
+    return { label: `${remaining} cupos`, color: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300", urgent: true };
+  if (pct >= 0.5)
+    return { label: `${remaining} cupos`, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", urgent: false };
+  return { label: `${remaining} cupos`, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", urgent: false };
+}
+
+function getRelativeTime(iso: string): string {
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  const diffMs = then - now;
+  const diffH = diffMs / 3600000;
+  if (diffH < 0) return "En curso";
+  if (diffH < 1) return `En ${Math.round(diffH * 60)} min`;
+  if (diffH < 24) return `En ${Math.floor(diffH)}h`;
+  if (diffH < 48) return "Mañana";
+  if (diffH < 168) return `En ${Math.floor(diffH / 24)} días`;
+  return formatMatchDate(iso);
+}
+
+function getBarColor(pct: number): string {
+  if (pct >= 0.9) return "bg-red-500";
+  if (pct >= 0.6) return "bg-amber-500";
+  return "bg-emerald-500";
+}
 
 export default function FeedPage() {
   const { profile } = useAuth();
@@ -42,6 +131,7 @@ export default function FeedPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [sportsMap, setSportsMap] = useState<Map<string, Sport>>(new Map());
+  const [participantCounts, setParticipantCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -66,12 +156,26 @@ export default function FeedPage() {
         sp.forEach((s) => map.set(s.id, s));
         setSportsMap(map);
       }
-      setMatches((matchesRes.data ?? []) as Match[]);
+      const ms = (matchesRes.data ?? []) as Match[];
+      setMatches(ms);
+
+      if (ms.length > 0) {
+        const { data: countData } = await supabase
+          .from("match_participants")
+          .select("match_id")
+          .in("match_id", ms.map((m) => m.id))
+          .eq("status", "joined");
+        const counts = new Map<string, number>();
+        (countData ?? []).forEach((row: { match_id: string }) => {
+          counts.set(row.match_id, (counts.get(row.match_id) ?? 0) + 1);
+        });
+        setParticipantCounts(counts);
+      }
+
       setLoading(false);
     }
     load();
   }, []);
-
 
   const filtered = useMemo(() => {
     return matches.filter((m) => {
@@ -134,9 +238,7 @@ export default function FeedPage() {
           {sports.map((sp) => (
             <button
               key={sp.id}
-              onClick={() =>
-                setFilterSport(filterSport === sp.id ? "" : sp.id)
-              }
+              onClick={() => setFilterSport(filterSport === sp.id ? "" : sp.id)}
               className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
                 filterSport === sp.id
                   ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent shadow-sm"
@@ -226,8 +328,10 @@ export default function FeedPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-40 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse border border-border/40" />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
@@ -246,19 +350,14 @@ export default function FeedPage() {
             </div>
             {hasFilters ? (
               <button
-                onClick={() => {
-                  setFilterSport("");
-                  setFilterCity("");
-                }}
+                onClick={() => { setFilterSport(""); setFilterCity(""); }}
                 className="text-sm text-violet-600 font-medium hover:underline"
               >
                 Limpiar filtros
               </button>
             ) : (
               <Link href="/matches/new">
-                <Button size="sm" className="rounded-xl">
-                  Crear partido
-                </Button>
+                <Button size="sm" className="rounded-xl">Crear partido</Button>
               </Link>
             )}
           </div>
@@ -266,64 +365,110 @@ export default function FeedPage() {
           <div className="flex flex-col gap-3">
             {filtered.map((match) => {
               const sport = sportsMap.get(match.sport_id);
+              const theme = getSportTheme(sport?.name);
+              const joinedCount = participantCounts.get(match.id) ?? 0;
+              const pct = match.max_players > 0 ? joinedCount / match.max_players : 0;
+              const urgency = getUrgencyInfo(joinedCount, match.max_players);
+              const relTime = getRelativeTime(match.starts_at);
+              const barColor = getBarColor(pct);
+              const isHot = urgency.urgent;
+
               return (
                 <Link key={match.id} href={`/matches/${match.id}`}>
-                  <div className="group bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm hover:shadow-md hover:border-violet-200 dark:hover:border-violet-800 transition-all duration-200 cursor-pointer overflow-hidden">
-                    <div className="p-4">
+                  <div
+                    className={`group relative bg-gradient-to-br ${theme.bg} rounded-2xl border border-border/60 border-l-4 ${theme.accent} shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden`}
+                  >
+                    {/* Hot badge overlay */}
+                    {isHot && (
+                      <div className="absolute top-3 right-3 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                        <Flame className="size-2.5" />
+                        HOT
+                      </div>
+                    )}
+
+                    <div className="p-4 pb-3">
                       <div className="flex items-start gap-3">
                         {/* Sport icon */}
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/30 dark:to-violet-900/10 flex items-center justify-center text-2xl shrink-0 border border-violet-100 dark:border-violet-800">
+                        <div
+                          className={`w-12 h-12 rounded-2xl ${theme.iconBg} flex items-center justify-center text-2xl shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200`}
+                        >
                           {sport?.icon ?? "🏃"}
                         </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-[11px] font-medium text-muted-foreground mb-0.5">
-                                {sport?.name ?? "Deporte"} · {match.city}
-                                {match.skill_level && (
-                                  <span className="ml-1.5 capitalize">
-                                    · {match.skill_level}
-                                  </span>
-                                )}
-                              </p>
-                              <h3 className="font-semibold text-[15px] leading-tight text-zinc-900 dark:text-white group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors truncate">
-                                {match.title}
-                              </h3>
-                            </div>
-                            {match.status !== "open" && (
-                              <span className="shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                {STATUS_LABEL[match.status] ?? match.status}
-                              </span>
+                        <div className="flex-1 min-w-0 pr-8">
+                          {/* Metadata row */}
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+                            <span className="font-medium">{sport?.name ?? "Deporte"}</span>
+                            <span>·</span>
+                            <span>{match.city}</span>
+                            {match.skill_level && (
+                              <>
+                                <span>·</span>
+                                <span className="capitalize">{match.skill_level}</span>
+                              </>
                             )}
                           </div>
 
-                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="size-3 shrink-0" />
-                              {formatMatchDate(match.starts_at)}
+                          {/* Title */}
+                          <h3 className="font-bold text-[15px] leading-tight text-zinc-900 dark:text-white group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors line-clamp-2">
+                            {match.title}
+                          </h3>
+
+                          {/* Time row */}
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300">
+                              <Clock className="size-3 shrink-0" />
+                              {relTime}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground/70">
+                              {new Date(match.starts_at).toLocaleString("es-CO", {
+                                weekday: "short",
+                                day: "2-digit",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </span>
                           </div>
                         </div>
                       </div>
 
+                      {/* Location */}
                       {match.location && (
                         <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2.5 truncate">
-                          <MapPin className="size-3 shrink-0" />
+                          <MapPin className="size-3 shrink-0 text-muted-foreground/70" />
                           {match.location}
                         </p>
                       )}
                     </div>
 
-                    {/* Footer bar */}
-                    <div className="px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border-t border-border/40 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Users className="size-3" />
-                        Máx. {match.max_players} jugadores
-                      </span>
-                      <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 group-hover:underline">
-                        Ver partido →
-                      </span>
+                    {/* Progress & CTA footer */}
+                    <div className="px-4 pb-4">
+                      {/* Occupancy bar */}
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                            style={{ width: `${Math.min(pct * 100, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-[11px] font-semibold tabular-nums text-muted-foreground whitespace-nowrap">
+                          {joinedCount}/{match.max_players}
+                        </span>
+                      </div>
+
+                      {/* Footer row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="size-3 text-muted-foreground" />
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${urgency.color}`}>
+                            {urgency.label}
+                          </span>
+                        </div>
+                        <span className="flex items-center gap-0.5 text-xs font-bold text-violet-600 dark:text-violet-400 group-hover:gap-1.5 transition-all duration-200">
+                          Ver partido <ChevronRight className="size-3.5" />
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </Link>
