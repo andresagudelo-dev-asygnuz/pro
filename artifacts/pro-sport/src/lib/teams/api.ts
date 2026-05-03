@@ -144,6 +144,14 @@ export async function deleteTeam(teamId: string): Promise<void> {
   if (error) throw new Error(friendlyError(error));
 }
 
+export async function updateTeamLogo(teamId: string, logoUrl: string): Promise<void> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
+    .eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
 export function generateSlug(name: string): string {
   return name
     .toLowerCase()

@@ -1,15 +1,38 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
-import { getTeamById, joinTeam, leaveTeam, deleteTeam, type TeamWithMembers, type TeamMemberWithProfile } from "@/lib/teams/api";
+import {
+  getTeamById, joinTeam, leaveTeam, deleteTeam, updateTeamLogo,
+  type TeamWithMembers, type TeamMemberWithProfile,
+} from "@/lib/teams/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { initialsFromName } from "@/lib/format";
 import { SPORT_TYPE_LABELS } from "@/lib/types/db";
-import { Users, MapPin, Crown, Shield, LogOut, Trash2, Lock, Globe } from "lucide-react";
+import { Users, MapPin, LogOut, Trash2, Lock, Globe, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
+/* ── Resize image helper (same as ProfilePage) ─────────────────── */
+function resizeToDataUrl(file: File, maxPx = 512, quality = 0.88): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("No se pudo leer la imagen.")); };
+    img.src = objectUrl;
+  });
+}
 
 const SPORT_EMOJIS: Record<string, string> = {
   futbol_5: "⚽", futbol_9: "⚽", futbol_11: "⚽", futbol_sala: "⚽",
@@ -20,7 +43,7 @@ const ROLE_LABELS: Record<string, string> = {
   owner: "Líder", captain: "Capitán", player: "Jugador",
 };
 
-/* ── Card styles per skill level (same palette as PlayerCard) ── */
+/* ── Card styles per skill level ────────────────────────────────── */
 const CARD_STYLES = {
   principiante: {
     bg: "from-amber-600 via-orange-700 to-amber-950",
@@ -29,7 +52,6 @@ const CARD_STYLES = {
     text: "text-amber-50", subtext: "text-amber-200/80",
     border: "border-amber-300/30", ring: "ring-amber-300/40",
     divider: "border-amber-300/20", barBg: "bg-amber-900/40", barFill: "bg-amber-200",
-    badge: "bg-amber-400/20 text-amber-100 border-amber-400/30",
   },
   intermedio: {
     bg: "from-slate-300 via-slate-400 to-slate-600",
@@ -38,7 +60,6 @@ const CARD_STYLES = {
     text: "text-zinc-900", subtext: "text-zinc-700",
     border: "border-white/50", ring: "ring-white/50",
     divider: "border-zinc-500/40", barBg: "bg-zinc-500/30", barFill: "bg-zinc-800",
-    badge: "bg-white/20 text-zinc-800 border-white/40",
   },
   avanzado: {
     bg: "from-yellow-300 via-amber-400 to-yellow-700",
@@ -47,7 +68,6 @@ const CARD_STYLES = {
     text: "text-amber-950", subtext: "text-amber-800",
     border: "border-yellow-100/50", ring: "ring-yellow-200/60",
     divider: "border-amber-700/30", barBg: "bg-amber-700/30", barFill: "bg-amber-950",
-    badge: "bg-amber-900/15 text-amber-900 border-amber-700/30",
   },
   pro: {
     bg: "from-violet-400 via-violet-700 to-purple-950",
@@ -56,7 +76,6 @@ const CARD_STYLES = {
     text: "text-white", subtext: "text-violet-200/90",
     border: "border-violet-300/30", ring: "ring-violet-300/40",
     divider: "border-violet-300/20", barBg: "bg-violet-900/40", barFill: "bg-violet-100",
-    badge: "bg-violet-300/20 text-violet-50 border-violet-300/30",
   },
 } as const;
 
@@ -67,17 +86,14 @@ const POSITION_ABBR: Record<string, string> = {
 function computeOvr(p: TeamMemberWithProfile["profile"]): number {
   if (!p) return 50;
   const vals = [
-    (p as any).skill_pace      ?? 50,
-    (p as any).skill_shooting  ?? 50,
-    (p as any).skill_passing   ?? 50,
-    (p as any).skill_dribbling ?? 50,
-    (p as any).skill_defending ?? 50,
-    (p as any).skill_physical  ?? 50,
+    (p as any).skill_pace ?? 50, (p as any).skill_shooting ?? 50,
+    (p as any).skill_passing ?? 50, (p as any).skill_dribbling ?? 50,
+    (p as any).skill_defending ?? 50, (p as any).skill_physical ?? 50,
   ];
   return Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
 }
 
-/* ── Mini member card ─────────────────────────────────────────── */
+/* ── Mini member card ────────────────────────────────────────────── */
 function MemberCard({ member }: { member: TeamMemberWithProfile }) {
   const p = member.profile;
   const level = ((p as any)?.primary_skill_level ?? "intermedio") as keyof typeof CARD_STYLES;
@@ -85,36 +101,31 @@ function MemberCard({ member }: { member: TeamMemberWithProfile }) {
   const ovr = computeOvr(p);
   const initials = initialsFromName((p as any)?.full_name ?? (p as any)?.username);
   const pos = POSITION_ABBR[(p as any)?.position ?? ""] ?? "JUG";
+  const isOwner = member.role === "owner";
+  const isCaptain = member.role === "captain";
 
-  const SKILL_DEFS = [
-    ["PAC", (p as any)?.skill_pace      ?? 50],
-    ["TIR", (p as any)?.skill_shooting  ?? 50],
-    ["PAS", (p as any)?.skill_passing   ?? 50],
+  const SKILL_DEFS: [string, number][] = [
+    ["PAC", (p as any)?.skill_pace ?? 50],
+    ["TIR", (p as any)?.skill_shooting ?? 50],
+    ["PAS", (p as any)?.skill_passing ?? 50],
     ["REG", (p as any)?.skill_dribbling ?? 50],
     ["DEF", (p as any)?.skill_defending ?? 50],
-    ["FIS", (p as any)?.skill_physical  ?? 50],
-  ] as [string, number][];
+    ["FIS", (p as any)?.skill_physical ?? 50],
+  ];
 
   return (
-    <div className={`relative bg-gradient-to-br ${s.bg} rounded-[22px] shadow-xl overflow-hidden select-none`}
-      style={{ aspectRatio: "5/7" }}>
-      {/* Shimmer */}
+    <div
+      className={`relative bg-gradient-to-br ${s.bg} rounded-[22px] shadow-xl overflow-hidden select-none`}
+      style={{ aspectRatio: "5/7" }}
+    >
       <div className={`absolute inset-0 bg-gradient-to-br ${s.shimmer} pointer-events-none`} />
       <div className={`absolute top-0 left-0 right-0 h-2/5 bg-gradient-to-b ${s.highlight} pointer-events-none`} />
       <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
 
-      {/* Role badge */}
-      {member.role !== "player" && (
-        <div className="absolute top-2.5 right-2.5 z-20">
-          {member.role === "owner"
-            ? <Crown className="size-4 text-amber-400 drop-shadow-md" />
-            : <Shield className="size-4 text-violet-300 drop-shadow-md" />}
-        </div>
-      )}
-
       {/* Inner frame */}
       <div className={`absolute inset-[6px] rounded-[17px] border ${s.border} flex flex-col`}>
-        {/* OVR + position */}
+
+        {/* OVR + sport icon */}
         <div className="flex items-start justify-between px-2.5 pt-2.5">
           <div>
             <p className={`text-[38px] font-black leading-none tracking-tight ${s.text}`}>{ovr}</p>
@@ -123,17 +134,33 @@ function MemberCard({ member }: { member: TeamMemberWithProfile }) {
           <span className="text-[16px] leading-none drop-shadow-md">⚽</span>
         </div>
 
-        {/* Avatar */}
+        {/* Avatar with leader/captain badge */}
         <div className="flex justify-center flex-1 items-center py-1">
-          <Avatar className={`size-16 ring-[3px] ${s.ring} shadow-xl`}>
-            {(p as any)?.avatar_url && <AvatarImage src={(p as any).avatar_url} alt={(p as any).full_name ?? ""} className="object-cover" />}
-            <AvatarFallback className="bg-black/20 text-lg font-black">
-              <span className={s.text}>{initials}</span>
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative inline-block">
+            <Avatar className={`size-16 ring-[3px] ${s.ring} shadow-xl`}>
+              {(p as any)?.avatar_url && (
+                <AvatarImage src={(p as any).avatar_url} alt={(p as any).full_name ?? ""} className="object-cover" />
+              )}
+              <AvatarFallback className="bg-black/20 text-lg font-black">
+                <span className={s.text}>{initials}</span>
+              </AvatarFallback>
+            </Avatar>
+
+            {/* "C" badge for owner, "CAP" for captain */}
+            {(isOwner || isCaptain) && (
+              <span
+                className={`absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black border shadow-md
+                  ${isOwner
+                    ? "bg-amber-400 text-amber-950 border-amber-200"
+                    : "bg-violet-500 text-white border-violet-300"}`}
+              >
+                C
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Name */}
+        {/* Name + role */}
         <div className="text-center px-2 -mt-0.5">
           <p className={`text-[11px] font-black uppercase tracking-wide leading-tight truncate ${s.text} drop-shadow-sm`}>
             {(p as any)?.full_name ?? (p as any)?.username ?? "Jugador"}
@@ -161,7 +188,7 @@ function MemberCard({ member }: { member: TeamMemberWithProfile }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════ */
 export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -169,6 +196,8 @@ export default function TeamDetailPage() {
   const [team, setTeam] = useState<TeamWithMembers | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionPending, setActionPending] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const myMembership = team?.team_members.find((m) => m.user_id === user?.id);
   const isOwner = myMembership?.role === "owner";
@@ -184,6 +213,25 @@ export default function TeamDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !id || !team) return;
+    if (!file.type.startsWith("image/")) { toast.error("Solo se permiten imágenes."); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("La imagen no puede superar 10 MB."); return; }
+    setUploadingLogo(true);
+    try {
+      const dataUrl = await resizeToDataUrl(file, 512, 0.88);
+      setTeam((prev) => prev ? { ...prev, logo_url: dataUrl } : prev);
+      await updateTeamLogo(id, dataUrl);
+      toast.success("¡Logo actualizado!");
+    } catch (err: unknown) {
+      toast.error("Error al guardar el logo: " + (err instanceof Error ? err.message : "Error desconocido"));
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  }
 
   async function handleJoin() {
     if (!user || !id) return;
@@ -259,12 +307,11 @@ export default function TeamDetailPage() {
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
 
-      {/* ══ HERO ════════════════════════════════════════════════════ */}
+      {/* ══ HERO ═══════════════════════════════════════════════════════ */}
       <div
         className="relative overflow-hidden rounded-b-[36px]"
         style={{ background: "linear-gradient(160deg, #2e1065 0%, #1e1b4b 35%, #312e81 65%, #1a1a2e 100%)" }}
       >
-        {/* Back + delete actions */}
         <PageHeader
           title=""
           backHref="/equipos"
@@ -287,15 +334,52 @@ export default function TeamDetailPage() {
           <div className="w-72 h-72 rounded-full blur-[100px] opacity-25 bg-violet-500" />
         </div>
 
-        {/* Team logo */}
         <div className="relative z-10 flex flex-col items-center pt-2 pb-6 px-5">
-          <div className="w-24 h-24 rounded-[24px] bg-gradient-to-br from-violet-500 to-violet-800 flex items-center justify-center text-5xl shadow-2xl border-2 border-white/15 mb-4">
-            {sportEmoji}
-          </div>
+
+          {/* ── Team logo (clickable for owner) ── */}
+          {isOwner ? (
+            <button
+              type="button"
+              onClick={() => logoInputRef.current?.click()}
+              disabled={uploadingLogo}
+              className="group relative w-24 h-24 rounded-[24px] shadow-2xl border-2 border-white/15 mb-4 overflow-hidden outline-none"
+            >
+              {team.logo_url ? (
+                <img src={team.logo_url} alt="Logo del equipo" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-violet-500 to-violet-800 flex items-center justify-center text-5xl">
+                  {sportEmoji}
+                </div>
+              )}
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-[22px]">
+                {uploadingLogo
+                  ? <Loader2 className="size-7 text-white animate-spin" />
+                  : <Camera className="size-7 text-white drop-shadow-md" />}
+              </div>
+            </button>
+          ) : (
+            <div className="w-24 h-24 rounded-[24px] shadow-2xl border-2 border-white/15 mb-4 overflow-hidden">
+              {team.logo_url ? (
+                <img src={team.logo_url} alt="Logo del equipo" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-violet-500 to-violet-800 flex items-center justify-center text-5xl">
+                  {sportEmoji}
+                </div>
+              )}
+            </div>
+          )}
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleLogoUpload}
+          />
 
           <h1 className="text-2xl font-black text-white text-center leading-tight mb-1">{team.name}</h1>
 
-          {/* Sport + visibility badge */}
+          {/* Sport + visibility */}
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs font-semibold bg-white/15 text-white/90 px-3 py-1 rounded-full border border-white/20 backdrop-blur-sm">
               {sportLabel}
@@ -307,18 +391,16 @@ export default function TeamDetailPage() {
 
           {/* Stats bar */}
           <div className="w-full max-w-xs grid grid-cols-3 divide-x divide-white/10 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 overflow-hidden mb-4">
-            <div className="flex flex-col items-center py-2.5 px-1 gap-0.5">
-              <p className="text-lg font-black text-white">{team.team_members.length}</p>
-              <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider">Jugadores</p>
-            </div>
-            <div className="flex flex-col items-center py-2.5 px-1 gap-0.5">
-              <p className="text-lg font-black text-white">{team.max_members}</p>
-              <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider">Máx</p>
-            </div>
-            <div className="flex flex-col items-center py-2.5 px-1 gap-0.5">
-              <p className={`text-lg font-black ${isFull ? "text-red-400" : "text-emerald-400"}`}>{spotsLeft}</p>
-              <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider">Lugares</p>
-            </div>
+            {[
+              { value: team.team_members.length, label: "Jugadores", color: "text-white" },
+              { value: team.max_members,          label: "Máx",       color: "text-white" },
+              { value: spotsLeft,                 label: "Lugares",   color: isFull ? "text-red-400" : "text-emerald-400" },
+            ].map(({ value, label, color }) => (
+              <div key={label} className="flex flex-col items-center py-2.5 px-1 gap-0.5">
+                <p className={`text-lg font-black ${color}`}>{value}</p>
+                <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider">{label}</p>
+              </div>
+            ))}
           </div>
 
           {/* City */}
@@ -339,11 +421,9 @@ export default function TeamDetailPage() {
             isMember ? (
               !isOwner && (
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="outline" size="sm"
                   className="rounded-xl gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
-                  onClick={handleLeave}
-                  disabled={actionPending}
+                  onClick={handleLeave} disabled={actionPending}
                 >
                   <LogOut className="size-3.5" />
                   {actionPending ? "Saliendo…" : "Salir del equipo"}
@@ -354,8 +434,7 @@ export default function TeamDetailPage() {
                 <Button
                   size="sm"
                   className="rounded-xl gap-2 bg-violet-500 hover:bg-violet-400 text-white shadow-lg shadow-violet-900/50"
-                  onClick={handleJoin}
-                  disabled={actionPending}
+                  onClick={handleJoin} disabled={actionPending}
                 >
                   <Users className="size-3.5" />
                   {actionPending ? "Uniéndome…" : "Unirme al equipo"}
@@ -366,13 +445,11 @@ export default function TeamDetailPage() {
         </div>
       </div>
 
-      {/* ══ MEMBERS ═════════════════════════════════════════════════ */}
+      {/* ══ MEMBERS ════════════════════════════════════════════════════ */}
       <main className="px-4 py-5 max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Integrantes · {team.team_members.length}
-          </p>
-        </div>
+        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+          Integrantes · {team.team_members.length}
+        </p>
 
         {team.team_members.length === 0 ? (
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-border/40 shadow-sm p-8 text-center">
