@@ -40,7 +40,7 @@ const SPORT_EMOJIS: Record<string, string> = {
 };
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: "Líder", captain: "Capitán", player: "Jugador",
+  owner: "Capitán", captain: "Capitán", player: "Jugador",
 };
 
 /* ── Card styles per skill level ────────────────────────────────── */
