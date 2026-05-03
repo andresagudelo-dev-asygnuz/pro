@@ -10,7 +10,7 @@ import {
   CheckCircle2, Clock, Globe, Lock, Building2,
   AlertCircle, Mail, Star, ArrowLeft, Send, Users,
   Timer, Zap, ShieldCheck, MessageCircle, Crown, UserPlus,
-  ListOrdered, Phone, DollarSign, CalendarCheck, MapPin, X, Check, Trash2,
+  ListOrdered, Phone, DollarSign, CalendarCheck, MapPin, X, Check, Trash2, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Match, MatchParticipant, Profile, Sport, CanchaBooking, MatchInvitation, MatchWaitlist } from "@/lib/types/db";
@@ -486,13 +486,22 @@ export default function MatchDetailPage() {
               : <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border bg-amber-500/20 text-amber-200 border-amber-500/30 uppercase tracking-wide"><Lock className="size-2.5" /> Privado</span>
             }
             {isOrganizer && match.status === "open" && (
-              <button
-                title="Cancelar partido"
-                onClick={() => setShowCancelConfirm(true)}
-                className="w-7 h-7 flex items-center justify-center rounded-full bg-red-500/20 border border-red-400/30 text-red-300 hover:bg-red-500/40 hover:text-red-100 transition-all active:scale-90"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
+              <>
+                <button
+                  title="Editar partido"
+                  onClick={() => setLocation(`/matches/${match.id}/edit`)}
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-white/15 border border-white/20 text-white/80 hover:bg-white/25 hover:text-white transition-all active:scale-90"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+                <button
+                  title="Cancelar partido"
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="w-7 h-7 flex items-center justify-center rounded-full bg-red-500/20 border border-red-400/30 text-red-300 hover:bg-red-500/40 hover:text-red-100 transition-all active:scale-90"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </>
             )}
           </div>
 
@@ -985,7 +994,7 @@ export default function MatchDetailPage() {
                         </Avatar>
                         <div>
                           <p className="text-sm font-medium">{pp?.full_name ?? pp?.username ?? "Jugador"}</p>
-                          {pp?.rating_count > 0 && <p className="text-xs text-muted-foreground">★ {pp.rating_avg?.toFixed(1)}</p>}
+                          {(pp?.rating_count ?? 0) > 0 && <p className="text-xs text-muted-foreground">★ {pp?.rating_avg?.toFixed(1)}</p>}
                         </div>
                       </div>
                       <div className="flex gap-0.5">

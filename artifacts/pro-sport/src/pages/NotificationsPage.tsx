@@ -184,18 +184,24 @@ export default function NotificationsPage() {
         return <CheckCircle2 className="size-4 text-green-500" />;
       case "match_invite":
         return <MessageSquare className="size-4 text-violet-500" />;
+      case "match_updated":
+        return <Bell className="size-4 text-amber-500" />;
+      case "booking_cancelled":
+        return <X className="size-4 text-red-500" />;
+      case "booking_created":
+        return <CheckCircle2 className="size-4 text-emerald-500" />;
       default:
         return <Bell className="size-4 text-muted-foreground" />;
     }
   };
 
   const getMessage = (n: Notification) => {
-    const { player_name } = n.data;
+    const { player_name, match_title, changes, needs_reconfirm, cancha_name, booking_date, start_time } = n.data as Record<string, unknown>;
     switch (n.type) {
       case "match_request":
         return (
           <span>
-            <strong>{player_name || "Un usuario"}</strong> solicitó unirse a tu
+            <strong>{(player_name as string) || "Un usuario"}</strong> solicitó unirse a tu
             partido.
           </span>
         );
@@ -209,6 +215,30 @@ export default function NotificationsPage() {
         return (
           <span>
             Has sido <strong>invitado</strong> a un nuevo partido.
+          </span>
+        );
+      case "match_updated":
+        return (
+          <span>
+            El partido <strong>{(match_title as string) || "al que pertenecés"}</strong> fue actualizado
+            {changes ? <> ({changes as string})</> : ""}.
+            {needs_reconfirm ? <strong> Debés re-confirmar tu asistencia.</strong> : ""}
+          </span>
+        );
+      case "booking_cancelled":
+        return (
+          <span>
+            La reserva de <strong>{(cancha_name as string) || "tu cancha"}</strong>
+            {booking_date ? <> del {booking_date as string}</> : ""}
+            {start_time ? <> a las {(start_time as string).substring(0, 5)}h</> : ""} fue <strong>cancelada</strong> (partido modificado).
+          </span>
+        );
+      case "booking_created":
+        return (
+          <span>
+            Nueva reserva en <strong>{(cancha_name as string) || "tu cancha"}</strong>
+            {booking_date ? <> para el {booking_date as string}</> : ""}
+            {start_time ? <> a las {(start_time as string).substring(0, 5)}h</> : ""} para el partido <strong>{(match_title as string) || ""}</strong>.
           </span>
         );
       default:

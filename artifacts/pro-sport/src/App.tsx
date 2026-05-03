@@ -45,6 +45,7 @@ import EditCanchaPage from "@/pages/EditCanchaPage";
 import TeamsPage from "@/pages/TeamsPage";
 import NewTeamPage from "@/pages/NewTeamPage";
 import TeamDetailPage from "@/pages/TeamDetailPage";
+import EditMatchPage from "@/pages/EditMatchPage";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,9 @@ function Router() {
 
       <Route path="/matches/new">
         <ProtectedRoute component={NewMatchPage} />
+      </Route>
+      <Route path="/matches/:id/edit">
+        <ProtectedRoute component={EditMatchPage} />
       </Route>
       <Route path="/matches/:id">
         <ProtectedRoute component={MatchDetailPage} />
