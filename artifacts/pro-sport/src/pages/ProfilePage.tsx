@@ -137,18 +137,35 @@ export default function ProfilePage() {
         }
       />
 
-      {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-      <div className="relative overflow-hidden pt-8 pb-16" style={{ background: "linear-gradient(160deg, #2e1065 0%, #1e1b4b 35%, #312e81 65%, #1a1a2e 100%)" }}>
-        {/* Ambient glow — level-tinted */}
+      {/* ══ HERO — stats arriba + card abajo, fondo violeta sin degradado ══ */}
+      <div
+        className="relative overflow-hidden rounded-b-[36px] pb-8"
+        style={{ background: "linear-gradient(160deg, #2e1065 0%, #1e1b4b 35%, #312e81 65%, #1a1a2e 100%)" }}
+      >
+        {/* Ambient glow */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
           <div className={`w-96 h-96 rounded-full blur-[120px] opacity-30 ${lvlCfg.glow}`} />
         </div>
-        {/* Top fade from page header */}
-        <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
-        {/* Bottom fade to page bg */}
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-b from-transparent to-zinc-100 dark:to-zinc-950 pointer-events-none" />
 
-        {/* Card */}
+        {/* ── Stats row (arriba, glassmorphism) ── */}
+        <div className="relative z-10 px-4 pt-5 pb-4">
+          <div className="grid grid-cols-4 divide-x divide-white/10 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 overflow-hidden">
+            {[
+              { value: ovr,                                    label: "OVR",      icon: <Star className="size-3" />,   color: "text-violet-200" },
+              { value: profile?.matches_played ?? 0,           label: "Partidos", icon: <Zap className="size-3" />,   color: "text-white" },
+              { value: profile?.rating_avg?.toFixed(1) ?? "—", label: "Rating",   icon: <Flame className="size-3" />, color: "text-amber-300" },
+              { value: profile?.tournament_goals ?? 0,         label: "Goles",    icon: <Target className="size-3" />,color: "text-emerald-300" },
+            ].map(({ value, label, icon, color }) => (
+              <div key={label} className="flex flex-col items-center py-3 px-1 gap-0.5">
+                <p className={`text-xl font-black tabular-nums ${color}`}>{value}</p>
+                <div className={`${color} opacity-60`}>{icon}</div>
+                <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Card ── */}
         <div className="relative z-10">
           <PlayerCard
             profile={profile}
@@ -159,32 +176,12 @@ export default function ProfilePage() {
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         </div>
 
-        {/* Level badge */}
+        {/* ── Level badge ── */}
         <div className="flex justify-center mt-5 z-10 relative">
           <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest backdrop-blur-sm ${lvlCfg.badge}`}>
             <span className="size-1.5 rounded-full bg-current opacity-70" />
             {lvlCfg.label}
           </span>
-        </div>
-      </div>
-
-      {/* ══ STATS BAR ═════════════════════════════════════════════════════ */}
-      <div className="px-4 -mt-5 relative z-10">
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-xl border border-border/40 overflow-hidden">
-          <div className="grid grid-cols-4 divide-x divide-border/40">
-            {[
-              { value: ovr,                                        label: "OVR",     accent: "text-violet-600 dark:text-violet-400", icon: <Star className="size-3" /> },
-              { value: profile?.matches_played ?? 0,               label: "Partidos", accent: "text-zinc-900 dark:text-white",      icon: <Zap className="size-3" /> },
-              { value: profile?.rating_avg?.toFixed(1) ?? "—",     label: "Rating",   accent: "text-amber-500",                    icon: <Flame className="size-3" /> },
-              { value: profile?.tournament_goals ?? 0,             label: "Goles",    accent: "text-emerald-600 dark:text-emerald-400", icon: <Target className="size-3" /> },
-            ].map(({ value, label, accent, icon }) => (
-              <div key={label} className="flex flex-col items-center py-4 px-2 gap-0.5">
-                <p className={`text-2xl font-black tabular-nums ${accent}`}>{value}</p>
-                <div className={`flex items-center gap-1 ${accent} opacity-60`}>{icon}</div>
-                <p className="text-[10px] font-semibold text-muted-foreground mt-0.5 uppercase tracking-wide">{label}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

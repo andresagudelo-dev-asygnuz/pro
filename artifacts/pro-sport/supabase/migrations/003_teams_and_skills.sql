@@ -84,21 +84,23 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- 6. Avatar bucket storage policies (run if avatars bucket already exists)
+-- 6. Avatar bucket + storage policies
 INSERT INTO storage.buckets (id, name, public)
   VALUES ('avatars', 'avatars', true)
   ON CONFLICT (id) DO UPDATE SET public = true;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='objects' AND policyname='avatars_public_read') THEN
-    CREATE POLICY avatars_public_read ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='objects' AND policyname='avatars_auth_insert') THEN
-    CREATE POLICY avatars_auth_insert ON storage.objects FOR INSERT TO authenticated
-      WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='objects' AND policyname='avatars_auth_update') THEN
-    CREATE POLICY avatars_auth_update ON storage.objects FOR UPDATE TO authenticated
-      USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-  END IF;
-END $$;
+-- Drop first so re-running is idempotent
+DROP POLICY IF EXISTS avatars_public_read  ON storage.objects;
+DROP POLICY IF EXISTS avatars_auth_insert  ON storage.objects;
+DROP POLICY IF EXISTS avatars_auth_update  ON storage.objects;
+
+CREATE POLICY avatars_public_read ON storage.objects
+  FOR SELECT USING (bucket_id = 'avatars');
+
+CREATE POLICY avatars_auth_insert ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY avatars_auth_update ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
