@@ -373,6 +373,13 @@ export interface Friendship {
   updated_at: string;
 }
 
+export interface MatchWaitlist {
+  id: string;
+  match_id: string;
+  user_id: string;
+  joined_at: string;
+}
+
 export type MatchInvitationStatus = "pending" | "accepted" | "rejected";
 
 export interface MatchInvitation {
