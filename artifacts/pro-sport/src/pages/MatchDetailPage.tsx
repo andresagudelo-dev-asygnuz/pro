@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -8,16 +8,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppLayout } from "@/components/AppLayout";
-import { CheckCircle2, Clock, MapPin, Globe, Lock, Building2, AlertCircle, Mail, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, MapPin, Globe, Lock, Building2, AlertCircle, Mail, XCircle, Star } from "lucide-react";
 import { toast } from "sonner";
 import type { Match, MatchParticipant, Profile, Sport, CanchaBooking, MatchInvitation } from "@/lib/types/db";
 import { getMyMatchInvitation, respondToMatchInvitation, getMatchInvitations } from "@/lib/friends/api";
 
 const supabase = createClient();
 
+type ChatMessage = { id: string; sender_id: string; content: string; created_at: string };
+
 export default function MatchDetailPage() {
   const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
   const [match, setMatch] = useState<Match | null>(null);
   const [sport, setSport] = useState<Sport | null>(null);
   const [organizer, setOrganizer] = useState<Profile | null>(null);
@@ -25,7 +28,7 @@ export default function MatchDetailPage() {
   const [profilesById, setProfilesById] = useState<Map<string, Profile>>(new Map());
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [chatMessage, setChatMessage] = useState("");
-  const [messages, setMessages] = useState<Array<{ id: string; sender_id: string; content: string; created_at: string }>>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -37,6 +40,13 @@ export default function MatchDetailPage() {
   const [respondingInvite, setRespondingInvite] = useState(false);
   const [cancellingMatch, setCancellingMatch] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  // Rating state
+  const [myRatings, setMyRatings] = useState<Record<string, number>>({});
+  const [submittingRatings, setSubmittingRatings] = useState(false);
+  const [ratingsSubmitted, setRatingsSubmitted] = useState(false);
+
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -65,9 +75,7 @@ export default function MatchDetailPage() {
         const inviteeIds = allInvRes.data.map((inv) => inv.invitee_id);
         const { data: invProfiles } = await supabase.from("profiles").select("*").in("id", inviteeIds);
         const profileMap = new Map(((invProfiles ?? []) as Profile[]).map((p) => [p.id, p]));
-        setPendingInvitations(
-          allInvRes.data.map((inv) => ({ ...inv, profile: profileMap.get(inv.invitee_id) })),
-        );
+        setPendingInvitations(allInvRes.data.map((inv) => ({ ...inv, profile: profileMap.get(inv.invitee_id) })));
       }
 
       setSport(sportData as Sport | null);
@@ -76,7 +84,7 @@ export default function MatchDetailPage() {
 
       const parts = (partsData ?? []) as MatchParticipant[];
       setParticipants(parts);
-      setMessages((messagesData ?? []) as typeof messages);
+      setMessages((messagesData ?? []) as ChatMessage[]);
 
       const pIds = Array.from(new Set(parts.map((p) => p.user_id).concat(m.organizer_id)));
       const { data: ppData } = await supabase.from("profiles").select("*").in("id", pIds);
@@ -84,9 +92,70 @@ export default function MatchDetailPage() {
       ((ppData ?? []) as Profile[]).forEach((p) => map.set(p.id, p));
       setProfilesById(map);
 
+      // Check if user already rated this match
+      if (m.status === "completed") {
+        const { data: existingRatings } = await supabase
+          .from("match_ratings")
+          .select("id")
+          .eq("match_id", m.id)
+          .eq("rater_id", user.id);
+        if (existingRatings && existingRatings.length > 0) {
+          setRatingsSubmitted(true);
+        }
+      }
+
       setLoading(false);
     })();
   }, [id, user]);
+
+  // Realtime: messages + participants
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`match-rt-${id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `match_id=eq.${id}`,
+      }, (payload: { new: Record<string, unknown> }) => {
+        const newMsg = payload.new as unknown as ChatMessage;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      })
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "match_participants",
+        filter: `match_id=eq.${id}`,
+      }, async (payload: { new: Record<string, unknown> }) => {
+        const newPart = payload.new as unknown as MatchParticipant;
+        setParticipants((prev) => {
+          if (prev.some((p) => p.user_id === newPart.user_id)) return prev;
+          return [...prev, newPart];
+        });
+        const { data } = await supabase.from("profiles").select("*").eq("id", newPart.user_id).maybeSingle();
+        if (data) setProfilesById((prev) => new Map([...prev, [data.id, data as Profile]]));
+      })
+      .on("postgres_changes", {
+        event: "DELETE",
+        schema: "public",
+        table: "match_participants",
+        filter: `match_id=eq.${id}`,
+      }, (payload: { old: Record<string, unknown> }) => {
+        setParticipants((prev) => prev.filter((p) => p.user_id !== (payload.old as unknown as MatchParticipant).user_id));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
+
+  // Auto-scroll chat to bottom on new messages
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   async function handleJoin() {
     if (!match || !user) return;
@@ -127,10 +196,7 @@ export default function MatchDetailPage() {
   async function handleCancelMatch() {
     if (!match || !user) return;
     setCancellingMatch(true);
-    const { error } = await supabase
-      .from("matches")
-      .update({ status: "cancelled" })
-      .eq("id", match.id);
+    const { error } = await supabase.from("matches").update({ status: "cancelled" }).eq("id", match.id);
     if (error) {
       toast.error("No se pudo cancelar el partido.");
     } else {
@@ -154,9 +220,38 @@ export default function MatchDetailPage() {
     if (!chatMessage.trim() || !match || !user) return;
     setSendingMsg(true);
     const { data: msg } = await supabase.from("messages").insert({ match_id: match.id, sender_id: user.id, content: chatMessage.trim() }).select().single();
-    if (msg) setMessages((prev) => [...prev, msg as typeof messages[0]]);
+    if (msg) setMessages((prev) => {
+      if (prev.some((m) => m.id === (msg as ChatMessage).id)) return prev;
+      return [...prev, msg as ChatMessage];
+    });
     setChatMessage("");
     setSendingMsg(false);
+  }
+
+  async function handleSubmitRatings() {
+    if (!user || !match) return;
+    setSubmittingRatings(true);
+    const ratingsToInsert = Object.entries(myRatings)
+      .filter(([, rating]) => rating > 0)
+      .map(([rated_id, rating]) => ({ match_id: match.id, rater_id: user.id, rated_id, rating }));
+
+    if (ratingsToInsert.length === 0) {
+      toast.error("Seleccioná al menos una calificación.");
+      setSubmittingRatings(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("match_ratings")
+      .upsert(ratingsToInsert, { onConflict: "match_id,rater_id,rated_id" });
+
+    if (error) {
+      toast.error("Error al guardar calificaciones: " + error.message);
+    } else {
+      toast.success("¡Calificaciones enviadas!");
+      setRatingsSubmitted(true);
+    }
+    setSubmittingRatings(false);
   }
 
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
@@ -170,6 +265,9 @@ export default function MatchDetailPage() {
   const isOrganizer = match.organizer_id === user?.id;
   const isFull = joinedCount >= match.max_players && !isJoined;
   const canChat = isJoined || isOrganizer;
+  const isCompleted = match.status === "completed";
+  const othersToRate = joinedParts.filter((p) => p.user_id !== user?.id);
+  const showRating = isCompleted && (isJoined || isOrganizer) && !ratingsSubmitted && othersToRate.length > 0;
 
   return (
     <AppLayout>
@@ -187,7 +285,13 @@ export default function MatchDetailPage() {
             <h1 className="text-2xl font-semibold tracking-tight">{match.title}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{formatMatchDate(match.starts_at)} · {match.duration_minutes} min</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {match.status === "cancelled" && (
+              <Badge variant="destructive">Cancelado</Badge>
+            )}
+            {isCompleted && (
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Completado</Badge>
+            )}
             {match.is_public ? (
               <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50"><Globe className="mr-1 h-3 w-3" /> Abierto</Badge>
             ) : (
@@ -204,7 +308,7 @@ export default function MatchDetailPage() {
                 <XCircle className="size-3.5 mr-1" /> Cancelar partido
               </Button>
             )}
-            {!isOrganizer && (
+            {!isOrganizer && match.status === "open" && (
               <Button size="sm" variant={isJoined ? "outline" : "default"} disabled={joining || isFull} onClick={handleJoin}>
                 {joining ? "…" : isJoined ? "Salir" : isFull ? "Lleno" : "Unirse"}
               </Button>
@@ -212,31 +316,15 @@ export default function MatchDetailPage() {
           </div>
         </div>
 
-        {/* Cancha booking status banner */}
-        {/* Cancel confirmation banner */}
         {showCancelConfirm && (
           <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-4 flex flex-col gap-3">
-            <p className="text-sm font-semibold text-red-800 dark:text-red-300">
-              ¿Cancelar el partido?
-            </p>
-            <p className="text-xs text-red-700 dark:text-red-400">
-              Esta acción notificará a los jugadores y no se puede deshacer.
-            </p>
+            <p className="text-sm font-semibold text-red-800 dark:text-red-300">¿Cancelar el partido?</p>
+            <p className="text-xs text-red-700 dark:text-red-400">Esta acción notificará a los jugadores y no se puede deshacer.</p>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                disabled={cancellingMatch}
-                className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={handleCancelMatch}
-              >
+              <Button size="sm" disabled={cancellingMatch} className="bg-red-600 hover:bg-red-700 text-white" onClick={handleCancelMatch}>
                 {cancellingMatch ? "Cancelando…" : "Sí, cancelar partido"}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={cancellingMatch}
-                onClick={() => setShowCancelConfirm(false)}
-              >
+              <Button size="sm" variant="outline" disabled={cancellingMatch} onClick={() => setShowCancelConfirm(false)}>
                 No, volver
               </Button>
             </div>
@@ -251,13 +339,9 @@ export default function MatchDetailPage() {
               ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-700 dark:text-green-300"
               : "bg-muted border-border text-muted-foreground"
           }`}>
-            {canchaBooking.status === "pendiente" ? (
-              <AlertCircle className="size-4 shrink-0" />
-            ) : canchaBooking.status === "confirmada" ? (
-              <CheckCircle2 className="size-4 shrink-0" />
-            ) : (
-              <Building2 className="size-4 shrink-0" />
-            )}
+            {canchaBooking.status === "pendiente" ? <AlertCircle className="size-4 shrink-0" />
+              : canchaBooking.status === "confirmada" ? <CheckCircle2 className="size-4 shrink-0" />
+              : <Building2 className="size-4 shrink-0" />}
             <div>
               <p className="font-medium">
                 {canchaBooking.status === "pendiente" && "Cancha pendiente de aprobación"}
@@ -273,7 +357,6 @@ export default function MatchDetailPage() {
           </div>
         )}
 
-        {/* Invitation banner — for users who were invited and haven't responded */}
         {myInvitation && myInvitation.status === "pending" && !isJoined && (
           <div className="rounded-lg p-4 flex flex-col gap-3 border bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700">
             <div className="flex items-center gap-2 text-purple-800 dark:text-purple-300">
@@ -281,21 +364,10 @@ export default function MatchDetailPage() {
               <p className="text-sm font-medium">Tenés una invitación para este partido</p>
             </div>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                disabled={respondingInvite}
-                onClick={() => handleRespondInvitation("accepted")}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
+              <Button size="sm" disabled={respondingInvite} onClick={() => handleRespondInvitation("accepted")} className="bg-purple-600 hover:bg-purple-700 text-white">
                 Aceptar e ingresar
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={respondingInvite}
-                onClick={() => handleRespondInvitation("rejected")}
-                className="border-purple-300 text-purple-700 hover:bg-purple-50"
-              >
+              <Button size="sm" variant="outline" disabled={respondingInvite} onClick={() => handleRespondInvitation("rejected")} className="border-purple-300 text-purple-700 hover:bg-purple-50">
                 Rechazar
               </Button>
             </div>
@@ -308,7 +380,7 @@ export default function MatchDetailPage() {
           </div>
         )}
 
-        {isJoined && !isConfirmed && (
+        {isJoined && !isConfirmed && match.status === "open" && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-amber-800 text-sm">
               <Clock className="h-4 w-4 text-amber-600" />
@@ -343,6 +415,67 @@ export default function MatchDetailPage() {
           </div>
         </div>
       </header>
+
+      {/* Post-match Rating */}
+      {showRating && (
+        <section className="rounded-xl border bg-background p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Star className="size-5 text-amber-400 fill-amber-400" />
+            <h2 className="text-sm font-semibold">Calificá a los jugadores</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-5">El partido terminó. Tu calificación ayuda a construir el ranking de la comunidad.</p>
+          <ul className="flex flex-col gap-4">
+            {othersToRate.map((p) => {
+              const pp = profilesById.get(p.user_id);
+              const currentRating = myRatings[p.user_id] ?? 0;
+              return (
+                <li key={p.user_id} className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-9">
+                      {pp?.avatar_url && <AvatarImage src={pp.avatar_url} />}
+                      <AvatarFallback className="text-xs">{initialsFromName(pp?.full_name ?? null)}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium">{pp?.full_name ?? pp?.username ?? "Jugador"}</span>
+                  </div>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setMyRatings((prev) => ({ ...prev, [p.user_id]: star }))}
+                        className="p-0.5 transition-transform active:scale-90"
+                        aria-label={`${star} estrellas`}
+                      >
+                        <Star
+                          className={`size-6 transition-colors ${
+                            star <= currentRating
+                              ? "text-amber-400 fill-amber-400"
+                              : "text-zinc-300 dark:text-zinc-600"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <Button
+            className="mt-5 w-full bg-amber-500 hover:bg-amber-600 text-white"
+            disabled={submittingRatings || Object.keys(myRatings).length === 0}
+            onClick={handleSubmitRatings}
+          >
+            {submittingRatings ? "Guardando…" : "Enviar calificaciones"}
+          </Button>
+        </section>
+      )}
+
+      {isCompleted && ratingsSubmitted && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 p-4 flex items-center gap-3 text-emerald-800 dark:text-emerald-300">
+          <CheckCircle2 className="size-5 shrink-0" />
+          <p className="text-sm font-medium">Ya enviaste tus calificaciones para este partido.</p>
+        </div>
+      )}
 
       {/* Pending invitations section — visible to organizer */}
       {isOrganizer && pendingInvitations.length > 0 && (
@@ -395,7 +528,7 @@ export default function MatchDetailPage() {
                   </Avatar>
                   <div className="flex flex-col">
                     <span className="text-sm">{pp.full_name ?? pp.username ?? "—"}</span>
-                    {pp.rating_count > 0 && <span className="text-xs text-muted-foreground">★ {pp.rating_avg} ({pp.rating_count})</span>}
+                    {pp.rating_count > 0 && <span className="text-xs text-muted-foreground">★ {pp.rating_avg?.toFixed ? pp.rating_avg.toFixed(1) : pp.rating_avg} ({pp.rating_count})</span>}
                   </div>
                 </Link>
                 {p.confirmed_at ? (
@@ -430,6 +563,7 @@ export default function MatchDetailPage() {
                   </div>
                 );
               })}
+              <div ref={chatBottomRef} />
             </div>
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <input
@@ -448,6 +582,11 @@ export default function MatchDetailPage() {
           <p className="text-sm text-muted-foreground">Unite al partido para participar del chat.</p>
         )}
       </section>
+
+      {/* Back to feed */}
+      <Button variant="ghost" size="sm" className="self-start text-muted-foreground" onClick={() => setLocation("/feed")}>
+        ← Volver al feed
+      </Button>
     </div>
     </AppLayout>
   );

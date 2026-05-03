@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifCount } from "@/context/NotifContext";
 import {
   Bell,
   CheckCircle2,
@@ -55,6 +56,7 @@ type MatchInviteWithMatch = MatchInvitation & {
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const { clearCount } = useNotifCount();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendWithProfile[]>(
     [],
@@ -118,6 +120,7 @@ export default function NotificationsPage() {
         read_at: n.read_at || new Date().toISOString(),
       })),
     );
+    clearCount();
   };
 
   async function handleAcceptFriend(friendshipId: string) {

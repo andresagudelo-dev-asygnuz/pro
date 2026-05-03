@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Home, Trophy, Plus, Building2, User } from "lucide-react";
+import { useNotifCount } from "@/context/NotifContext";
 
 type NavItem = {
   href: string;
@@ -50,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function BottomNav() {
   const [location] = useLocation();
+  const { unreadCount } = useNotifCount();
 
   function isActive(item: NavItem): boolean {
     if (item.isAction) return false;
@@ -74,6 +76,7 @@ export function BottomNav() {
           {NAV_ITEMS.map((item) => {
             const { href, label, Icon, isAction } = item;
             const active = isActive(item);
+            const isPerfil = href === "/perfil";
 
             if (isAction) {
               return (
@@ -115,6 +118,11 @@ export function BottomNav() {
                     />
                     {active && (
                       <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-600 dark:bg-violet-400" />
+                    )}
+                    {isPerfil && unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
                     )}
                   </div>
                   <span
