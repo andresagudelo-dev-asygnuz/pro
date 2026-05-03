@@ -10,7 +10,7 @@ import {
   updateBookingStatus,
 } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, XCircle, Pencil, Users } from "lucide-react";
+import { CheckCircle2, XCircle, Pencil, Users } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import {

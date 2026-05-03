@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { getCanchaById, getAvailableSlots, createBooking } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MapPin, Users, Phone, MessageCircle, CheckCircle2 } from "lucide-react";
+import { MapPin, Users, Phone, MessageCircle, CheckCircle2 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, type Cancha, type TimeSlot } from "@/lib/types/db";

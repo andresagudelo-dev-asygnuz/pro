@@ -6,7 +6,7 @@ import { formatMatchDate } from "@/lib/format";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Zap, Calendar, Users, ArrowLeft } from "lucide-react";
+import { Plus, Zap, Calendar, Users } from "lucide-react";
 import type { Match, Sport } from "@/lib/types/db";
 
 const supabase = createClient();
@@ -86,7 +86,7 @@ export default function MisPartidosPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
       <PageHeader
         title="Mis Partidos"
-        backHref="/feed"
+        backHref="/perfil"
         actions={
           <Link href="/matches/new">
             <Button size="sm" className="gap-1.5 rounded-xl">
