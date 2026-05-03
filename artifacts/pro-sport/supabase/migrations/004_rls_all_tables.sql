@@ -277,19 +277,15 @@ CREATE POLICY teams_delete ON teams FOR DELETE TO authenticated
   USING (owner_id = auth.uid());
 
 -- ─── TEAM_MEMBERS (re-aplica 003) ────────────────────────────────────────────
+-- IMPORTANTE: tm_select usa USING (true) para evitar recursión infinita
+-- con la política teams_select que referencia team_members.
 ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tm_select ON team_members;
 DROP POLICY IF EXISTS tm_insert ON team_members;
 DROP POLICY IF EXISTS tm_delete ON team_members;
-CREATE POLICY tm_select ON team_members FOR SELECT USING (
-  user_id = auth.uid()
-  OR EXISTS (SELECT 1 FROM teams WHERE id = team_id AND (is_public OR owner_id = auth.uid()))
-);
+CREATE POLICY tm_select ON team_members FOR SELECT USING (true);
 CREATE POLICY tm_insert ON team_members FOR INSERT TO authenticated
-  WITH CHECK (
-    user_id = auth.uid()
-    OR EXISTS (SELECT 1 FROM teams WHERE id = team_id AND owner_id = auth.uid())
-  );
+  WITH CHECK (user_id = auth.uid());
 CREATE POLICY tm_delete ON team_members FOR DELETE TO authenticated
   USING (
     user_id = auth.uid()

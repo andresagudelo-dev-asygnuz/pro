@@ -73,7 +73,7 @@ export class RlsPolicyError extends Error {
   }
 }
 
-const TEAMS_RLS_FIX_SQL = `-- Ejecutá esto en Supabase → SQL Editor
+const TEAMS_RLS_FIX_SQL = `-- Ejecutá en Supabase → SQL Editor → New query
 DROP POLICY IF EXISTS teams_insert ON teams;
 CREATE POLICY teams_insert ON teams
   FOR INSERT TO authenticated
@@ -82,13 +82,12 @@ CREATE POLICY teams_insert ON teams
 DROP POLICY IF EXISTS tm_insert ON team_members;
 CREATE POLICY tm_insert ON team_members
   FOR INSERT TO authenticated
-  WITH CHECK (
-    user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM teams
-      WHERE id = team_id AND owner_id = auth.uid()
-    )
-  );`.trim();
+  WITH CHECK (user_id = auth.uid());`.trim();
+
+// Recursion fix: the teams_select <-> tm_select policies reference each other
+const TEAMS_RECURSION_FIX_SQL = `-- Solo 2 líneas — pegá en Supabase → SQL Editor
+DROP POLICY IF EXISTS tm_select ON team_members;
+CREATE POLICY tm_select ON team_members FOR SELECT USING (true);`.trim();
 
 export async function createTeam(payload: {
   name: string;
@@ -106,9 +105,10 @@ export async function createTeam(payload: {
     .select()
     .single();
   if (error) {
+    if (error.code === "42P17" || error.message?.includes("infinite recursion"))
+      throw new RlsPolicyError(TEAMS_RECURSION_FIX_SQL);
     const isRls =
       error.message?.includes("row-level security") ||
-      error.message?.includes("policy") ||
       error.code === "42501" ||
       error.code === "PGRST301";
     if (isRls) throw new RlsPolicyError(TEAMS_RLS_FIX_SQL);
@@ -118,9 +118,10 @@ export async function createTeam(payload: {
     .from("team_members")
     .insert({ team_id: data.id, user_id: payload.owner_id, role: "owner" });
   if (memberErr) {
+    if (memberErr.code === "42P17" || memberErr.message?.includes("infinite recursion"))
+      throw new RlsPolicyError(TEAMS_RECURSION_FIX_SQL);
     const isRls =
       memberErr.message?.includes("row-level security") ||
-      memberErr.message?.includes("policy") ||
       memberErr.code === "42501" ||
       memberErr.code === "PGRST301";
     if (isRls) throw new RlsPolicyError(TEAMS_RLS_FIX_SQL);
