@@ -51,7 +51,10 @@ export default function TeamDetailPage() {
     if (!id) return;
     getTeamById(id)
       .then((data) => setTeam(data))
-      .catch(() => toast.error("No se pudo cargar el equipo."))
+      .catch((err: any) => {
+        console.error("[TeamDetailPage] getTeamById error:", err);
+        toast.error("Error al cargar equipo: " + (err?.message ?? String(err)));
+      })
       .finally(() => setLoading(false));
   }, [id]);
 

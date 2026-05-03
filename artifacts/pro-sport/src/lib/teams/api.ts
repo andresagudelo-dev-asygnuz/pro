@@ -60,37 +60,48 @@ export async function getPublicTeams(city?: string): Promise<TeamWithCount[]> {
 }
 
 export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
-  // Fetch team + raw members (no direct FK from team_members → profiles)
+  // 1. Fetch the team row only (no joins)
   const { data: teamData, error: teamErr } = await supabase
     .from("teams")
-    .select(`*, team_members(role, joined_at, user_id)`)
+    .select("*")
     .eq("id", id)
     .maybeSingle();
   if (teamErr) {
+    console.error("[getTeamById] team query error:", teamErr);
     if (isMissingTable(teamErr)) return null;
     throw teamErr;
   }
   if (!teamData) return null;
 
-  // Fetch profiles for each member separately
-  const userIds: string[] = (teamData as any).team_members?.map((m: any) => m.user_id) ?? [];
+  // 2. Fetch team_members for this team
+  const { data: members, error: membersErr } = await supabase
+    .from("team_members")
+    .select("role, joined_at, user_id")
+    .eq("team_id", id);
+  if (membersErr) {
+    console.error("[getTeamById] members query error:", membersErr);
+  }
+  const memberRows: any[] = members ?? [];
+
+  // 3. Fetch profiles for each member
+  const userIds: string[] = memberRows.map((m: any) => m.user_id);
   let profileMap: Record<string, any> = {};
   if (userIds.length > 0) {
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profErr } = await supabase
       .from("profiles")
       .select("id, full_name, username, avatar_url, city, primary_skill_level")
       .in("id", userIds);
+    if (profErr) console.error("[getTeamById] profiles query error:", profErr);
     for (const p of profiles ?? []) profileMap[p.id] = p;
   }
 
-  const merged = {
+  return {
     ...(teamData as any),
-    team_members: ((teamData as any).team_members ?? []).map((m: any) => ({
+    team_members: memberRows.map((m: any) => ({
       ...m,
       profile: profileMap[m.user_id] ?? null,
     })),
-  };
-  return merged as TeamWithMembers;
+  } as TeamWithMembers;
 }
 
 export async function createTeam(payload: {
