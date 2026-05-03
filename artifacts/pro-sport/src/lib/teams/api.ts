@@ -79,7 +79,12 @@ export async function createTeam(payload: {
     .insert({ ...payload, updated_at: new Date().toISOString() })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.message?.includes("row-level security") || error.message?.includes("policy")) {
+      throw new Error("Falta la política RLS de INSERT en la tabla teams. Ejecutá en Supabase SQL Editor: CREATE POLICY teams_insert ON teams FOR INSERT TO authenticated WITH CHECK (owner_id = auth.uid());");
+    }
+    throw error;
+  }
   await supabase.from("team_members").insert({ team_id: data.id, user_id: payload.owner_id, role: "owner" });
   return data as Team;
 }
