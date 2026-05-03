@@ -1,25 +1,15 @@
-import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { initialsFromName } from "@/lib/format";
-import type { Profile } from "@/lib/types/db";
 
 const supabase = createClient();
 
 export function AppNav() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { profile } = useAuth();
   const [, navigate] = useLocation();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data }) => {
-        setProfile(data as Profile | null);
-      });
-    });
-  }, []);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
