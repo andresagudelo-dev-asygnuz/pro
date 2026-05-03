@@ -7,7 +7,6 @@ export type TeamWithCount = Team & { member_count: number };
 export type TeamMemberWithProfile = TeamMember & { profile: Pick<Profile, "id" | "full_name" | "username" | "avatar_url" | "city" | "primary_skill_level"> };
 export type TeamWithMembers = Team & { team_members: TeamMemberWithProfile[] };
 
-/** Returns true if the error means the teams table doesn't exist yet (migration pending). */
 function isMissingTable(error: any): boolean {
   const msg: string = error?.message ?? error?.details ?? "";
   return (
@@ -18,6 +17,15 @@ function isMissingTable(error: any): boolean {
     error?.code === "PGRST200" ||
     error?.code === "42P01"
   );
+}
+
+function friendlyError(error: any): string {
+  if (!error) return "Error desconocido";
+  if (error.code === "23505") return "Ya existe un equipo con ese nombre o slug.";
+  if (error.code === "23503") return "Error de referencia en la base de datos.";
+  if (error.code === "42501" || error.code === "PGRST301") return "Sin permisos para crear equipos. Contactá al administrador.";
+  if (error.code === "42P17") return "Error de configuración en la base de datos.";
+  return error.message ?? "No se pudo completar la operación.";
 }
 
 export async function getMyTeams(userId: string): Promise<TeamWithCount[]> {
@@ -64,31 +72,6 @@ export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
   return data as TeamWithMembers | null;
 }
 
-export class RlsPolicyError extends Error {
-  readonly sql: string;
-  constructor(sql: string) {
-    super("rls_policy_missing");
-    this.name = "RlsPolicyError";
-    this.sql = sql;
-  }
-}
-
-const TEAMS_RLS_FIX_SQL = `-- Ejecutá en Supabase → SQL Editor → New query
-DROP POLICY IF EXISTS teams_insert ON teams;
-CREATE POLICY teams_insert ON teams
-  FOR INSERT TO authenticated
-  WITH CHECK (owner_id = auth.uid());
-
-DROP POLICY IF EXISTS tm_insert ON team_members;
-CREATE POLICY tm_insert ON team_members
-  FOR INSERT TO authenticated
-  WITH CHECK (user_id = auth.uid());`.trim();
-
-// Recursion fix: the teams_select <-> tm_select policies reference each other
-const TEAMS_RECURSION_FIX_SQL = `-- Solo 2 líneas — pegá en Supabase → SQL Editor
-DROP POLICY IF EXISTS tm_select ON team_members;
-CREATE POLICY tm_select ON team_members FOR SELECT USING (true);`.trim();
-
 export async function createTeam(payload: {
   name: string;
   slug: string;
@@ -104,45 +87,29 @@ export async function createTeam(payload: {
     .insert({ ...payload, updated_at: new Date().toISOString() })
     .select()
     .single();
-  if (error) {
-    if (error.code === "42P17" || error.message?.includes("infinite recursion"))
-      throw new RlsPolicyError(TEAMS_RECURSION_FIX_SQL);
-    const isRls =
-      error.message?.includes("row-level security") ||
-      error.code === "42501" ||
-      error.code === "PGRST301";
-    if (isRls) throw new RlsPolicyError(TEAMS_RLS_FIX_SQL);
-    throw error;
-  }
+  if (error) throw new Error(friendlyError(error));
+
   const { error: memberErr } = await supabase
     .from("team_members")
     .insert({ team_id: data.id, user_id: payload.owner_id, role: "owner" });
-  if (memberErr) {
-    if (memberErr.code === "42P17" || memberErr.message?.includes("infinite recursion"))
-      throw new RlsPolicyError(TEAMS_RECURSION_FIX_SQL);
-    const isRls =
-      memberErr.message?.includes("row-level security") ||
-      memberErr.code === "42501" ||
-      memberErr.code === "PGRST301";
-    if (isRls) throw new RlsPolicyError(TEAMS_RLS_FIX_SQL);
-    throw memberErr;
-  }
+  if (memberErr) throw new Error(friendlyError(memberErr));
+
   return data as Team;
 }
 
 export async function joinTeam(teamId: string, userId: string): Promise<void> {
   const { error } = await supabase.from("team_members").insert({ team_id: teamId, user_id: userId, role: "player" });
-  if (error) throw error;
+  if (error) throw new Error(friendlyError(error));
 }
 
 export async function leaveTeam(teamId: string, userId: string): Promise<void> {
   const { error } = await supabase.from("team_members").delete().eq("team_id", teamId).eq("user_id", userId);
-  if (error) throw error;
+  if (error) throw new Error(friendlyError(error));
 }
 
 export async function deleteTeam(teamId: string): Promise<void> {
   const { error } = await supabase.from("teams").delete().eq("id", teamId);
-  if (error) throw error;
+  if (error) throw new Error(friendlyError(error));
 }
 
 export function generateSlug(name: string): string {
