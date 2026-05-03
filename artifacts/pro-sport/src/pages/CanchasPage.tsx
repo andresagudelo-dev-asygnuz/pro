@@ -5,56 +5,82 @@ import { useAuth } from "@/context/AuthContext";
 import { getAllCanchas } from "@/lib/canchas/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, CANCHAS_SPORT_OPTIONS, type Cancha, type CanchaSportType } from "@/lib/types/db";
-import { Search, Plus, MapPin, Users, Clock } from "lucide-react";
+import { BottomNav } from "@/components/BottomNav";
+import {
+  SPORT_TYPE_LABELS,
+  SPORT_TYPE_ICONS,
+  CANCHAS_SPORT_OPTIONS,
+  type Cancha,
+  type CanchaSportType,
+} from "@/lib/types/db";
+import { Search, Plus, MapPin, Users } from "lucide-react";
 
 const supabase = createClient();
 
 function CanchaCard({ cancha }: { cancha: Cancha }) {
-  const finalPrice = cancha.discount_percent > 0
-    ? cancha.price_per_hour * (1 - cancha.discount_percent / 100)
-    : cancha.price_per_hour;
+  const finalPrice =
+    cancha.discount_percent > 0
+      ? cancha.price_per_hour * (1 - cancha.discount_percent / 100)
+      : cancha.price_per_hour;
 
   return (
     <Link href={`/canchas/${cancha.id}`}>
-      <div className="rounded-xl border bg-white dark:bg-zinc-900 p-4 shadow-sm hover:border-foreground/30 transition-colors cursor-pointer space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">{SPORT_TYPE_ICONS[cancha.sport_type]}</span>
-              <h3 className="font-semibold text-zinc-900 dark:text-white leading-tight">{cancha.name}</h3>
+      <div className="group bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm hover:shadow-md hover:border-violet-200 dark:hover:border-violet-800 transition-all duration-200 cursor-pointer overflow-hidden">
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/30 dark:to-violet-900/10 border border-violet-100 dark:border-violet-800 flex items-center justify-center text-2xl shrink-0">
+                {SPORT_TYPE_ICONS[cancha.sport_type]}
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-zinc-900 dark:text-white leading-tight group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors truncate">
+                  {cancha.name}
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  {SPORT_TYPE_LABELS[cancha.sport_type]}
+                </span>
+              </div>
             </div>
-            <span className="text-xs text-muted-foreground">{SPORT_TYPE_LABELS[cancha.sport_type]}</span>
-          </div>
-          <div className="text-right shrink-0">
-            {cancha.discount_percent > 0 && (
-              <p className="text-xs text-muted-foreground line-through">
-                ${cancha.price_per_hour.toLocaleString("es-CO")}
+            <div className="text-right shrink-0">
+              {cancha.discount_percent > 0 && (
+                <p className="text-xs text-muted-foreground line-through">
+                  ${cancha.price_per_hour.toLocaleString("es-CO")}/h
+                </p>
+              )}
+              <p className="font-bold text-violet-600 dark:text-violet-400 text-sm">
+                ${finalPrice.toLocaleString("es-CO")}/h
               </p>
-            )}
-            <p className="font-bold text-brand-primary text-sm">
-              ${finalPrice.toLocaleString("es-CO")}/h
-            </p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <MapPin className="size-3" /> {cancha.city}
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="size-3" /> {cancha.capacity} jugadores
-          </span>
-          {cancha.discount_percent > 0 && (
-            <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium">
-              -{cancha.discount_percent}% dto.
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <MapPin className="size-3" /> {cancha.city}
             </span>
+            <span className="flex items-center gap-1">
+              <Users className="size-3" /> {cancha.capacity} jugadores
+            </span>
+            {cancha.discount_percent > 0 && (
+              <span className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-semibold">
+                -{cancha.discount_percent}%
+              </span>
+            )}
+          </div>
+
+          {cancha.description && (
+            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+              {cancha.description}
+            </p>
           )}
         </div>
-
-        {cancha.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{cancha.description}</p>
-        )}
+        <div className="px-4 py-2 bg-zinc-50 dark:bg-zinc-800/50 border-t border-border/40 flex items-center justify-between">
+          <span className="text-xs text-muted-foreground truncate">
+            📍 {cancha.address}
+          </span>
+          <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 group-hover:underline shrink-0 ml-2">
+            Reservar →
+          </span>
+        </div>
       </div>
     </Link>
   );
@@ -71,96 +97,128 @@ export default function CanchasPage() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    getAllCanchas(supabase, { city: city || undefined, sportType: sportType || undefined }).then(
-      ({ data, error }) => {
-        if (!active) return;
-        if (error) setError(error);
-        else { setCanchas(data ?? []); setError(null); }
-        setLoading(false);
-      },
-    );
-    return () => { active = false; };
+    getAllCanchas(supabase, {
+      city: city || undefined,
+      sportType: sportType || undefined,
+    }).then(({ data, error }) => {
+      if (!active) return;
+      if (error) setError(error);
+      else {
+        setCanchas(data ?? []);
+        setError(null);
+      }
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
   }, [city, sportType]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-zinc-900 dark:text-white">Canchas</h1>
+          <h1 className="text-lg font-bold text-zinc-900 dark:text-white">
+            Canchas
+          </h1>
           <div className="flex items-center gap-2">
             {roles?.is_cancha && (
+              <Link href="/mis-canchas">
+                <Button variant="outline" size="sm" className="rounded-xl text-xs">
+                  Mis canchas
+                </Button>
+              </Link>
+            )}
+            {roles?.is_cancha && (
               <Link href="/canchas/nueva">
-                <Button size="sm">
-                  <Plus className="size-4 mr-1" /> Agregar
+                <Button size="sm" className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
+                  <Plus className="size-3.5" /> Agregar
                 </Button>
               </Link>
             )}
           </div>
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 pt-4 pb-2 max-w-2xl space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por ciudad…"
-            className="pl-9"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-          />
-        </div>
+        {/* Search + sport filters */}
+        <div className="px-4 pb-3 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por ciudad…"
+              className="pl-9 rounded-xl h-9 text-sm"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+          </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            onClick={() => setSportType("")}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              sportType === ""
-                ? "bg-foreground text-background border-foreground"
-                : "bg-background border-border hover:border-foreground/40"
-            }`}
-          >
-            Todos
-          </button>
-          {CANCHAS_SPORT_OPTIONS.map((opt) => (
+          <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
             <button
-              key={opt.value}
-              onClick={() => setSportType(sportType === opt.value ? "" : opt.value)}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                sportType === opt.value
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-background border-border hover:border-foreground/40"
+              onClick={() => setSportType("")}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                sportType === ""
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
+                  : "bg-background border-border hover:border-foreground/30 text-muted-foreground"
               }`}
             >
-              {SPORT_TYPE_ICONS[opt.value]} {opt.label}
+              Todos
             </button>
-          ))}
+            {CANCHAS_SPORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() =>
+                  setSportType(sportType === opt.value ? "" : opt.value)
+                }
+                className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                  sportType === opt.value
+                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
+                    : "bg-background border-border hover:border-foreground/30 text-muted-foreground"
+                }`}
+              >
+                {SPORT_TYPE_ICONS[opt.value]} {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </header>
 
-      <main className="container mx-auto px-4 py-3 max-w-2xl">
+      <main className="container mx-auto px-4 py-4 max-w-2xl">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : error ? (
-          <div className="bg-destructive/15 text-destructive p-4 rounded-md text-sm">{error}</div>
+          <div className="bg-destructive/10 text-destructive p-4 rounded-2xl text-sm border border-destructive/20">
+            {error}
+          </div>
         ) : canchas.length === 0 ? (
-          <div className="text-center py-12">
-            <Clock className="size-12 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="text-muted-foreground mb-2">No hay canchas disponibles.</p>
-            {city && (
-              <p className="text-sm text-muted-foreground">
-                Probá buscar en otra ciudad o sin filtros.
+          <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center text-3xl">
+              🏟️
+            </div>
+            <div>
+              <p className="font-semibold text-foreground mb-1">
+                No hay canchas disponibles
               </p>
-            )}
+              {city && (
+                <p className="text-sm text-muted-foreground">
+                  Probá buscar en otra ciudad o sin filtros.
+                </p>
+              )}
+            </div>
             {roles?.is_cancha && (
               <Link href="/canchas/nueva">
-                <Button className="mt-4">Registrar mi cancha</Button>
+                <Button size="sm" className="rounded-xl">
+                  Registrar mi cancha
+                </Button>
               </Link>
             )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
+            <p className="text-xs text-muted-foreground">
+              {canchas.length}{" "}
+              {canchas.length === 1 ? "cancha disponible" : "canchas disponibles"}
+            </p>
             {canchas.map((c) => (
               <CanchaCard key={c.id} cancha={c} />
             ))}
@@ -168,27 +226,7 @@ export default function CanchasPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-t border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-around h-14">
-            <Link href="/feed" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🏠</span><span>Inicio</span>
-            </Link>
-            <Link href="/tournaments" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🏆</span><span>Torneos</span>
-            </Link>
-            <Link href="/canchas" className="flex flex-col items-center gap-0.5 text-xs font-medium text-brand-primary">
-              <span>🏟️</span><span>Canchas</span>
-            </Link>
-            <Link href="/amigos" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>👥</span><span>Amigos</span>
-            </Link>
-            <Link href="/perfil" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>👤</span><span>Perfil</span>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 }

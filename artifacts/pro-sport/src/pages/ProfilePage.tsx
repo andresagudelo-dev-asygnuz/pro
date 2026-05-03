@@ -3,8 +3,21 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { initialsFromName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { BottomNav } from "@/components/BottomNav";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut, Pencil, Shield, Trophy, Zap, Building2 } from "lucide-react";
+import {
+  LogOut,
+  Pencil,
+  Shield,
+  Trophy,
+  Zap,
+  Building2,
+  Bell,
+  Users,
+  Calendar,
+  Bookmark,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const supabase = createClient();
@@ -55,7 +68,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -63,194 +76,291 @@ export default function ProfilePage() {
   const initials = initialsFromName(profile?.full_name || profile?.username);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/feed" className="text-xl font-black italic tracking-tighter text-zinc-900 dark:text-white uppercase">
-            PRO<span className="text-brand-primary">.</span>
-          </Link>
-          <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold text-zinc-900 dark:text-white">
+            Mi Perfil
+          </h1>
+          <div className="flex items-center gap-1">
             <Link href="/perfil/editar">
-              <Button variant="ghost" size="icon" title="Editar perfil">
+              <button
+                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
+                title="Editar perfil"
+              >
                 <Pencil className="size-4" />
-              </Button>
+              </button>
             </Link>
-            <Button variant="ghost" size="icon" onClick={handleSignOut} title="Cerrar sesión">
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors text-muted-foreground"
+              onClick={handleSignOut}
+              title="Cerrar sesión"
+            >
               <LogOut className="size-4" />
-            </Button>
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main className="container mx-auto px-4 py-5 max-w-2xl space-y-4">
         {/* User card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border p-6 shadow-sm mb-5">
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-full bg-brand-primary/20 flex items-center justify-center text-xl font-black text-brand-primary shrink-0">
-              {initials}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 overflow-hidden shadow-sm">
+          {/* Purple gradient top bar */}
+          <div className="h-16 bg-gradient-to-br from-violet-600 to-violet-800" />
+          <div className="px-5 pb-5 -mt-8">
+            <div className="flex items-end gap-4 mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-violet-100 dark:bg-violet-900/50 border-4 border-white dark:border-zinc-900 flex items-center justify-center text-xl font-black text-violet-700 dark:text-violet-300 shrink-0 shadow-sm">
+                {initials}
+              </div>
+              <div className="pb-1 min-w-0">
+                <h1 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight truncate">
+                  {profile?.full_name || "Sin nombre"}
+                </h1>
+                {profile?.username && (
+                  <p className="text-sm text-muted-foreground">
+                    @{profile.username}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-zinc-900 dark:text-white">
-                {profile?.full_name || "Sin nombre"}
-              </h1>
-              {profile?.username && (
-                <p className="text-sm text-muted-foreground">@{profile.username}</p>
-              )}
+
+            <div className="flex flex-wrap gap-1.5 mb-4">
               {profile?.city && (
-                <p className="text-sm text-muted-foreground mt-1">📍 {profile.city}</p>
+                <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                  📍 {profile.city}
+                </span>
               )}
               {profile?.primary_skill_level && (
-                <p className="text-xs text-muted-foreground mt-1 capitalize">
-                  Nivel: {profile.primary_skill_level}
-                </p>
+                <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full capitalize">
+                  {profile.primary_skill_level}
+                </span>
               )}
-              {profile?.bio && (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">{profile.bio}</p>
+              {roles?.is_player && (
+                <span className="text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full border border-blue-100 dark:border-blue-800">
+                  Jugador
+                </span>
               )}
-              {roles && (
-                <div className="flex gap-1.5 mt-2 flex-wrap">
-                  {roles.is_player && (
-                    <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                      Jugador
-                    </span>
-                  )}
-                  {roles.is_promoter && (
-                    <span className="text-xs font-medium bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">
-                      Promotor
-                    </span>
-                  )}
-                  {roles.is_cancha && (
-                    <span className="text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full">
-                      🏟️ Cancha
-                    </span>
-                  )}
-                </div>
+              {roles?.is_promoter && (
+                <span className="text-xs font-medium bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2.5 py-1 rounded-full border border-violet-100 dark:border-violet-800">
+                  Promotor
+                </span>
+              )}
+              {roles?.is_cancha && (
+                <span className="text-xs font-medium bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2.5 py-1 rounded-full border border-orange-100 dark:border-orange-800">
+                  🏟️ Cancha
+                </span>
               )}
             </div>
-          </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-3 pt-4 border-t border-border">
-            <div className="text-center">
-              <p className="text-2xl font-black text-zinc-900 dark:text-white">{profile?.matches_played ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Partidos</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-black text-zinc-900 dark:text-white">
-                {profile?.rating_avg ? profile.rating_avg.toFixed(1) : "—"}
+            {profile?.bio && (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                {profile.bio}
               </p>
-              <p className="text-xs text-muted-foreground">Rating</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-black text-zinc-900 dark:text-white">{profile?.tournament_goals ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Goles</p>
+            )}
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3 pt-4 border-t border-border/60">
+              <div className="text-center">
+                <p className="text-2xl font-black text-zinc-900 dark:text-white">
+                  {profile?.matches_played ?? 0}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Partidos</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-black text-zinc-900 dark:text-white">
+                  {profile?.rating_avg
+                    ? profile.rating_avg.toFixed(1)
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Rating</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-black text-zinc-900 dark:text-white">
+                  {profile?.tournament_goals ?? 0}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Goles</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Complete profile banner */}
         {!profile?.username && (
-          <div className="bg-brand-primary/10 border border-brand-primary/30 rounded-xl p-4 mb-5">
-            <p className="text-sm font-medium text-brand-primary mb-1">Completá tu perfil</p>
-            <p className="text-xs text-muted-foreground mb-3">Añadí tu username y datos deportivos para empezar.</p>
+          <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl p-4">
+            <p className="text-sm font-semibold text-violet-800 dark:text-violet-300 mb-1">
+              Completá tu perfil
+            </p>
+            <p className="text-xs text-violet-600 dark:text-violet-400 mb-3">
+              Añadí tu username y datos deportivos para empezar.
+            </p>
             <Link href="/onboarding">
-              <Button size="sm">Completar perfil</Button>
+              <Button size="sm" className="rounded-xl">
+                Completar perfil
+              </Button>
             </Link>
           </div>
         )}
 
-        {/* Activate promoter banner */}
+        {/* Quick actions — activity */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+          <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Mi actividad
+          </p>
+          <nav className="divide-y divide-border/50">
+            <Link href="/mis-partidos">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                  <Zap className="size-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <span className="text-sm font-medium flex-1">
+                  Mis partidos
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </div>
+            </Link>
+            <Link href="/mis-reservas">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Bookmark className="size-4 text-green-600 dark:text-green-400" />
+                </div>
+                <span className="text-sm font-medium flex-1">
+                  Mis reservas
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </div>
+            </Link>
+            <Link href="/notificaciones">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Bell className="size-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <span className="text-sm font-medium flex-1">
+                  Notificaciones
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </div>
+            </Link>
+            <Link href="/amigos">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <Users className="size-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="text-sm font-medium flex-1">Amigos</span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </div>
+            </Link>
+          </nav>
+        </div>
+
+        {/* Quick actions — explore */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+          <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Explorar
+          </p>
+          <nav className="divide-y divide-border/50">
+            <Link href="/matches/new">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                  <Zap className="size-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <span className="text-sm font-medium flex-1">
+                  Crear partido
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </div>
+            </Link>
+            <Link href="/tournaments">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <Trophy className="size-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <span className="text-sm font-medium flex-1">Torneos</span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </div>
+            </Link>
+            {roles?.is_promoter && (
+              <Link href="/tournaments/mine">
+                <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Calendar className="size-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <span className="text-sm font-medium flex-1">
+                    Mis torneos
+                  </span>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </div>
+              </Link>
+            )}
+            {roles?.is_cancha && (
+              <Link href="/mis-canchas">
+                <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <Building2 className="size-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <span className="text-sm font-medium flex-1">
+                    Mis canchas
+                  </span>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </div>
+              </Link>
+            )}
+            <Link href="/verificacion">
+              <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                  <Shield className="size-4 text-zinc-600 dark:text-zinc-400" />
+                </div>
+                <span className="text-sm font-medium flex-1">
+                  Verificación de edad
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </div>
+            </Link>
+          </nav>
+        </div>
+
+        {/* Role activation banners */}
         {roles && !roles.is_promoter && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 mb-5">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-4">
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
               ¿Querés organizar torneos?
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
               Activá el rol de Promotor para crear y gestionar torneos.
             </p>
-            <Button size="sm" onClick={handleEnablePromoter} disabled={upgradingPromoter}>
+            <Button
+              size="sm"
+              className="rounded-xl"
+              onClick={handleEnablePromoter}
+              disabled={upgradingPromoter}
+            >
               {upgradingPromoter ? "Activando…" : "Activar rol de Promotor"}
             </Button>
           </div>
         )}
 
-        {/* Activate cancha banner */}
         {roles && !roles.is_cancha && (
-          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-xl p-4 mb-5">
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-2xl p-4">
             <p className="text-sm font-semibold text-orange-800 dark:text-orange-300 mb-1">
               🏟️ ¿Administrás una cancha?
             </p>
             <p className="text-xs text-orange-700 dark:text-orange-400 mb-3">
-              Registrá tus canchas, configurá horarios y recibí reservas online.
+              Registrá tus canchas, configurá horarios y recibí reservas
+              online.
             </p>
-            <Button size="sm" variant="outline" onClick={handleEnableCancha} disabled={upgradingCancha}
-              className="border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-50">
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-xl border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-50"
+              onClick={handleEnableCancha}
+              disabled={upgradingCancha}
+            >
               {upgradingCancha ? "Activando…" : "Activar rol de Cancha"}
             </Button>
           </div>
         )}
-
-        {/* Action grid */}
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <Link href="/matches/new">
-            <Button variant="outline" className="w-full gap-2">
-              <Zap className="size-4" /> Crear partido
-            </Button>
-          </Link>
-          <Link href="/tournaments">
-            <Button variant="outline" className="w-full gap-2">
-              <Trophy className="size-4" /> Torneos
-            </Button>
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <Link href="/tournaments/mine">
-            <Button variant="outline" className="w-full gap-2">
-              <Trophy className="size-4" /> Mis torneos
-            </Button>
-          </Link>
-          <Link href="/canchas">
-            <Button variant="outline" className="w-full gap-2">
-              <Building2 className="size-4" /> Canchas
-            </Button>
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {roles?.is_cancha && (
-            <Link href="/mis-canchas">
-              <Button variant="outline" className="w-full gap-2">
-                <Building2 className="size-4" /> Mis canchas
-              </Button>
-            </Link>
-          )}
-          <Link href="/verificacion">
-            <Button variant="outline" className="w-full gap-2">
-              <Shield className="size-4" /> Verificación
-            </Button>
-          </Link>
-        </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-t border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-around h-14">
-            <Link href="/feed" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🏠</span><span>Inicio</span>
-            </Link>
-            <Link href="/tournaments" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🏆</span><span>Torneos</span>
-            </Link>
-            <Link href="/canchas" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🏟️</span><span>Canchas</span>
-            </Link>
-            <Link href="/amigos" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>👥</span><span>Amigos</span>
-            </Link>
-            <Link href="/perfil" className="flex flex-col items-center gap-0.5 text-xs font-medium text-brand-primary">
-              <span>👤</span><span>Perfil</span>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 }

@@ -38,6 +38,9 @@ import MisCanchasPage from "@/pages/MisCanchasPage";
 import NuevaCanchaPage from "@/pages/NuevaCanchaPage";
 import CanchaAgendaPage from "@/pages/CanchaAgendaPage";
 import FriendsPage from "@/pages/FriendsPage";
+import MisPartidosPage from "@/pages/MisPartidosPage";
+import MisReservasPage from "@/pages/MisReservasPage";
+import EditCanchaPage from "@/pages/EditCanchaPage";
 
 const queryClient = new QueryClient();
 
@@ -113,6 +116,14 @@ function Router() {
         <ProtectedRoute component={TournamentRegistrationsPage} />
       </Route>
 
+      {/* Mis actividades */}
+      <Route path="/mis-partidos">
+        <ProtectedRoute component={MisPartidosPage} />
+      </Route>
+      <Route path="/mis-reservas">
+        <ProtectedRoute component={MisReservasPage} />
+      </Route>
+
       {/* Canchas (protected management) */}
       <Route path="/mis-canchas">
         <ProtectedRoute component={MisCanchasPage} />
@@ -123,7 +134,10 @@ function Router() {
       <Route path="/canchas/:id/agenda">
         <ProtectedRoute component={CanchaAgendaPage} />
       </Route>
-      {/* Public cancha detail — must come AFTER /canchas/nueva and /canchas/:id/agenda */}
+      <Route path="/canchas/:id/editar">
+        <ProtectedRoute component={EditCanchaPage} />
+      </Route>
+      {/* Public cancha detail — must come AFTER specific sub-routes */}
       <Route path="/canchas/:id" component={CanchaDetailPage} />
 
       <Route path="/amigos">

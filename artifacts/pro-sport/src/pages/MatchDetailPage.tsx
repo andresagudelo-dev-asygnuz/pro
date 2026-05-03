@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppLayout } from "@/components/AppLayout";
-import { CheckCircle2, Clock, MapPin, Globe, Lock, Building2, AlertCircle, Mail } from "lucide-react";
+import { CheckCircle2, Clock, MapPin, Globe, Lock, Building2, AlertCircle, Mail, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { Match, MatchParticipant, Profile, Sport, CanchaBooking, MatchInvitation } from "@/lib/types/db";
 import { getMyMatchInvitation, respondToMatchInvitation, getMatchInvitations } from "@/lib/friends/api";
@@ -35,6 +35,8 @@ export default function MatchDetailPage() {
   const [myInvitation, setMyInvitation] = useState<MatchInvitation | null>(null);
   const [pendingInvitations, setPendingInvitations] = useState<(MatchInvitation & { profile?: Profile })[]>([]);
   const [respondingInvite, setRespondingInvite] = useState(false);
+  const [cancellingMatch, setCancellingMatch] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -122,6 +124,23 @@ export default function MatchDetailPage() {
     setRespondingInvite(false);
   }
 
+  async function handleCancelMatch() {
+    if (!match || !user) return;
+    setCancellingMatch(true);
+    const { error } = await supabase
+      .from("matches")
+      .update({ status: "cancelled" })
+      .eq("id", match.id);
+    if (error) {
+      toast.error("No se pudo cancelar el partido.");
+    } else {
+      toast.success("El partido fue cancelado.");
+      setMatch((m) => (m ? { ...m, status: "cancelled" } : m));
+      setShowCancelConfirm(false);
+    }
+    setCancellingMatch(false);
+  }
+
   async function handleConfirm() {
     if (!match || !user) return;
     setConfirming(true);
@@ -175,6 +194,16 @@ export default function MatchDetailPage() {
               <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50"><Lock className="mr-1 h-3 w-3" /> Cerrado</Badge>
             )}
             {isOrganizer && <Badge variant="secondary">Organizás</Badge>}
+            {isOrganizer && match.status === "open" && !showCancelConfirm && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                onClick={() => setShowCancelConfirm(true)}
+              >
+                <XCircle className="size-3.5 mr-1" /> Cancelar partido
+              </Button>
+            )}
             {!isOrganizer && (
               <Button size="sm" variant={isJoined ? "outline" : "default"} disabled={joining || isFull} onClick={handleJoin}>
                 {joining ? "…" : isJoined ? "Salir" : isFull ? "Lleno" : "Unirse"}
@@ -184,6 +213,36 @@ export default function MatchDetailPage() {
         </div>
 
         {/* Cancha booking status banner */}
+        {/* Cancel confirmation banner */}
+        {showCancelConfirm && (
+          <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-4 flex flex-col gap-3">
+            <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+              ¿Cancelar el partido?
+            </p>
+            <p className="text-xs text-red-700 dark:text-red-400">
+              Esta acción notificará a los jugadores y no se puede deshacer.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={cancellingMatch}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleCancelMatch}
+              >
+                {cancellingMatch ? "Cancelando…" : "Sí, cancelar partido"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={cancellingMatch}
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                No, volver
+              </Button>
+            </div>
+          </div>
+        )}
+
         {canchaBooking && (
           <div className={`rounded-lg p-3 flex items-center gap-3 text-sm border ${
             canchaBooking.status === "pendiente"

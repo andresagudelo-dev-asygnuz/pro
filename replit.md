@@ -63,6 +63,14 @@ pnpm workspace monorepo using TypeScript. Migration from Vercel/Next.js → Repl
 | `/tournaments/:id/standings` | TournamentStandingsPage | Protected |
 | `/tournaments/:id/register` | TournamentRegisterPage | Protected |
 | `/tournaments/:id/registrations` | TournamentRegistrationsPage | Protected |
+| `/mis-partidos` | MisPartidosPage | Protected |
+| `/mis-reservas` | MisReservasPage | Protected |
+| `/mis-canchas` | MisCanchasPage | Protected |
+| `/canchas` | CanchasPage | Public |
+| `/canchas/nueva` | NuevaCanchaPage | Protected |
+| `/canchas/:id` | CanchaDetailPage | Public |
+| `/canchas/:id/agenda` | CanchaAgendaPage | Protected |
+| `/canchas/:id/editar` | EditCanchaPage | Protected |
 | `/admin/venues` | AdminVenuesPage | Protected |
 | `/admin/verificaciones` | AdminVerificationsPage | Protected |
 
@@ -76,23 +84,41 @@ pnpm workspace monorepo using TypeScript. Migration from Vercel/Next.js → Repl
 - **NotificationsPage**: shows pending friend requests + match invitations with inline accept/reject
 - **Bottom nav**: all pages now show 👥 Amigos instead of 🔔 Notif
 
+### Bottom Navigation (BottomNav.tsx)
+- 5-tab fixed bottom nav: Inicio / Torneos / Crear (violet FAB) / Canchas / Perfil
+- Active tab: violet bg pill + dot indicator below icon
+- Integrated into AppLayout (covers all detail pages) + every standalone page
+- Crear button always stays centered as a gradient violet rounded square button
+
+### Canchas System
+- **CanchasPage** — Browse all canchas with sport chip filters + city search, cancha cards with price/discount
+- **CanchaDetailPage** — View cancha details, schedule availability picker, booking form
+- **NuevaCanchaPage** — Register new cancha (is_cancha role required)
+- **CanchaAgendaPage** — Owner manages weekly schedule + daily bookings (shows booker full_name + avatar)
+- **EditCanchaPage** — Pre-filled edit form for all cancha fields (owner-only access)
+- **MisCanchasPage** — Owner's cancha list with Agenda/Editar/Ver buttons + active toggle
+
 ### Pages summary
 - **LandingPage** — Countdown banner, hero, features, registration form
 - **LoginPage / SignupPage** — Supabase email/password auth; signup → onboarding redirect if session immediate
 - **OnboardingPage** — Profile setup after signup (username, city, skill level)
-- **FeedPage** — Open matches list with bottom nav
-- **MatchDetailPage** — Join/leave match, participant list, confirmation, inline chat, invitation accept/reject
-- **NewMatchPage** — 3-step wizard: info → place/date → invite friends
+- **FeedPage** — Open matches list; sport chip filters from DB + city dropdown filter; Mis Partidos shortcut
+- **MatchDetailPage** — Join/leave match, participant list, confirmation, inline chat, invitation accept/reject; organizer can cancel match (status → cancelled)
+- **NewMatchPage** — 3-step wizard: info (+ is_public toggle) → place/date → invite friends; is_public sent to DB
+- **MisPartidosPage** — Two tabs: "Organizo" + "Participo"; sport icon + status badge per match
+- **MisReservasPage** — Cancha bookings list; status badges (pendiente/confirmada/cancelada), grouped by active/cancelled
 - **FriendsPage** — Search users, manage friends, handle requests
-- **TournamentsPage** — List all tournaments
+- **TournamentsPage** — List all tournaments with slots progress bar
 - **TournamentDetailPage** — Tournament info, standings/matches links, register button
 - **NewTournamentPage** — Create tournament form
-- **TournamentMatchesPage / StandingsPage / RegisterPage / RegistrationsPage / NewMatchPage / MatchResultPage** — Full tournament flow
-- **ProfilePage** — My profile: stats, edit button (→ `/perfil/editar`), quick actions
+- **TournamentMatchesPage** — Fixture; displayRegistration shows real player full_name via profiles join
+- **TournamentRegistrationsPage** — Registrations with real full_name via profiles join + avatar initials
+- **TournamentStandingsPage / RegisterPage / NewMatchPage / MatchResultPage** — Full tournament flow
+- **ProfilePage** — Gradient card; stats; activity menu (Mis Partidos, Mis Reservas, Notificaciones, Amigos as ChevronRight rows); role activation banners
 - **ProfileEditPage** — Edit full_name, username, city, skill level, bio
 - **UserProfilePage** (`/profile/:id`) — Other users' profile with friend button
 - **PublicProfilePage** (`/u/:slug`) — Public profile by username slug with friend button
-- **NotificationsPage** — Friend requests + match invitations + activity notifications
+- **NotificationsPage** — Friend requests + match invitations with accept/reject + activity feed
 - **VerificationPage** — Age verification document upload
 - **AdminVenuesPage** — Create/manage venues and courts
 - **AdminVerificationsPage** — Admin review of age verifications

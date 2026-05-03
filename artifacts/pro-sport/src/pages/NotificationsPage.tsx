@@ -2,9 +2,19 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { Bell, CheckCircle2, MessageSquare, UserPlus, Mail, Check, X } from "lucide-react";
+import {
+  Bell,
+  CheckCircle2,
+  MessageSquare,
+  UserPlus,
+  Mail,
+  Check,
+  X,
+  ArrowLeft,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BottomNav } from "@/components/BottomNav";
 import { initialsFromName } from "@/lib/format";
 import { toast } from "sonner";
 import {
@@ -36,14 +46,22 @@ type Notification = {
 
 type MatchInviteWithMatch = MatchInvitation & {
   matches: { title: string; starts_at: string } | null;
-  inviterProfile?: { full_name: string | null; avatar_url: string | null; username: string | null };
+  inviterProfile?: {
+    full_name: string | null;
+    avatar_url: string | null;
+    username: string | null;
+  };
 };
 
 export default function NotificationsPage() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [friendRequests, setFriendRequests] = useState<FriendWithProfile[]>([]);
-  const [matchInvitations, setMatchInvitations] = useState<MatchInviteWithMatch[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendWithProfile[]>(
+    [],
+  );
+  const [matchInvitations, setMatchInvitations] = useState<
+    MatchInviteWithMatch[]
+  >([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,11 +71,11 @@ export default function NotificationsPage() {
         supabase
           .from("notifications")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", user!.id)
           .order("created_at", { ascending: false })
           .limit(50),
-        getPendingReceived(supabase, user.id),
-        getPendingMatchInvitations(supabase, user.id),
+        getPendingReceived(supabase, user!.id),
+        getPendingMatchInvitations(supabase, user!.id),
       ]);
 
       setNotifications(notifRes.data || []);
@@ -71,7 +89,7 @@ export default function NotificationsPage() {
           .select("id, full_name, avatar_url, username")
           .in("id", inviterIds);
         const profileMap = new Map(
-          ((inviterProfiles ?? []) as any[]).map((p) => [p.id, p]),
+          ((inviterProfiles ?? []) as { id: string; full_name: string | null; avatar_url: string | null; username: string | null }[]).map((p) => [p.id, p]),
         );
         setMatchInvitations(
           rawInvites.map((inv) => ({
@@ -82,7 +100,6 @@ export default function NotificationsPage() {
       } else {
         setMatchInvitations([]);
       }
-
       setLoading(false);
     }
     load();
@@ -96,26 +113,45 @@ export default function NotificationsPage() {
       .eq("user_id", user.id)
       .is("read_at", null);
     setNotifications((prev) =>
-      prev.map((n) => ({ ...n, read_at: n.read_at || new Date().toISOString() })),
+      prev.map((n) => ({
+        ...n,
+        read_at: n.read_at || new Date().toISOString(),
+      })),
     );
   };
 
   async function handleAcceptFriend(friendshipId: string) {
     const { error } = await acceptFriendRequest(supabase, friendshipId);
-    if (error) { toast.error(error); return; }
+    if (error) {
+      toast.error(error);
+      return;
+    }
     setFriendRequests((prev) => prev.filter((f) => f.id !== friendshipId));
     toast.success("¡Ahora son amigos!");
   }
 
   async function handleRejectFriend(friendshipId: string) {
     const { error } = await rejectFriendRequest(supabase, friendshipId);
-    if (error) { toast.error(error); return; }
+    if (error) {
+      toast.error(error);
+      return;
+    }
     setFriendRequests((prev) => prev.filter((f) => f.id !== friendshipId));
   }
 
-  async function handleAcceptMatchInvite(invitationId: string, matchId: string) {
-    const { error } = await respondToMatchInvitation(supabase, invitationId, "accepted");
-    if (error) { toast.error(error); return; }
+  async function handleAcceptMatchInvite(
+    invitationId: string,
+    matchId: string,
+  ) {
+    const { error } = await respondToMatchInvitation(
+      supabase,
+      invitationId,
+      "accepted",
+    );
+    if (error) {
+      toast.error(error);
+      return;
+    }
     await supabase
       .from("match_participants")
       .insert({ match_id: matchId, user_id: user?.id, status: "joined" });
@@ -124,18 +160,29 @@ export default function NotificationsPage() {
   }
 
   async function handleRejectMatchInvite(invitationId: string) {
-    const { error } = await respondToMatchInvitation(supabase, invitationId, "rejected");
-    if (error) { toast.error(error); return; }
+    const { error } = await respondToMatchInvitation(
+      supabase,
+      invitationId,
+      "rejected",
+    );
+    if (error) {
+      toast.error(error);
+      return;
+    }
     setMatchInvitations((prev) => prev.filter((i) => i.id !== invitationId));
     toast.success("Invitación rechazada.");
   }
 
   const getIcon = (type: string) => {
     switch (type) {
-      case "match_request": return <UserPlus className="size-4 text-blue-500" />;
-      case "match_accepted": return <CheckCircle2 className="size-4 text-green-500" />;
-      case "match_invite": return <MessageSquare className="size-4 text-purple-500" />;
-      default: return <Bell className="size-4 text-muted-foreground" />;
+      case "match_request":
+        return <UserPlus className="size-4 text-blue-500" />;
+      case "match_accepted":
+        return <CheckCircle2 className="size-4 text-green-500" />;
+      case "match_invite":
+        return <MessageSquare className="size-4 text-violet-500" />;
+      default:
+        return <Bell className="size-4 text-muted-foreground" />;
     }
   };
 
@@ -143,62 +190,118 @@ export default function NotificationsPage() {
     const { player_name } = n.data;
     switch (n.type) {
       case "match_request":
-        return <span><strong>{player_name || "Un usuario"}</strong> solicitó unirse a tu partido.</span>;
+        return (
+          <span>
+            <strong>{player_name || "Un usuario"}</strong> solicitó unirse a tu
+            partido.
+          </span>
+        );
       case "match_accepted":
-        return <span>Tu solicitud para unirte al partido fue <strong>aceptada</strong>.</span>;
+        return (
+          <span>
+            Tu solicitud para unirte al partido fue <strong>aceptada</strong>.
+          </span>
+        );
       case "match_invite":
-        return <span>Has sido <strong>invitado</strong> a un nuevo partido.</span>;
+        return (
+          <span>
+            Has sido <strong>invitado</strong> a un nuevo partido.
+          </span>
+        );
       default:
         return <span>Nueva notificación recibida.</span>;
     }
   };
 
-  const hasActionable = friendRequests.length > 0 || matchInvitations.length > 0;
+  const hasActionable =
+    friendRequests.length > 0 || matchInvitations.length > 0;
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-zinc-900 dark:text-white">Notificaciones</h1>
-          <Button variant="ghost" size="sm" onClick={markAllRead}>Marcar todas</Button>
+          <div className="flex items-center gap-3">
+            <Link href="/perfil">
+              <button className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
+                <ArrowLeft className="size-4" />
+              </button>
+            </Link>
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-white">
+              Notificaciones
+            </h1>
+            {unreadCount > 0 && (
+              <span className="text-xs font-semibold bg-violet-600 text-white px-2 py-0.5 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={markAllRead}
+              className="text-xs text-muted-foreground rounded-xl"
+            >
+              Marcar leídas
+            </Button>
+          )}
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
+      <main className="container mx-auto px-4 py-4 max-w-2xl space-y-5">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <>
-            {/* ─── Friend requests ─── */}
+            {/* Friend requests */}
             {friendRequests.length > 0 && (
               <section>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
                   <UserPlus className="size-3.5" /> Solicitudes de amistad
                 </p>
-                <div className="flex flex-col border rounded-xl divide-y overflow-hidden bg-white dark:bg-zinc-900">
+                <div className="flex flex-col border border-border/60 rounded-2xl divide-y divide-border/50 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
                   {friendRequests.map((f) => (
-                    <div key={f.id} className="flex items-center gap-3 p-4 bg-primary/5">
+                    <div
+                      key={f.id}
+                      className="flex items-center gap-3 p-4 bg-violet-50/50 dark:bg-violet-900/10"
+                    >
                       <Link href={`/profile/${f.requester_id}`}>
                         <Avatar className="size-10 cursor-pointer shrink-0">
-                          {f.profile.avatar_url && <AvatarImage src={f.profile.avatar_url} />}
-                          <AvatarFallback>
-                            {initialsFromName(f.profile.full_name ?? f.profile.username)}
+                          {f.profile.avatar_url && (
+                            <AvatarImage src={f.profile.avatar_url} />
+                          )}
+                          <AvatarFallback className="text-xs">
+                            {initialsFromName(
+                              f.profile.full_name ?? f.profile.username,
+                            )}
                           </AvatarFallback>
                         </Avatar>
                       </Link>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
+                        <p className="text-sm font-semibold truncate">
                           {f.profile.full_name ?? f.profile.username ?? "Usuario"}
                         </p>
-                        <p className="text-xs text-muted-foreground">quiere ser tu amigo</p>
+                        <p className="text-xs text-muted-foreground">
+                          quiere ser tu amigo
+                        </p>
                       </div>
                       <div className="flex gap-2 shrink-0">
-                        <Button size="sm" onClick={() => handleAcceptFriend(f.id)}>
+                        <Button
+                          size="sm"
+                          className="rounded-xl w-8 h-8 p-0 bg-violet-600 hover:bg-violet-700"
+                          onClick={() => handleAcceptFriend(f.id)}
+                        >
                           <Check className="size-3.5" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleRejectFriend(f.id)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl w-8 h-8 p-0"
+                          onClick={() => handleRejectFriend(f.id)}
+                        >
                           <X className="size-3.5" />
                         </Button>
                       </div>
@@ -208,22 +311,27 @@ export default function NotificationsPage() {
               </section>
             )}
 
-            {/* ─── Match invitations ─── */}
+            {/* Match invitations */}
             {matchInvitations.length > 0 && (
               <section>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
                   <Mail className="size-3.5" /> Invitaciones a partidos
                 </p>
-                <div className="flex flex-col border rounded-xl divide-y overflow-hidden bg-white dark:bg-zinc-900">
+                <div className="flex flex-col border border-border/60 rounded-2xl divide-y divide-border/50 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
                   {matchInvitations.map((inv) => (
-                    <div key={inv.id} className="flex items-start gap-3 p-4 bg-primary/5">
+                    <div
+                      key={inv.id}
+                      className="flex items-start gap-3 p-4 bg-violet-50/50 dark:bg-violet-900/10"
+                    >
                       <Avatar className="size-10 shrink-0 mt-0.5">
                         {inv.inviterProfile?.avatar_url && (
                           <AvatarImage src={inv.inviterProfile.avatar_url} />
                         )}
-                        <AvatarFallback>
+                        <AvatarFallback className="text-xs">
                           {initialsFromName(
-                            inv.inviterProfile?.full_name ?? inv.inviterProfile?.username ?? null,
+                            inv.inviterProfile?.full_name ??
+                              inv.inviterProfile?.username ??
+                              null,
                           )}
                         </AvatarFallback>
                       </Avatar>
@@ -237,35 +345,42 @@ export default function NotificationsPage() {
                           te invitó a{" "}
                           <Link
                             href={`/matches/${inv.match_id}`}
-                            className="font-semibold underline"
+                            className="font-semibold text-violet-600 dark:text-violet-400 hover:underline"
                           >
                             {inv.matches?.title ?? "un partido"}
                           </Link>
                         </p>
                         {inv.matches?.starts_at && (
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {new Date(inv.matches.starts_at).toLocaleString("es-CO", {
-                              weekday: "short",
-                              day: "numeric",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {new Date(inv.matches.starts_at).toLocaleString(
+                              "es-CO",
+                              {
+                                weekday: "short",
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
                           </p>
                         )}
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex gap-2 mt-2.5">
                           <Button
                             size="sm"
-                            onClick={() => handleAcceptMatchInvite(inv.id, inv.match_id)}
+                            className="rounded-xl gap-1 bg-violet-600 hover:bg-violet-700"
+                            onClick={() =>
+                              handleAcceptMatchInvite(inv.id, inv.match_id)
+                            }
                           >
-                            <Check className="size-3.5 mr-1" /> Aceptar
+                            <Check className="size-3.5" /> Aceptar
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
+                            className="rounded-xl gap-1"
                             onClick={() => handleRejectMatchInvite(inv.id)}
                           >
-                            <X className="size-3.5 mr-1" /> Rechazar
+                            <X className="size-3.5" /> Rechazar
                           </Button>
                         </div>
                       </div>
@@ -275,33 +390,48 @@ export default function NotificationsPage() {
               </section>
             )}
 
-            {/* ─── Regular notifications ─── */}
+            {/* Regular notifications */}
             {notifications.length === 0 && !hasActionable ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Bell className="size-12 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground">No tenés notificaciones nuevas.</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
+                  <Bell className="size-7 text-muted-foreground/40" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground mb-1">
+                    Sin notificaciones
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Acá aparecerán tus actividades recientes.
+                  </p>
+                </div>
               </div>
             ) : notifications.length > 0 ? (
               <section>
                 {hasActionable && (
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
-                    <Bell className="size-3.5" /> Actividad
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                    <Bell className="size-3.5" /> Actividad reciente
                   </p>
                 )}
-                <div className="flex flex-col border rounded-xl divide-y overflow-hidden bg-white dark:bg-zinc-900">
+                <div className="flex flex-col border border-border/60 rounded-2xl divide-y divide-border/50 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
                   {notifications.map((n) => (
                     <div
                       key={n.id}
                       className={`flex items-start gap-4 p-4 transition-colors ${
                         !n.read_at
-                          ? "bg-primary/5"
+                          ? "bg-violet-50/50 dark:bg-violet-900/10"
                           : "bg-background hover:bg-muted/30"
                       }`}
                     >
-                      <div className="mt-1">{getIcon(n.type)}</div>
+                      <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                        {getIcon(n.type)}
+                      </div>
                       <div className="flex-1 flex flex-col gap-1">
                         <Link
-                          href={n.data.match_id ? `/matches/${n.data.match_id}` : "#"}
+                          href={
+                            n.data.match_id
+                              ? `/matches/${n.data.match_id}`
+                              : "#"
+                          }
                           className="text-sm hover:underline"
                         >
                           {getMessage(n)}
@@ -311,7 +441,7 @@ export default function NotificationsPage() {
                         </span>
                       </div>
                       {!n.read_at && (
-                        <div className="size-2 rounded-full bg-primary mt-2" />
+                        <div className="size-2 rounded-full bg-violet-600 mt-2 shrink-0" />
                       )}
                     </div>
                   ))}
@@ -322,27 +452,7 @@ export default function NotificationsPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-t border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-around h-14">
-            <Link href="/feed" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🏠</span><span>Inicio</span>
-            </Link>
-            <Link href="/tournaments" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🏆</span><span>Torneos</span>
-            </Link>
-            <Link href="/matches/new" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>➕</span><span>Crear</span>
-            </Link>
-            <Link href="/notificaciones" className="flex flex-col items-center gap-0.5 text-xs font-medium text-brand-primary">
-              <span>🔔</span><span>Notif.</span>
-            </Link>
-            <Link href="/perfil" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>👤</span><span>Perfil</span>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 }

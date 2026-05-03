@@ -54,6 +54,7 @@ export default function NewMatchPage() {
   const [, setLocation] = useLocation();
 
   const [sports, setSports] = useState<Sport[]>([]);
+  const [isPublic, setIsPublic] = useState(true);
 
   const [s1, setS1] = useState<Step1>({
     title: "",
@@ -83,8 +84,8 @@ export default function NewMatchPage() {
       .from("sports")
       .select("*")
       .order("name")
-      .then(({ data }) => {
-        if (data) setSports(data as Sport[]);
+      .then(({ data }: { data: Sport[] | null }) => {
+        if (data) setSports(data);
       });
   }, []);
 
@@ -215,6 +216,7 @@ export default function NewMatchPage() {
         max_players: s1.max_players,
         skill_level: s1.skill_level && s1.skill_level !== "any" ? s1.skill_level : null,
         status: "open",
+        is_public: isPublic,
         ...(cancha_booking_id ? { cancha_booking_id } : {}),
       })
       .select()
@@ -431,7 +433,32 @@ export default function NewMatchPage() {
                 />
               </div>
 
-              <Button onClick={goToStep2} className="w-full">
+              {/* Visibilidad */}
+              <div className="flex items-center justify-between p-4 border border-border/60 rounded-xl bg-muted/30">
+                <div>
+                  <p className="text-sm font-medium">Partido público</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isPublic
+                      ? "Aparece en el feed y cualquiera puede unirse."
+                      : "Solo visible para quienes tengan el enlace."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPublic(!isPublic)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                    isPublic ? "bg-violet-600" : "bg-zinc-300 dark:bg-zinc-600"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                      isPublic ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <Button onClick={goToStep2} className="w-full rounded-xl bg-violet-600 hover:bg-violet-700">
                 Siguiente — Elegir lugar
                 <ArrowRight className="size-4 ml-1" />
               </Button>
