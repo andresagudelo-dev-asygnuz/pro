@@ -114,8 +114,8 @@ pnpm workspace monorepo using TypeScript. Migration from Vercel/Next.js → Repl
 - **TournamentMatchesPage** — Fixture; displayRegistration shows real player full_name via profiles join
 - **TournamentRegistrationsPage** — Registrations with real full_name via profiles join + avatar initials
 - **TournamentStandingsPage / RegisterPage / NewMatchPage / MatchResultPage** — Full tournament flow
-- **ProfilePage** — Gradient card; stats; activity menu (Mis Partidos, Mis Reservas, Notificaciones, Amigos as ChevronRight rows); role activation banners
-- **ProfileEditPage** — Edit full_name, username, city, skill level, bio
+- **ProfilePage** — FIFA-style PlayerCard in dark hero with ambient glow; stats bar (OVR/Partidos/Rating/Goles); unified-violet skills bars; teams section; activity nav rows with icons; role activation buttons; avatar upload via Supabase Storage (requires migration 003)
+- **ProfileEditPage** — Edit full_name, username, city, skill level, bio, position + 6 skill sliders (pace/shooting/passing/dribbling/defending/physical)
 - **UserProfilePage** (`/profile/:id`) — Other users' profile with friend button
 - **PublicProfilePage** (`/u/:slug`) — Public profile by username slug with friend button
 - **NotificationsPage** — Friend requests + match invitations with accept/reject + activity feed
@@ -161,9 +161,26 @@ This was migrated from `apps/web` (old Next.js setup). If this setting is wrong,
 - `pnpm --filter @workspace/api-server run dev` — run API server
 - `pnpm --filter @workspace/pro-sport exec tsc --noEmit` — typecheck frontend
 
+## Player Card Design System
+
+`src/components/PlayerCard.tsx` — FIFA-style card with 4 level variants:
+- **principiante**: amber/bronze gradient, `from-amber-600 via-orange-700 to-amber-950`
+- **intermedio**: silver, `from-slate-300 via-slate-400 to-slate-600`
+- **avanzado**: gold, `from-yellow-300 via-amber-400 to-yellow-700`
+- **pro**: violet/elite, `from-violet-400 via-violet-700 to-purple-950`
+
+OVR = avg of 6 skill stats. Aspect ratio 5/7. Avatar size-[120px]. Shimmer overlays + bottom vignette. Editable prop shows camera overlay on hover.
+
+## Teams System (requires migration 003)
+
+`src/lib/teams/api.ts` — createTeam, getMyTeams, getTeamById, joinTeam, leaveTeam with graceful degradation if table missing.  
+Routes: `/equipos`, `/equipos/nuevo`, `/equipos/:id`.  
+**Migration SQL**: `artifacts/pro-sport/supabase/migrations/003_teams_and_skills.sql` — run in Supabase Dashboard → SQL Editor.  
+Creates: `teams`, `team_members` tables + RLS policies + skills columns on `profiles` + avatars storage bucket + policies.
+
 ## Next Steps (post-MVP)
 
-- Avatar upload via Supabase Storage
+- Run migration 003 in Supabase SQL Editor to enable avatar upload + teams
 - Real-time notifications (Supabase Realtime subscriptions)
 - Match rating system
 - Venue booking / availability calendar
