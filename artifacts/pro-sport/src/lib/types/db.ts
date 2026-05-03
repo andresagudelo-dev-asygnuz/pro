@@ -38,6 +38,8 @@ export interface Sport {
   created_at: string;
 }
 
+export type PlayerPosition = "arquero" | "defensa" | "mediocampista" | "delantero";
+
 export interface Profile {
   id: string;
   username: string | null;
@@ -52,9 +54,45 @@ export interface Profile {
   matches_played: number;
   tournament_goals: number;
   tournament_matches: number;
+  position: PlayerPosition | null;
+  skill_pace: number;
+  skill_shooting: number;
+  skill_passing: number;
+  skill_dribbling: number;
+  skill_defending: number;
+  skill_physical: number;
   created_at: string;
   updated_at: string;
 }
+
+export interface Team {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  sport_type: string;
+  city: string;
+  owner_id: string;
+  is_public: boolean;
+  max_members: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMember {
+  team_id: string;
+  user_id: string;
+  role: "owner" | "captain" | "player";
+  joined_at: string;
+}
+
+export const PLAYER_POSITIONS: { value: PlayerPosition; label: string; abbr: string }[] = [
+  { value: "arquero", label: "Arquero / Portero", abbr: "POR" },
+  { value: "defensa", label: "Defensa", abbr: "DEF" },
+  { value: "mediocampista", label: "Mediocampista", abbr: "MED" },
+  { value: "delantero", label: "Delantero", abbr: "DEL" },
+];
 
 export interface Match {
   id: string;

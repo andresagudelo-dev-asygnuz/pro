@@ -42,6 +42,9 @@ import FriendsPage from "@/pages/FriendsPage";
 import MisPartidosPage from "@/pages/MisPartidosPage";
 import MisReservasPage from "@/pages/MisReservasPage";
 import EditCanchaPage from "@/pages/EditCanchaPage";
+import TeamsPage from "@/pages/TeamsPage";
+import NewTeamPage from "@/pages/NewTeamPage";
+import TeamDetailPage from "@/pages/TeamDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -143,6 +146,16 @@ function Router() {
 
       <Route path="/amigos">
         <ProtectedRoute component={FriendsPage} />
+      </Route>
+
+      <Route path="/equipos/nuevo">
+        <ProtectedRoute component={NewTeamPage} />
+      </Route>
+      <Route path="/equipos/:id">
+        <ProtectedRoute component={TeamDetailPage} />
+      </Route>
+      <Route path="/equipos">
+        <ProtectedRoute component={TeamsPage} />
       </Route>
 
       <Route path="/profile/:id">
