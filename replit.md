@@ -98,6 +98,21 @@ pnpm workspace monorepo using TypeScript. Migration from Vercel/Next.js → Repl
 - **AdminVerificationsPage** — Admin review of age verifications
 - **FeedbackPage** — Survey form (dark gradient design, public)
 
+### Email Templates (Supabase Auth)
+
+Templates personalizados aplicados via Supabase Management API. Archivos fuente en `artifacts/pro-sport/email-templates/`.
+
+| Template | Archivo | Asunto | Cuándo |
+|----------|---------|--------|--------|
+| Confirmación de registro | `confirmation.html` | Activá tu cuenta en PRO. ⚡ | Al crear cuenta |
+| Recuperación de contraseña | `recovery.html` | Restablecé tu contraseña · PRO. | Al pedir reset |
+| Cambio de email | `email-change.html` | Confirmá tu nuevo email · PRO. | Al cambiar email |
+| Invitación de usuario | `invite.html` | ¡Te invitaron a PRO.! 🏆 | Al invitar usuario |
+
+**Diseño:** Header oscuro (`#1C1535`), logo PRO. con punto violeta, franja degradada `#6B46C1 → #8B5CF6`, botón CTA con sombra, estilos inline (compatibilidad universal), en español. Variables Supabase usadas: `{{ .ConfirmationURL }}`, `{{ .Email }}`, `{{ .NewEmail }}`.
+
+**Para re-aplicar:** `PATCH https://api.supabase.com/v1/projects/ewzpwldtaeaxtesimjau/config/auth` con `Authorization: Bearer <PAT>` y `User-Agent` header.
+
 ## Vercel Deployment
 
 The project deploys via Vercel. The `vercel.json` at `artifacts/pro-sport/vercel.json` configures the build:
