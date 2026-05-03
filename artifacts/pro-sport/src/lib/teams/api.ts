@@ -7,12 +7,28 @@ export type TeamWithCount = Team & { member_count: number };
 export type TeamMemberWithProfile = TeamMember & { profile: Pick<Profile, "id" | "full_name" | "username" | "avatar_url" | "city" | "primary_skill_level"> };
 export type TeamWithMembers = Team & { team_members: TeamMemberWithProfile[] };
 
+/** Returns true if the error means the teams table doesn't exist yet (migration pending). */
+function isMissingTable(error: any): boolean {
+  const msg: string = error?.message ?? error?.details ?? "";
+  return (
+    msg.includes("schema cache") ||
+    msg.includes("relation") ||
+    msg.includes("does not exist") ||
+    msg.includes("Could not find the table") ||
+    error?.code === "PGRST200" ||
+    error?.code === "42P01"
+  );
+}
+
 export async function getMyTeams(userId: string): Promise<TeamWithCount[]> {
   const { data, error } = await supabase
     .from("team_members")
     .select("team_id, teams(*, team_members(count))")
     .eq("user_id", userId);
-  if (error) throw error;
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw error;
+  }
   return (data ?? []).map((row: any) => {
     const t = row.teams;
     return { ...t, member_count: t.team_members?.[0]?.count ?? 0 };
@@ -28,7 +44,10 @@ export async function getPublicTeams(city?: string): Promise<TeamWithCount[]> {
     .limit(30);
   if (city) q = q.eq("city", city);
   const { data, error } = await q;
-  if (error) throw error;
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw error;
+  }
   return (data ?? []).map((t: any) => ({ ...t, member_count: t.team_members?.[0]?.count ?? 0 }));
 }
 
@@ -38,7 +57,10 @@ export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
     .select(`*, team_members(role, joined_at, user_id, profile:profiles(id, full_name, username, avatar_url, city, primary_skill_level))`)
     .eq("id", id)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    if (isMissingTable(error)) return null;
+    throw error;
+  }
   return data as TeamWithMembers | null;
 }
 
@@ -58,7 +80,6 @@ export async function createTeam(payload: {
     .select()
     .single();
   if (error) throw error;
-  // Auto-add owner as member
   await supabase.from("team_members").insert({ team_id: data.id, user_id: payload.owner_id, role: "owner" });
   return data as Team;
 }
