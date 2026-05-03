@@ -15,7 +15,21 @@ ALTER TABLE match_ratings ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Participants can insert ratings"
   ON match_ratings FOR INSERT
-  WITH CHECK (auth.uid() = rater_id);
+  WITH CHECK (
+    auth.uid() = rater_id
+    AND (
+      EXISTS (
+        SELECT 1 FROM match_participants
+        WHERE match_participants.match_id = match_ratings.match_id
+          AND match_participants.user_id = auth.uid()
+      )
+      OR EXISTS (
+        SELECT 1 FROM matches
+        WHERE matches.id = match_ratings.match_id
+          AND matches.organizer_id = auth.uid()
+      )
+    )
+  );
 
 CREATE POLICY "Anyone can view ratings"
   ON match_ratings FOR SELECT
@@ -23,7 +37,22 @@ CREATE POLICY "Anyone can view ratings"
 
 CREATE POLICY "Raters can update their own"
   ON match_ratings FOR UPDATE
-  USING (auth.uid() = rater_id);
+  USING (auth.uid() = rater_id)
+  WITH CHECK (
+    auth.uid() = rater_id
+    AND (
+      EXISTS (
+        SELECT 1 FROM match_participants
+        WHERE match_participants.match_id = match_ratings.match_id
+          AND match_participants.user_id = auth.uid()
+      )
+      OR EXISTS (
+        SELECT 1 FROM matches
+        WHERE matches.id = match_ratings.match_id
+          AND matches.organizer_id = auth.uid()
+      )
+    )
+  );
 
 -- 2. Trigger to recalculate profile rating after each insert/update
 CREATE OR REPLACE FUNCTION update_profile_rating()
