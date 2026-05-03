@@ -64,6 +64,32 @@ export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
   return data as TeamWithMembers | null;
 }
 
+export class RlsPolicyError extends Error {
+  readonly sql: string;
+  constructor(sql: string) {
+    super("rls_policy_missing");
+    this.name = "RlsPolicyError";
+    this.sql = sql;
+  }
+}
+
+const TEAMS_RLS_FIX_SQL = `-- Ejecutá esto en Supabase → SQL Editor
+DROP POLICY IF EXISTS teams_insert ON teams;
+CREATE POLICY teams_insert ON teams
+  FOR INSERT TO authenticated
+  WITH CHECK (owner_id = auth.uid());
+
+DROP POLICY IF EXISTS tm_insert ON team_members;
+CREATE POLICY tm_insert ON team_members
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    user_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM teams
+      WHERE id = team_id AND owner_id = auth.uid()
+    )
+  );`.trim();
+
 export async function createTeam(payload: {
   name: string;
   slug: string;
@@ -80,12 +106,26 @@ export async function createTeam(payload: {
     .select()
     .single();
   if (error) {
-    if (error.message?.includes("row-level security") || error.message?.includes("policy")) {
-      throw new Error("Falta la política RLS de INSERT en la tabla teams. Ejecutá en Supabase SQL Editor: CREATE POLICY teams_insert ON teams FOR INSERT TO authenticated WITH CHECK (owner_id = auth.uid());");
-    }
+    const isRls =
+      error.message?.includes("row-level security") ||
+      error.message?.includes("policy") ||
+      error.code === "42501" ||
+      error.code === "PGRST301";
+    if (isRls) throw new RlsPolicyError(TEAMS_RLS_FIX_SQL);
     throw error;
   }
-  await supabase.from("team_members").insert({ team_id: data.id, user_id: payload.owner_id, role: "owner" });
+  const { error: memberErr } = await supabase
+    .from("team_members")
+    .insert({ team_id: data.id, user_id: payload.owner_id, role: "owner" });
+  if (memberErr) {
+    const isRls =
+      memberErr.message?.includes("row-level security") ||
+      memberErr.message?.includes("policy") ||
+      memberErr.code === "42501" ||
+      memberErr.code === "PGRST301";
+    if (isRls) throw new RlsPolicyError(TEAMS_RLS_FIX_SQL);
+    throw memberErr;
+  }
   return data as Team;
 }
 
