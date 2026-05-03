@@ -28,10 +28,8 @@ import { ArrowLeft, ArrowRight, Building2, MapPin } from "lucide-react";
 
 const supabase = createClient();
 
-function todayDatetimeLocal() {
-  const now = new Date();
-  now.setMinutes(Math.ceil(now.getMinutes() / 30) * 30, 0, 0);
-  return now.toISOString().slice(0, 16);
+function todayDate() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 type Step1 = {
@@ -63,7 +61,7 @@ export default function NewMatchPage() {
   });
 
   const [city, setCity] = useState("");
-  const [startsAt, setStartsAt] = useState(todayDatetimeLocal());
+  const [dateStr, setDateStr] = useState(todayDate());
   const [canchas, setCanchas] = useState<Cancha[]>([]);
   const [loadingCanchas, setLoadingCanchas] = useState(false);
   const [selectedCancha, setSelectedCancha] = useState<Cancha | null>(null);
@@ -100,18 +98,17 @@ export default function NewMatchPage() {
   }, [city, s1.sport_id]);
 
   useEffect(() => {
-    if (!selectedCancha || !startsAt) {
+    if (!selectedCancha || !dateStr) {
       setSlots([]);
       return;
     }
-    const dateStr = startsAt.split("T")[0];
     setSelectedSlot(null);
     setLoadingSlots(true);
     getAvailableSlots(supabase, selectedCancha.id, dateStr).then(({ data }) => {
       setSlots(data ?? []);
       setLoadingSlots(false);
     });
-  }, [selectedCancha, startsAt]);
+  }, [selectedCancha, dateStr]);
 
   function validateStep1() {
     const errs: Record<string, string> = {};
@@ -137,8 +134,9 @@ export default function NewMatchPage() {
     setError(null);
     const errs: Record<string, string> = {};
     if (!city) errs.city = "Seleccioná la ciudad del evento.";
-    if (!startsAt) errs.starts_at = "Indicá la fecha y hora del partido.";
+    if (!dateStr) errs.date = "Indicá la fecha del partido.";
     if (selectedCancha && !selectedSlot) errs.slot = "Seleccioná un horario disponible para la cancha.";
+    if (!selectedCancha && !selectedSlot) errs.slot = "Seleccioná una cancha y un horario.";
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
       return;
@@ -150,7 +148,6 @@ export default function NewMatchPage() {
     let cancha_booking_id: string | null = null;
 
     if (selectedCancha && selectedSlot) {
-      const dateStr = startsAt.split("T")[0];
       const finalPrice =
         selectedCancha.discount_percent > 0
           ? selectedCancha.price_per_hour * (1 - selectedCancha.discount_percent / 100)
@@ -179,6 +176,11 @@ export default function NewMatchPage() {
       ? `${selectedCancha.name} — ${selectedCancha.address}`
       : manualAddress || null;
 
+    // Build starts_at from date + slot start time (or midnight if no slot)
+    const startsAtISO = selectedSlot
+      ? new Date(`${dateStr}T${selectedSlot.start}:00`).toISOString()
+      : new Date(`${dateStr}T00:00:00`).toISOString();
+
     const { data, error: matchErr } = await supabase
       .from("matches")
       .insert({
@@ -188,7 +190,7 @@ export default function NewMatchPage() {
         description: s1.description.trim() || null,
         city,
         location: matchLocation,
-        starts_at: new Date(startsAt).toISOString(),
+        starts_at: startsAtISO,
         duration_minutes: s1.duration_minutes,
         max_players: s1.max_players,
         skill_level: (s1.skill_level && s1.skill_level !== "any") ? s1.skill_level : null,
@@ -206,7 +208,6 @@ export default function NewMatchPage() {
     setPending(false);
   }
 
-  const dateStr = startsAt ? startsAt.split("T")[0] : "";
   const finalPrice = selectedCancha
     ? selectedCancha.discount_percent > 0
       ? selectedCancha.price_per_hour * (1 - selectedCancha.discount_percent / 100)
@@ -382,18 +383,19 @@ export default function NewMatchPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Fecha y hora *</Label>
+                <Label>Fecha del partido *</Label>
                 <input
-                  type="datetime-local"
-                  value={startsAt}
+                  type="date"
+                  value={dateStr}
+                  min={todayDate()}
                   onChange={(e) => {
-                    setStartsAt(e.target.value);
+                    setDateStr(e.target.value);
                     setSelectedSlot(null);
                   }}
                   className="border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 />
-                {fieldErrors.starts_at && (
-                  <p className="text-xs text-destructive">{fieldErrors.starts_at}</p>
+                {fieldErrors.date && (
+                  <p className="text-xs text-destructive">{fieldErrors.date}</p>
                 )}
               </div>
 
@@ -494,9 +496,9 @@ export default function NewMatchPage() {
                     <div className="border-t pt-3 space-y-3">
                       <p className="text-sm font-medium">{selectedCancha.name} — horarios disponibles</p>
 
-                      {!startsAt ? (
+                      {!dateStr ? (
                         <p className="text-sm text-muted-foreground">
-                          Seleccioná la fecha y hora arriba para ver disponibilidad.
+                          Seleccioná la fecha arriba para ver disponibilidad.
                         </p>
                       ) : loadingSlots ? (
                         <div className="flex justify-center py-3">
