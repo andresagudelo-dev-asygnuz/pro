@@ -6,6 +6,7 @@ import { getAllCanchas } from "@/lib/canchas/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import {
   SPORT_TYPE_LABELS,
   SPORT_TYPE_ICONS,
@@ -116,70 +117,61 @@ export default function CanchasPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-zinc-900 dark:text-white">
-            Canchas
-          </h1>
-          <div className="flex items-center gap-2">
-            {roles?.is_cancha && (
-              <Link href="/mis-canchas">
-                <Button variant="outline" size="sm" className="rounded-xl text-xs">
-                  Mis canchas
-                </Button>
-              </Link>
-            )}
-            {roles?.is_cancha && (
-              <Link href="/canchas/nueva">
-                <Button size="sm" className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
-                  <Plus className="size-3.5" /> Agregar
-                </Button>
-              </Link>
-            )}
-          </div>
+      <PageHeader
+        title="Canchas"
+        actions={<>
+          {roles?.is_cancha && (
+            <Link href="/mis-canchas">
+              <Button variant="outline" size="sm" className="rounded-xl text-xs">Mis canchas</Button>
+            </Link>
+          )}
+          {roles?.is_cancha && (
+            <Link href="/canchas/nueva">
+              <Button size="sm" className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
+                <Plus className="size-3.5" /> Agregar
+              </Button>
+            </Link>
+          )}
+        </>}
+      />
+
+      {/* Search + sport filters */}
+      <div className="sticky top-14 z-40 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-b border-border/50 px-4 pb-3 pt-2 space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por ciudad…"
+            className="pl-9 rounded-xl h-9 text-sm"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
         </div>
-
-        {/* Search + sport filters */}
-        <div className="px-4 pb-3 space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por ciudad…"
-              className="pl-9 rounded-xl h-9 text-sm"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+          <button
+            onClick={() => setSportType("")}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+              sportType === ""
+                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
+                : "bg-background border-border hover:border-foreground/30 text-muted-foreground"
+            }`}
+          >
+            Todos
+          </button>
+          {CANCHAS_SPORT_OPTIONS.map((opt) => (
             <button
-              onClick={() => setSportType("")}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
-                sportType === ""
+              key={opt.value}
+              onClick={() => setSportType(sportType === opt.value ? "" : opt.value)}
+              className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+                sportType === opt.value
                   ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
                   : "bg-background border-border hover:border-foreground/30 text-muted-foreground"
               }`}
             >
-              Todos
+              {SPORT_TYPE_ICONS[opt.value]} {opt.label}
             </button>
-            {CANCHAS_SPORT_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() =>
-                  setSportType(sportType === opt.value ? "" : opt.value)
-                }
-                className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
-                  sportType === opt.value
-                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
-                    : "bg-background border-border hover:border-foreground/30 text-muted-foreground"
-                }`}
-              >
-                {SPORT_TYPE_ICONS[opt.value]} {opt.label}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
-      </header>
+      </div>
 
       <main className="container mx-auto px-4 py-4 max-w-2xl">
         {loading ? (

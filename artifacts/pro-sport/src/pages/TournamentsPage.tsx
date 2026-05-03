@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import { Plus, Trophy, Users, Calendar, MapPin } from "lucide-react";
 
 interface Tournament {
@@ -65,31 +66,23 @@ export default function TournamentsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-zinc-900 dark:text-white">
-              Torneos
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {roles?.is_promoter && (
-              <Link href="/tournaments/mine">
-                <Button variant="outline" size="sm" className="rounded-xl text-xs">
-                  Mis torneos
-                </Button>
-              </Link>
-            )}
-            {roles?.is_promoter && (
-              <Link href="/tournaments/new">
-                <Button size="sm" className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
-                  <Plus className="size-3.5" /> Crear
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Torneos"
+        actions={<>
+          {roles?.is_promoter && (
+            <Link href="/tournaments/mine">
+              <Button variant="outline" size="sm" className="rounded-xl text-xs">Mis torneos</Button>
+            </Link>
+          )}
+          {roles?.is_promoter && (
+            <Link href="/tournaments/new">
+              <Button size="sm" className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
+                <Plus className="size-3.5" /> Crear
+              </Button>
+            </Link>
+          )}
+        </>}
+      />
 
       <main className="container mx-auto px-4 py-4 max-w-2xl">
         {loading ? (

@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import { ArrowLeft, ArrowRight, Building2, MapPin, Users } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 const supabase = createClient();
@@ -47,7 +48,7 @@ type Step1 = {
 };
 
 export default function NewMatchPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -302,6 +303,15 @@ export default function NewMatchPage() {
               );
             })}
           </div>
+
+          <Link href="/perfil" className="shrink-0">
+            <Avatar className="size-8 ring-2 ring-violet-100 dark:ring-violet-900 cursor-pointer">
+              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Perfil" />}
+              <AvatarFallback className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-bold">
+                {initialsFromName(profile?.full_name ?? profile?.username)}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
         </div>
 
         <div className="h-1 bg-muted">

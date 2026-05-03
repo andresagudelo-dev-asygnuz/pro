@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { formatMatchDate } from "@/lib/format";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Plus, Zap, Calendar, Users, ArrowLeft } from "lucide-react";
 import type { Match, Sport } from "@/lib/types/db";
@@ -83,44 +84,40 @@ export default function MisPartidosPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/perfil">
-            <button className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
-              <ArrowLeft className="size-4" />
-            </button>
-          </Link>
-          <h1 className="text-lg font-bold flex-1">Mis Partidos</h1>
+      <PageHeader
+        title="Mis Partidos"
+        backHref="/feed"
+        actions={
           <Link href="/matches/new">
             <Button size="sm" className="gap-1.5 rounded-xl">
               <Plus className="size-3.5" /> Crear
             </Button>
           </Link>
-        </div>
+        }
+      />
 
-        <div className="flex px-4 pb-3 gap-2">
-          <button
-            onClick={() => setTab("organizados")}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-              tab === "organizados"
-                ? "bg-violet-600 text-white shadow-sm shadow-violet-500/30"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            Organizo ({organized.length})
-          </button>
-          <button
-            onClick={() => setTab("participando")}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-              tab === "participando"
-                ? "bg-violet-600 text-white shadow-sm shadow-violet-500/30"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            Participo ({participating.length})
-          </button>
-        </div>
-      </header>
+      <div className="sticky top-14 z-40 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-b border-border/50 px-4 pb-3 pt-2 flex gap-2">
+        <button
+          onClick={() => setTab("organizados")}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+            tab === "organizados"
+              ? "bg-violet-600 text-white shadow-sm shadow-violet-500/30"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          Organizo ({organized.length})
+        </button>
+        <button
+          onClick={() => setTab("participando")}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+            tab === "participando"
+              ? "bg-violet-600 text-white shadow-sm shadow-violet-500/30"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          Participo ({participating.length})
+        </button>
+      </div>
 
       <main className="container mx-auto px-4 py-4 max-w-2xl">
         {loading ? (

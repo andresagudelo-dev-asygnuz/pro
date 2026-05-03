@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, XCircle, Pencil, Users } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import {
   DAY_LABELS,
   type Cancha,
@@ -188,24 +189,17 @@ export default function CanchaAgendaPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/mis-canchas">
-            <button className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
-              <ArrowLeft className="size-4" />
-            </button>
-          </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold truncate">{cancha.name}</h1>
-            <p className="text-xs text-muted-foreground -mt-0.5">Agenda y horarios</p>
-          </div>
+      <PageHeader
+        title={cancha.name}
+        backHref="/mis-canchas"
+        actions={
           <Link href={`/canchas/${id}/editar`}>
             <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs">
               <Pencil className="size-3.5" /> Editar
             </Button>
           </Link>
-        </div>
-      </header>
+        }
+      />
 
       <main className="container mx-auto px-4 py-5 max-w-2xl space-y-5">
         {/* Horario semanal */}

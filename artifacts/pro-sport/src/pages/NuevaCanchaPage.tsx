@@ -13,6 +13,7 @@ import {
 import { CANCHAS_SPORT_OPTIONS, type CanchaSportType } from "@/lib/types/db";
 import { ArrowLeft } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 
 const supabase = createClient();
 
@@ -105,14 +106,7 @@ export default function NuevaCanchaPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/mis-canchas">
-            <Button variant="ghost" size="icon"><ArrowLeft className="size-4" /></Button>
-          </Link>
-          <h1 className="text-lg font-bold">Nueva cancha</h1>
-        </div>
-      </header>
+      <PageHeader title="Nueva cancha" backHref="/mis-canchas" />
 
       <main className="container mx-auto px-4 py-8 max-w-lg">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border p-6 shadow-sm">

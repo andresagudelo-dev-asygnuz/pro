@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { getMyBookings, type BookingWithCancha } from "@/lib/canchas/api";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
   SPORT_TYPE_ICONS,
@@ -118,16 +119,7 @@ export default function MisReservasPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/perfil">
-            <button className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
-              <ArrowLeft className="size-4" />
-            </button>
-          </Link>
-          <h1 className="text-lg font-bold">Mis Reservas</h1>
-        </div>
-      </header>
+      <PageHeader title="Mis Reservas" backHref="/perfil" />
 
       <main className="container mx-auto px-4 py-4 max-w-2xl space-y-6">
         {loading ? (

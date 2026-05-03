@@ -21,6 +21,7 @@ import type { Profile } from "@/lib/types/db";
 import { Users, UserPlus, Search, UserCheck, Clock, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 
 const supabase = createClient();
 
@@ -109,11 +110,7 @@ export default function FriendsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center">
-          <h1 className="text-lg font-bold text-zinc-900 dark:text-white">Amigos</h1>
-        </div>
-      </header>
+      <PageHeader title="Amigos" />
 
       <div className="sticky top-14 z-40 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-b border-border">
         <div className="container mx-auto px-4">

@@ -5,6 +5,7 @@ import { initialsFromName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import { createClient } from "@/lib/supabase/client";
 import {
   LogOut,
@@ -78,30 +79,23 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-zinc-900 dark:text-white">
-            Mi Perfil
-          </h1>
-          <div className="flex items-center gap-1">
-            <Link href="/perfil/editar">
-              <button
-                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
-                title="Editar perfil"
-              >
-                <Pencil className="size-4" />
-              </button>
-            </Link>
-            <button
-              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors text-muted-foreground"
-              onClick={handleSignOut}
-              title="Cerrar sesión"
-            >
-              <LogOut className="size-4" />
+      <PageHeader
+        title="Mi Perfil"
+        actions={<>
+          <Link href="/perfil/editar">
+            <button className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors" title="Editar perfil">
+              <Pencil className="size-4" />
             </button>
-          </div>
-        </div>
-      </header>
+          </Link>
+          <button
+            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors text-muted-foreground"
+            onClick={handleSignOut}
+            title="Cerrar sesión"
+          >
+            <LogOut className="size-4" />
+          </button>
+        </>}
+      />
 
       <main className="container mx-auto px-4 py-5 max-w-2xl space-y-4">
         {/* User card */}

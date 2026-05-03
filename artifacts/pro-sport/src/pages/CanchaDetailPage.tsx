@@ -6,6 +6,7 @@ import { getCanchaById, getAvailableSlots, createBooking } from "@/lib/canchas/a
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin, Users, Phone, MessageCircle, CheckCircle2 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
+import { PageHeader } from "@/components/PageHeader";
 import { SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, type Cancha, type TimeSlot } from "@/lib/types/db";
 import { toast } from "sonner";
 
@@ -116,19 +117,15 @@ export default function CanchaDetailPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/canchas">
-            <Button variant="ghost" size="icon"><ArrowLeft className="size-4" /></Button>
+      <PageHeader
+        title={cancha.name}
+        backHref="/canchas"
+        actions={isOwner ? (
+          <Link href={`/canchas/${cancha.id}/agenda`}>
+            <Button variant="outline" size="sm">Gestionar</Button>
           </Link>
-          <h1 className="text-lg font-bold truncate">{cancha.name}</h1>
-          {isOwner && (
-            <Link href={`/canchas/${cancha.id}/agenda`} className="ml-auto">
-              <Button variant="outline" size="sm">Gestionar</Button>
-            </Link>
-          )}
-        </div>
-      </header>
+        ) : undefined}
+      />
 
       <main className="container mx-auto px-4 py-6 max-w-lg space-y-5">
         {/* Info card */}
