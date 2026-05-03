@@ -242,8 +242,8 @@ export default function ProfilePage() {
             <Link href="/canchas" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
               <span>🏟️</span><span>Canchas</span>
             </Link>
-            <Link href="/notificaciones" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🔔</span><span>Notif.</span>
+            <Link href="/amigos" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+              <span>👥</span><span>Amigos</span>
             </Link>
             <Link href="/perfil" className="flex flex-col items-center gap-0.5 text-xs font-medium text-brand-primary">
               <span>👤</span><span>Perfil</span>

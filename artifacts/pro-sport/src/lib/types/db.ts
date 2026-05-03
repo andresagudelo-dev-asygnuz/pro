@@ -321,3 +321,26 @@ export const ENABLED_CITIES: string[] = [
   "Tunja",
   "Sincelejo",
 ];
+
+export type FriendshipStatus = "pending" | "accepted" | "rejected" | "blocked";
+
+export interface Friendship {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: FriendshipStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MatchInvitationStatus = "pending" | "accepted" | "rejected";
+
+export interface MatchInvitation {
+  id: string;
+  match_id: string;
+  inviter_id: string;
+  invitee_id: string;
+  status: MatchInvitationStatus;
+  created_at: string;
+  updated_at: string;
+}

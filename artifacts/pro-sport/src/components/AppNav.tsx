@@ -37,6 +37,7 @@ export function AppNav() {
             <Link href="/feed" className="text-muted-foreground hover:text-foreground transition-colors">Feed</Link>
             <Link href="/tournaments" className="text-muted-foreground hover:text-foreground transition-colors">Torneos</Link>
             <Link href="/matches/new" className="text-muted-foreground hover:text-foreground transition-colors">Crear partido</Link>
+            <Link href="/amigos" className="text-muted-foreground hover:text-foreground transition-colors">Amigos</Link>
             <Link href="/perfil" className="text-muted-foreground hover:text-foreground transition-colors">Mi perfil</Link>
           </nav>
         </div>

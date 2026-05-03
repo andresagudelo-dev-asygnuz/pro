@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppLayout } from "@/components/AppLayout";
-import { CheckCircle2, Clock, MapPin, Globe, Lock, Building2, AlertCircle } from "lucide-react";
-import type { Match, MatchParticipant, Profile, Sport, CanchaBooking } from "@/lib/types/db";
+import { CheckCircle2, Clock, MapPin, Globe, Lock, Building2, AlertCircle, Mail } from "lucide-react";
+import { toast } from "sonner";
+import type { Match, MatchParticipant, Profile, Sport, CanchaBooking, MatchInvitation } from "@/lib/types/db";
+import { getMyMatchInvitation, respondToMatchInvitation, getMatchInvitations } from "@/lib/friends/api";
 
 const supabase = createClient();
 
@@ -30,6 +32,9 @@ export default function MatchDetailPage() {
   const [sendingMsg, setSendingMsg] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [canchaBooking, setCanchaBooking] = useState<CanchaBooking & { canchas?: { name: string } } | null>(null);
+  const [myInvitation, setMyInvitation] = useState<MatchInvitation | null>(null);
+  const [pendingInvitations, setPendingInvitations] = useState<(MatchInvitation & { profile?: Profile })[]>([]);
+  const [respondingInvite, setRespondingInvite] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -39,7 +44,7 @@ export default function MatchDetailPage() {
       const m = matchRaw as Match;
       setMatch(m);
 
-      const [{ data: sportData }, { data: orgData }, { data: partsData }, { data: messagesData }, { data: profileRaw }, bookingRes] = await Promise.all([
+      const [{ data: sportData }, { data: orgData }, { data: partsData }, { data: messagesData }, { data: profileRaw }, bookingRes, invRes, allInvRes] = await Promise.all([
         supabase.from("sports").select("*").eq("id", m.sport_id).maybeSingle(),
         supabase.from("profiles").select("*").eq("id", m.organizer_id).maybeSingle(),
         supabase.from("match_participants").select("*").eq("match_id", m.id).order("joined_at"),
@@ -48,8 +53,20 @@ export default function MatchDetailPage() {
         m.cancha_booking_id
           ? supabase.from("cancha_bookings").select("*, canchas(name)").eq("id", m.cancha_booking_id).maybeSingle()
           : Promise.resolve({ data: null }),
+        getMyMatchInvitation(supabase, m.id, user.id),
+        getMatchInvitations(supabase, m.id),
       ]);
       if (bookingRes.data) setCanchaBooking(bookingRes.data as typeof canchaBooking);
+      if (invRes.data) setMyInvitation(invRes.data);
+
+      if (allInvRes.data && allInvRes.data.length > 0) {
+        const inviteeIds = allInvRes.data.map((inv) => inv.invitee_id);
+        const { data: invProfiles } = await supabase.from("profiles").select("*").in("id", inviteeIds);
+        const profileMap = new Map(((invProfiles ?? []) as Profile[]).map((p) => [p.id, p]));
+        setPendingInvitations(
+          allInvRes.data.map((inv) => ({ ...inv, profile: profileMap.get(inv.invitee_id) })),
+        );
+      }
 
       setSport(sportData as Sport | null);
       setOrganizer(orgData as Profile | null);
@@ -81,6 +98,28 @@ export default function MatchDetailPage() {
       if (newPart) setParticipants((prev) => [...prev, newPart as MatchParticipant]);
     }
     setJoining(false);
+  }
+
+  async function handleRespondInvitation(status: "accepted" | "rejected") {
+    if (!myInvitation) return;
+    setRespondingInvite(true);
+    const { error } = await respondToMatchInvitation(supabase, myInvitation.id, status);
+    if (error) { toast.error(error); }
+    else {
+      setMyInvitation((prev) => prev ? { ...prev, status } : null);
+      if (status === "accepted" && match && user) {
+        const { data: newPart } = await supabase
+          .from("match_participants")
+          .insert({ match_id: match.id, user_id: user.id, status: "joined" })
+          .select()
+          .single();
+        if (newPart) setParticipants((prev) => [...prev, newPart as MatchParticipant]);
+        toast.success("¡Te uniste al partido!");
+      } else if (status === "rejected") {
+        toast.success("Rechazaste la invitación.");
+      }
+    }
+    setRespondingInvite(false);
   }
 
   async function handleConfirm() {
@@ -175,6 +214,41 @@ export default function MatchDetailPage() {
           </div>
         )}
 
+        {/* Invitation banner — for users who were invited and haven't responded */}
+        {myInvitation && myInvitation.status === "pending" && !isJoined && (
+          <div className="rounded-lg p-4 flex flex-col gap-3 border bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-700">
+            <div className="flex items-center gap-2 text-purple-800 dark:text-purple-300">
+              <Mail className="size-4 shrink-0" />
+              <p className="text-sm font-medium">Tenés una invitación para este partido</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={respondingInvite}
+                onClick={() => handleRespondInvitation("accepted")}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Aceptar e ingresar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={respondingInvite}
+                onClick={() => handleRespondInvitation("rejected")}
+                className="border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                Rechazar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {myInvitation && myInvitation.status === "rejected" && !isJoined && (
+          <div className="rounded-lg p-3 text-sm border bg-muted/40 text-muted-foreground">
+            Rechazaste la invitación a este partido.
+          </div>
+        )}
+
         {isJoined && !isConfirmed && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-amber-800 text-sm">
@@ -210,6 +284,41 @@ export default function MatchDetailPage() {
           </div>
         </div>
       </header>
+
+      {/* Pending invitations section — visible to organizer */}
+      {isOrganizer && pendingInvitations.length > 0 && (
+        <section className="rounded-xl border bg-background p-6 shadow-sm">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
+            <Mail className="size-4 text-purple-500" />
+            Invitaciones pendientes ({pendingInvitations.filter((i) => i.status === "pending").length})
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {pendingInvitations.map((inv) => {
+              const pp = inv.profile;
+              return (
+                <li key={inv.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="size-7">
+                      {pp?.avatar_url && <AvatarImage src={pp.avatar_url} />}
+                      <AvatarFallback className="text-xs">{initialsFromName(pp?.full_name ?? null)}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{pp?.full_name ?? pp?.username ?? "Usuario"}</span>
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    inv.status === "pending"
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                      : inv.status === "accepted"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {inv.status === "pending" ? "Pendiente" : inv.status === "accepted" ? "Aceptó" : "Rechazó"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="rounded-xl border bg-background p-6 shadow-sm">
         <h2 className="text-sm font-semibold mb-4">Jugadores ({joinedCount}/{match.max_players})</h2>

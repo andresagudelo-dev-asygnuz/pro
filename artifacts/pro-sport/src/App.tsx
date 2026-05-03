@@ -37,6 +37,7 @@ import CanchaDetailPage from "@/pages/CanchaDetailPage";
 import MisCanchasPage from "@/pages/MisCanchasPage";
 import NuevaCanchaPage from "@/pages/NuevaCanchaPage";
 import CanchaAgendaPage from "@/pages/CanchaAgendaPage";
+import FriendsPage from "@/pages/FriendsPage";
 
 const queryClient = new QueryClient();
 
@@ -124,6 +125,10 @@ function Router() {
       </Route>
       {/* Public cancha detail — must come AFTER /canchas/nueva and /canchas/:id/agenda */}
       <Route path="/canchas/:id" component={CanchaDetailPage} />
+
+      <Route path="/amigos">
+        <ProtectedRoute component={FriendsPage} />
+      </Route>
 
       <Route path="/profile/:id">
         <ProtectedRoute component={UserProfilePage} />

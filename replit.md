@@ -52,6 +52,7 @@ pnpm workspace monorepo using TypeScript. Migration from Vercel/Next.js → Repl
 | `/onboarding` | OnboardingPage | Protected |
 | `/notificaciones` | NotificationsPage | Protected |
 | `/verificacion` | VerificationPage | Protected |
+| `/amigos` | FriendsPage | Protected |
 | `/matches/new` | NewMatchPage | Protected |
 | `/matches/:id` | MatchDetailPage | Protected |
 | `/tournaments` | TournamentsPage | Protected |
@@ -65,22 +66,33 @@ pnpm workspace monorepo using TypeScript. Migration from Vercel/Next.js → Repl
 | `/admin/venues` | AdminVenuesPage | Protected |
 | `/admin/verificaciones` | AdminVerificationsPage | Protected |
 
+### Friends System
+- **DB tables**: `friendships` (requester_id, addressee_id, status: pending/accepted/rejected/blocked) + `match_invitations` (match_id, inviter_id, invitee_id, status: pending/accepted/rejected)
+- **API**: `src/lib/friends/api.ts` — searchUsers, getFriends, getPendingReceived/Sent, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, removeFriend, sendMatchInvitations, getMyMatchInvitation, getMatchInvitations, respondToMatchInvitation
+- **FriendsPage** (`/amigos`): 3 tabs — Amigos (list + remove), Solicitudes (received + sent), Buscar (live search)
+- **Friend button**: on UserProfilePage + PublicProfilePage, shows state-aware button (Add / Pending / Accept+Reject / Remove)
+- **NewMatchPage**: 3-step wizard — Step 3 lets organizer select friends to invite before creating the match
+- **MatchDetailPage**: invitation banner (Accept/Reject) for invited users; pending invitations section for organizer
+- **NotificationsPage**: shows pending friend requests + match invitations with inline accept/reject
+- **Bottom nav**: all pages now show 👥 Amigos instead of 🔔 Notif
+
 ### Pages summary
 - **LandingPage** — Countdown banner, hero, features, registration form
 - **LoginPage / SignupPage** — Supabase email/password auth; signup → onboarding redirect if session immediate
 - **OnboardingPage** — Profile setup after signup (username, city, skill level)
 - **FeedPage** — Open matches list with bottom nav
-- **MatchDetailPage** — Join/leave match, participant list, confirmation, inline chat
-- **NewMatchPage** — Create match form
+- **MatchDetailPage** — Join/leave match, participant list, confirmation, inline chat, invitation accept/reject
+- **NewMatchPage** — 3-step wizard: info → place/date → invite friends
+- **FriendsPage** — Search users, manage friends, handle requests
 - **TournamentsPage** — List all tournaments
 - **TournamentDetailPage** — Tournament info, standings/matches links, register button
 - **NewTournamentPage** — Create tournament form
 - **TournamentMatchesPage / StandingsPage / RegisterPage / RegistrationsPage / NewMatchPage / MatchResultPage** — Full tournament flow
 - **ProfilePage** — My profile: stats, edit button (→ `/perfil/editar`), quick actions
 - **ProfileEditPage** — Edit full_name, username, city, skill level, bio
-- **UserProfilePage** (`/profile/:id`) — Other users' profile
-- **PublicProfilePage** (`/u/:slug`) — Public profile by username slug
-- **NotificationsPage** — Notifications list with mark-all-read
+- **UserProfilePage** (`/profile/:id`) — Other users' profile with friend button
+- **PublicProfilePage** (`/u/:slug`) — Public profile by username slug with friend button
+- **NotificationsPage** — Friend requests + match invitations + activity notifications
 - **VerificationPage** — Age verification document upload
 - **AdminVenuesPage** — Create/manage venues and courts
 - **AdminVerificationsPage** — Admin review of age verifications

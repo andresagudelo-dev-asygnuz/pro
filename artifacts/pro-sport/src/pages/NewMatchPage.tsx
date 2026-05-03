@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, Link } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { getAllCanchas, getAvailableSlots, createBooking } from "@/lib/canchas/api";
+import { getFriends, sendMatchInvitations, type FriendWithProfile } from "@/lib/friends/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,10 @@ import {
   type TimeSlot,
   type Sport,
 } from "@/lib/types/db";
-import { ArrowLeft, ArrowRight, Building2, MapPin } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { initialsFromName } from "@/lib/format";
+import { ArrowLeft, ArrowRight, Building2, MapPin, Users } from "lucide-react";
+import { toast } from "sonner";
 
 const supabase = createClient();
 
@@ -43,7 +47,7 @@ type Step1 = {
 
 export default function NewMatchPage() {
   const { user } = useAuth();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -69,6 +73,10 @@ export default function NewMatchPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [manualAddress, setManualAddress] = useState("");
+
+  const [friends, setFriends] = useState<FriendWithProfile[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     supabase
@@ -110,6 +118,14 @@ export default function NewMatchPage() {
     });
   }, [selectedCancha, dateStr]);
 
+  const loadFriends = useCallback(async () => {
+    if (!user) return;
+    setLoadingFriends(true);
+    const { data } = await getFriends(supabase, user.id);
+    setFriends(data ?? []);
+    setLoadingFriends(false);
+  }, [user]);
+
   function validateStep1() {
     const errs: Record<string, string> = {};
     if (s1.title.trim().length < 3) errs.title = "El título debe tener al menos 3 caracteres.";
@@ -121,27 +137,36 @@ export default function NewMatchPage() {
 
   function goToStep2() {
     const errs = validateStep1();
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
     setFieldErrors({});
     setStep(2);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function handleSubmit() {
-    setError(null);
+  function goToStep3() {
     const errs: Record<string, string> = {};
     if (!city) errs.city = "Seleccioná la ciudad del evento.";
     if (!dateStr) errs.date = "Indicá la fecha del partido.";
     if (selectedCancha && !selectedSlot) errs.slot = "Seleccioná un horario disponible para la cancha.";
     if (!selectedCancha && !selectedSlot) errs.slot = "Seleccioná una cancha y un horario.";
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    setFieldErrors({});
+    loadFriends();
+    setStep(3);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
+  function toggleFriend(friendId: string) {
+    setSelectedFriendIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(friendId)) next.delete(friendId);
+      else next.add(friendId);
+      return next;
+    });
+  }
+
+  async function handleSubmit() {
+    setError(null);
     if (!user) { setLocation("/login"); return; }
     setPending(true);
 
@@ -164,11 +189,7 @@ export default function NewMatchPage() {
         },
         user.id,
       );
-      if (bookingErr) {
-        setError(bookingErr);
-        setPending(false);
-        return;
-      }
+      if (bookingErr) { setError(bookingErr); setPending(false); return; }
       cancha_booking_id = booking!.id;
     }
 
@@ -176,7 +197,6 @@ export default function NewMatchPage() {
       ? `${selectedCancha.name} — ${selectedCancha.address}`
       : manualAddress || null;
 
-    // Build starts_at from date + slot start time (or midnight if no slot)
     const startsAtISO = selectedSlot
       ? new Date(`${dateStr}T${selectedSlot.start}:00`).toISOString()
       : new Date(`${dateStr}T00:00:00`).toISOString();
@@ -193,7 +213,7 @@ export default function NewMatchPage() {
         starts_at: startsAtISO,
         duration_minutes: s1.duration_minutes,
         max_players: s1.max_players,
-        skill_level: (s1.skill_level && s1.skill_level !== "any") ? s1.skill_level : null,
+        skill_level: s1.skill_level && s1.skill_level !== "any" ? s1.skill_level : null,
         status: "open",
         ...(cancha_booking_id ? { cancha_booking_id } : {}),
       })
@@ -202,9 +222,22 @@ export default function NewMatchPage() {
 
     if (matchErr) {
       setError(matchErr.message);
-    } else if (data) {
-      setLocation(`/matches/${data.id}`);
+      setPending(false);
+      return;
     }
+
+    if (data && selectedFriendIds.size > 0) {
+      const { error: invErr } = await sendMatchInvitations(
+        supabase,
+        data.id,
+        user.id,
+        Array.from(selectedFriendIds),
+      );
+      if (invErr) toast.error(`Partido creado, pero hubo un error al enviar algunas invitaciones: ${invErr}`);
+      else toast.success(`Partido creado. ${selectedFriendIds.size} invitación(es) enviada(s).`);
+    }
+
+    if (data) setLocation(`/matches/${data.id}`);
     setPending(false);
   }
 
@@ -213,6 +246,9 @@ export default function NewMatchPage() {
       ? selectedCancha.price_per_hour * (1 - selectedCancha.discount_percent / 100)
       : selectedCancha.price_per_hour
     : 0;
+
+  const stepLabels = ["Info", "Lugar", "Amigos"];
+  const progressWidth = step === 1 ? "33%" : step === 2 ? "66%" : "100%";
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-10">
@@ -225,30 +261,50 @@ export default function NewMatchPage() {
               </Button>
             </Link>
           ) : (
-            <Button variant="ghost" size="icon" onClick={() => { setStep(1); setFieldErrors({}); }}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setStep((s) => (s - 1) as 1 | 2 | 3);
+                setFieldErrors({});
+              }}
+            >
               <ArrowLeft className="size-4" />
             </Button>
           )}
 
           <h1 className="text-lg font-bold flex-1">Crear partido</h1>
 
-          <div className="flex items-center gap-2 text-xs">
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-full transition-colors ${step === 1 ? "bg-brand-primary text-white" : "bg-muted text-muted-foreground"}`}>
-              <span className="font-bold">1</span>
-              <span className="hidden sm:inline">Info</span>
-            </div>
-            <div className="w-4 h-px bg-border" />
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-full transition-colors ${step === 2 ? "bg-brand-primary text-white" : "bg-muted text-muted-foreground"}`}>
-              <span className="font-bold">2</span>
-              <span className="hidden sm:inline">Lugar</span>
-            </div>
+          <div className="flex items-center gap-1.5 text-xs">
+            {stepLabels.map((label, idx) => {
+              const n = idx + 1;
+              return (
+                <div key={label} className="flex items-center gap-1.5">
+                  <div
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full transition-colors ${
+                      step === n
+                        ? "bg-brand-primary text-white"
+                        : step > n
+                        ? "bg-brand-primary/20 text-brand-primary"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <span className="font-bold">{n}</span>
+                    <span className="hidden sm:inline">{label}</span>
+                  </div>
+                  {idx < stepLabels.length - 1 && (
+                    <div className="w-4 h-px bg-border" />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <div className="h-1 bg-muted">
           <div
             className="h-full bg-brand-primary transition-all duration-500 ease-out"
-            style={{ width: step === 1 ? "50%" : "100%" }}
+            style={{ width: progressWidth }}
           />
         </div>
       </header>
@@ -274,7 +330,9 @@ export default function NewMatchPage() {
                   value={s1.title}
                   onChange={(e) => setS1((p) => ({ ...p, title: e.target.value }))}
                 />
-                {fieldErrors.title && <p className="text-xs text-destructive">{fieldErrors.title}</p>}
+                {fieldErrors.title && (
+                  <p className="text-xs text-destructive">{fieldErrors.title}</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -295,11 +353,16 @@ export default function NewMatchPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {fieldErrors.sport_id && <p className="text-xs text-destructive">{fieldErrors.sport_id}</p>}
+                {fieldErrors.sport_id && (
+                  <p className="text-xs text-destructive">{fieldErrors.sport_id}</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label>Nivel de dificultad <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                <Label>
+                  Nivel de dificultad{" "}
+                  <span className="text-muted-foreground text-xs">(opcional)</span>
+                </Label>
                 <Select
                   value={s1.skill_level}
                   onValueChange={(v) => setS1((p) => ({ ...p, skill_level: v }))}
@@ -310,7 +373,9 @@ export default function NewMatchPage() {
                   <SelectContent>
                     <SelectItem value="any">Cualquier nivel</SelectItem>
                     {SKILL_LEVELS.map((lvl) => (
-                      <SelectItem key={lvl.value} value={lvl.value}>{lvl.label}</SelectItem>
+                      <SelectItem key={lvl.value} value={lvl.value}>
+                        {lvl.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -354,7 +419,8 @@ export default function NewMatchPage() {
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="description">
-                  Descripción <span className="text-muted-foreground text-xs">(opcional)</span>
+                  Descripción{" "}
+                  <span className="text-muted-foreground text-xs">(opcional)</span>
                 </Label>
                 <Textarea
                   id="description"
@@ -388,10 +454,7 @@ export default function NewMatchPage() {
                   type="date"
                   value={dateStr}
                   min={todayDate()}
-                  onChange={(e) => {
-                    setDateStr(e.target.value);
-                    setSelectedSlot(null);
-                  }}
+                  onChange={(e) => { setDateStr(e.target.value); setSelectedSlot(null); }}
                   className="border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 {fieldErrors.date && (
@@ -403,11 +466,7 @@ export default function NewMatchPage() {
                 <Label>Ciudad *</Label>
                 <Select
                   value={city}
-                  onValueChange={(v) => {
-                    setCity(v);
-                    setSelectedCancha(null);
-                    setSelectedSlot(null);
-                  }}
+                  onValueChange={(v) => { setCity(v); setSelectedCancha(null); setSelectedSlot(null); }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccioná la ciudad" />
@@ -418,19 +477,21 @@ export default function NewMatchPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {fieldErrors.city && <p className="text-xs text-destructive">{fieldErrors.city}</p>}
+                {fieldErrors.city && (
+                  <p className="text-xs text-destructive">{fieldErrors.city}</p>
+                )}
               </div>
 
-              {/* Canchas de la ciudad seleccionada */}
               {city && (
                 <div className="space-y-3 border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-800/40">
                   <div className="flex items-center gap-2">
                     <Building2 className="size-4 text-muted-foreground" />
                     <p className="text-sm font-semibold">
                       Canchas en {city}
-                      {s1.sport_id && sports.find(sp => sp.id === s1.sport_id) && (
+                      {s1.sport_id && sports.find((sp) => sp.id === s1.sport_id) && (
                         <span className="ml-1 text-muted-foreground font-normal">
-                          · {sports.find(sp => sp.id === s1.sport_id)!.icon} {sports.find(sp => sp.id === s1.sport_id)!.name}
+                          · {sports.find((sp) => sp.id === s1.sport_id)!.icon}{" "}
+                          {sports.find((sp) => sp.id === s1.sport_id)!.name}
                         </span>
                       )}
                     </p>
@@ -443,9 +504,8 @@ export default function NewMatchPage() {
                   ) : canchas.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-1">
                       {s1.sport_id && (SPORT_ID_TO_CANCHA_TYPES[s1.sport_id] ?? []).length > 0
-                        ? `No hay canchas de ${sports.find(sp => sp.id === s1.sport_id)?.name ?? "este deporte"} registradas en ${city} aún.`
-                        : `No hay canchas registradas en ${city} aún.`
-                      }
+                        ? `No hay canchas de ${sports.find((sp) => sp.id === s1.sport_id)?.name ?? "este deporte"} registradas en ${city} aún.`
+                        : `No hay canchas registradas en ${city} aún.`}
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -463,11 +523,14 @@ export default function NewMatchPage() {
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-2xl shrink-0">{SPORT_TYPE_ICONS[c.sport_type]}</span>
+                            <span className="text-2xl shrink-0">
+                              {SPORT_TYPE_ICONS[c.sport_type]}
+                            </span>
                             <div className="min-w-0">
                               <p className="font-semibold leading-tight truncate">{c.name}</p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {SPORT_TYPE_LABELS[c.sport_type]} · {c.capacity} jug. · {c.address}
+                                {SPORT_TYPE_LABELS[c.sport_type]} · {c.capacity} jug. ·{" "}
+                                {c.address}
                               </p>
                             </div>
                           </div>
@@ -491,10 +554,11 @@ export default function NewMatchPage() {
                     </div>
                   )}
 
-                  {/* Slots del día para la cancha seleccionada */}
                   {selectedCancha && (
                     <div className="border-t pt-3 space-y-3">
-                      <p className="text-sm font-medium">{selectedCancha.name} — horarios disponibles</p>
+                      <p className="text-sm font-medium">
+                        {selectedCancha.name} — horarios disponibles
+                      </p>
 
                       {!dateStr ? (
                         <p className="text-sm text-muted-foreground">
@@ -544,10 +608,12 @@ export default function NewMatchPage() {
                       {selectedSlot && (
                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2.5 text-sm space-y-0.5">
                           <p className="font-semibold text-amber-800 dark:text-amber-300">
-                            Solicitud: {selectedSlot.start}–{selectedSlot.end} en {selectedCancha.name}
+                            Solicitud: {selectedSlot.start}–{selectedSlot.end} en{" "}
+                            {selectedCancha.name}
                           </p>
                           <p className="text-xs text-amber-700 dark:text-amber-400">
-                            ${finalPrice.toLocaleString("es-CO")} · Pendiente hasta que el dueño apruebe
+                            ${finalPrice.toLocaleString("es-CO")} · Pendiente hasta que el dueño
+                            apruebe
                           </p>
                         </div>
                       )}
@@ -556,7 +622,6 @@ export default function NewMatchPage() {
                 </div>
               )}
 
-              {/* Dirección manual — si no seleccionó cancha */}
               {!selectedCancha && (
                 <div className="flex flex-col gap-2">
                   <Label>
@@ -581,9 +646,123 @@ export default function NewMatchPage() {
                 </p>
               )}
 
-              <Button onClick={handleSubmit} disabled={pending} className="w-full" size="lg">
-                {pending ? "Creando partido…" : "Crear partido"}
+              <Button onClick={goToStep3} className="w-full" size="lg">
+                Siguiente — Invitar amigos
+                <ArrowRight className="size-4 ml-1" />
               </Button>
+            </div>
+          )}
+
+          {/* ─── STEP 3: Invitar amigos ─── */}
+          {step === 3 && (
+            <div className="flex flex-col gap-5">
+              <div>
+                <h2 className="text-base font-semibold flex items-center gap-2">
+                  <Users className="size-4" /> Invitar amigos
+                </h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Seleccioná los amigos que querés invitar. Solo ellos recibirán la invitación y
+                  deberán aceptarla para unirse al partido. Este paso es opcional.
+                </p>
+              </div>
+
+              {loadingFriends ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : friends.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-10 text-center rounded-xl bg-muted/40 border border-dashed">
+                  <Users className="size-10 text-muted-foreground/40" />
+                  <div>
+                    <p className="font-medium text-sm">No tenés amigos todavía</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Agregá amigos desde la sección Amigos para poder invitarlos.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {selectedFriendIds.size > 0 && (
+                    <p className="text-xs font-medium text-brand-primary">
+                      {selectedFriendIds.size} amigo(s) seleccionado(s)
+                    </p>
+                  )}
+                  {friends.map((f) => {
+                    const friendId =
+                      f.requester_id === user?.id ? f.addressee_id : f.requester_id;
+                    const isSelected = selectedFriendIds.has(friendId);
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => toggleFriend(friendId)}
+                        className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all w-full ${
+                          isSelected
+                            ? "border-brand-primary bg-brand-primary/5 shadow-sm"
+                            : "border-border bg-white dark:bg-zinc-900 hover:border-foreground/30"
+                        }`}
+                      >
+                        <div className="relative">
+                          <Avatar className="size-10">
+                            {f.profile.avatar_url && (
+                              <AvatarImage src={f.profile.avatar_url} />
+                            )}
+                            <AvatarFallback>
+                              {initialsFromName(f.profile.full_name ?? f.profile.username)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {isSelected && (
+                            <div className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-brand-primary flex items-center justify-center">
+                              <span className="text-white text-[10px] font-bold">✓</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {f.profile.full_name ?? f.profile.username ?? "Usuario"}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {[f.profile.city, f.profile.username ? `@${f.profile.username}` : ""]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </div>
+                        <div
+                          className={`size-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected
+                              ? "border-brand-primary bg-brand-primary"
+                              : "border-muted-foreground/30"
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="text-white text-[10px] font-bold">✓</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {error && (
+                <p role="alert" className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+                  {error}
+                </p>
+              )}
+
+              <Button onClick={handleSubmit} disabled={pending} className="w-full" size="lg">
+                {pending
+                  ? "Creando partido…"
+                  : selectedFriendIds.size > 0
+                  ? `Crear partido e invitar ${selectedFriendIds.size} amigo(s)`
+                  : "Crear partido sin invitar"}
+              </Button>
+
+              {selectedFriendIds.size === 0 && friends.length > 0 && (
+                <p className="text-xs text-center text-muted-foreground -mt-2">
+                  No seleccionaste ningún amigo — el partido se creará sin invitaciones privadas.
+                </p>
+              )}
             </div>
           )}
         </div>

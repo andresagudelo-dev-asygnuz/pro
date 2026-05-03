@@ -128,9 +128,9 @@ export default function FeedPage() {
               <span>➕</span>
               <span>Crear</span>
             </Link>
-            <Link href="/notificaciones" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
-              <span>🔔</span>
-              <span>Notif.</span>
+            <Link href="/amigos" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+              <span>👥</span>
+              <span>Amigos</span>
             </Link>
             <Link href="/perfil" className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground">
               <span>👤</span>
