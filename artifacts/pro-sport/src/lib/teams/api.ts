@@ -60,16 +60,37 @@ export async function getPublicTeams(city?: string): Promise<TeamWithCount[]> {
 }
 
 export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
-  const { data, error } = await supabase
+  // Fetch team + raw members (no direct FK from team_members → profiles)
+  const { data: teamData, error: teamErr } = await supabase
     .from("teams")
-    .select(`*, team_members(role, joined_at, user_id, profile:profiles(id, full_name, username, avatar_url, city, primary_skill_level))`)
+    .select(`*, team_members(role, joined_at, user_id)`)
     .eq("id", id)
     .maybeSingle();
-  if (error) {
-    if (isMissingTable(error)) return null;
-    throw error;
+  if (teamErr) {
+    if (isMissingTable(teamErr)) return null;
+    throw teamErr;
   }
-  return data as TeamWithMembers | null;
+  if (!teamData) return null;
+
+  // Fetch profiles for each member separately
+  const userIds: string[] = (teamData as any).team_members?.map((m: any) => m.user_id) ?? [];
+  let profileMap: Record<string, any> = {};
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url, city, primary_skill_level")
+      .in("id", userIds);
+    for (const p of profiles ?? []) profileMap[p.id] = p;
+  }
+
+  const merged = {
+    ...(teamData as any),
+    team_members: ((teamData as any).team_members ?? []).map((m: any) => ({
+      ...m,
+      profile: profileMap[m.user_id] ?? null,
+    })),
+  };
+  return merged as TeamWithMembers;
 }
 
 export async function createTeam(payload: {

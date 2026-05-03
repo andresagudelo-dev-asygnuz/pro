@@ -45,7 +45,7 @@ export default function NewTeamPage() {
         is_public: isPublic,
       });
       toast.success("¡Equipo creado!");
-      setLocation(`/equipos/${team.id}`);
+      setLocation("/equipos");
     } catch (err: any) {
       toast.error(err?.message ?? "No se pudo crear el equipo.");
     } finally {
