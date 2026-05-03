@@ -4,7 +4,7 @@ import type { Team, TeamMember, Profile } from "@/lib/types/db";
 const supabase = createClient();
 
 export type TeamWithCount = Team & { member_count: number };
-export type TeamMemberWithProfile = TeamMember & { profile: Pick<Profile, "id" | "full_name" | "username" | "avatar_url" | "city" | "primary_skill_level"> };
+export type TeamMemberWithProfile = TeamMember & { profile: Pick<Profile, "id" | "full_name" | "username" | "avatar_url" | "city" | "primary_skill_level" | "position" | "skill_pace" | "skill_shooting" | "skill_passing" | "skill_dribbling" | "skill_defending" | "skill_physical"> | null };
 export type TeamWithMembers = Team & { team_members: TeamMemberWithProfile[] };
 
 function isMissingTable(error: any): boolean {
@@ -89,7 +89,7 @@ export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
   if (userIds.length > 0) {
     const { data: profiles, error: profErr } = await supabase
       .from("profiles")
-      .select("id, full_name, username, avatar_url, city, primary_skill_level")
+      .select("id, full_name, username, avatar_url, city, primary_skill_level, position, skill_pace, skill_shooting, skill_passing, skill_dribbling, skill_defending, skill_physical")
       .in("id", userIds);
     if (profErr) console.error("[getTeamById] profiles query error:", profErr);
     for (const p of profiles ?? []) profileMap[p.id] = p;
