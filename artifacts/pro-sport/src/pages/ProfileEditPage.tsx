@@ -12,9 +12,29 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SKILL_LEVELS, PLAYER_POSITIONS } from "@/lib/types/db";
+import type { Profile, SkillLevel, PlayerPosition } from "@/lib/types/db";
 import { initialsFromName } from "@/lib/format";
 import { toast } from "sonner";
 import { Camera, Loader2 } from "lucide-react";
+
+function resizeToDataUrl(file: File, maxPx = 512, quality = 0.88): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("No se pudo leer la imagen.")); };
+    img.src = objectUrl;
+  });
+}
 
 const SKILL_DEFS = [
   { key: "skill_pace"      as const, label: "PAC", name: "Velocidad" },
@@ -26,7 +46,7 @@ const SKILL_DEFS = [
 ];
 
 export default function ProfileEditPage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const [, setLocation] = useLocation();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,38 +86,27 @@ export default function ProfileEditPage() {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("La imagen no puede superar 5 MB."); return; }
     if (!file.type.startsWith("image/")) { toast.error("Solo se permiten imágenes (JPG, PNG, WebP)."); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("La imagen no puede superar 10 MB."); return; }
 
     setUploadingAvatar(true);
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${user.id}/avatar.${ext}`;
-
-    await supabase.storage.createBucket("avatars", { public: true }).catch(() => {});
-
-    const { error: uploadErr } = await supabase.storage
-      .from("avatars").upload(path, file, { upsert: true, contentType: file.type });
-
-    if (uploadErr) {
-      if (uploadErr.message?.includes("row-level security") || uploadErr.message?.includes("policy")) {
-        toast.error("Falta configurar el permiso de Storage en Supabase. Ejecutá la migración 003 en el SQL Editor.");
-      } else {
-        toast.error("No se pudo subir la foto: " + uploadErr.message);
-      }
+    try {
+      const dataUrl = await resizeToDataUrl(file, 512, 0.88);
+      setAvatarUrl(dataUrl);
+      updateProfile({ avatar_url: dataUrl });
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: dataUrl, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+      if (error) throw error;
+      toast.success("Foto de perfil actualizada.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error("Error al guardar la foto: " + msg);
+    } finally {
       setUploadingAvatar(false);
-      return;
+      e.target.value = "";
     }
-
-    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-    const cacheBusted = `${publicUrl}?t=${Date.now()}`;
-
-    const { error: updateErr } = await supabase
-      .from("profiles").update({ avatar_url: cacheBusted, updated_at: new Date().toISOString() }).eq("id", user.id);
-
-    if (updateErr) toast.error("Error actualizando perfil.");
-    else { setAvatarUrl(cacheBusted); await refreshProfile(); toast.success("Foto de perfil actualizada."); }
-    setUploadingAvatar(false);
-    e.target.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -139,10 +148,18 @@ export default function ProfileEditPage() {
       if (err.message.includes("unique") || err.code === "23505") {
         setFieldErrors({ username: "Ese username ya está en uso." });
       } else {
-        setError(err.message);
+        setError("Error al guardar: " + err.message);
       }
     } else {
-      await refreshProfile();
+      // Update context immediately — no re-fetch needed
+      updateProfile({
+        full_name,
+        city,
+        bio: bio || null,
+        primary_skill_level: (skillLevel as SkillLevel) || null,
+        position: (position as PlayerPosition) || null,
+        ...skills,
+      });
       toast.success("Perfil actualizado.");
       setLocation("/perfil");
     }

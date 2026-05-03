@@ -18,6 +18,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshRoles: () => Promise<void>;
+  updateProfile: (partial: Partial<Profile>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -56,6 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) await loadRoles(user.id);
   }
 
+  function updateProfile(partial: Partial<Profile>) {
+    setProfile((prev) => (prev ? { ...prev, ...partial } : null));
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -90,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, roles, loading, signOut, refreshProfile, refreshRoles }}>
+    <AuthContext.Provider value={{ user, session, profile, roles, loading, signOut, refreshProfile, refreshRoles, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

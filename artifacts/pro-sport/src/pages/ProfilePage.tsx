@@ -55,7 +55,7 @@ const SKILL_DEFS = [
 ];
 
 export default function ProfilePage() {
-  const { user, profile, roles, loading, signOut, refreshRoles, refreshProfile } = useAuth();
+  const { user, profile, roles, loading, signOut, refreshRoles, updateProfile } = useAuth();
   const [, setLocation] = useLocation();
   const [upgradingPromoter, setUpgradingPromoter] = useState(false);
   const [upgradingCancha,   setUpgradingCancha]   = useState(false);
@@ -97,14 +97,15 @@ export default function ProfilePage() {
 
     setUploadingAvatar(true);
     try {
-      // Resize in-browser via Canvas → no storage bucket needed
       const dataUrl = await resizeToDataUrl(file, 512, 0.88);
+      // Update context immediately so the card reflects the change right away
+      updateProfile({ avatar_url: dataUrl });
+      // Persist to DB in background
       const { error } = await supabase
         .from("profiles")
         .update({ avatar_url: dataUrl, updated_at: new Date().toISOString() })
         .eq("id", user.id);
       if (error) throw error;
-      await refreshProfile();
       toast.success("¡Foto actualizada!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
