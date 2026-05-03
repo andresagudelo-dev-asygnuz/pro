@@ -7,10 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
 import {
-  CheckCircle2, Clock, MapPin, Globe, Lock, Building2,
-  AlertCircle, Mail, XCircle, Star, ArrowLeft, Send, Users,
+  CheckCircle2, Clock, Globe, Lock, Building2,
+  AlertCircle, Mail, Star, ArrowLeft, Send, Users,
   Timer, Zap, ShieldCheck, MessageCircle, Crown, UserPlus,
-  ListOrdered, Phone, DollarSign, CalendarCheck, X, Check,
+  ListOrdered, Phone, DollarSign, CalendarCheck, MapPin, X, Check, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Match, MatchParticipant, Profile, Sport, CanchaBooking, MatchInvitation, MatchWaitlist } from "@/lib/types/db";
@@ -485,6 +485,15 @@ export default function MatchDetailPage() {
               ? <span className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${theme.chipBg} uppercase tracking-wide`}><Globe className="size-2.5" /> Abierto</span>
               : <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border bg-amber-500/20 text-amber-200 border-amber-500/30 uppercase tracking-wide"><Lock className="size-2.5" /> Privado</span>
             }
+            {isOrganizer && match.status === "open" && (
+              <button
+                title="Cancelar partido"
+                onClick={() => setShowCancelConfirm(true)}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-red-500/20 border border-red-400/30 text-red-300 hover:bg-red-500/40 hover:text-red-100 transition-all active:scale-90"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )}
           </div>
 
           <div className="px-5 pt-8 pb-6">
@@ -557,16 +566,21 @@ export default function MatchDetailPage() {
           </div>
         </div>
 
-        {/* ── 4. LOCATION ───────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 p-4 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-            <MapPin className="size-4 text-violet-600" />
+        {/* ── Cancel confirm dialog (organizer only) ────────────────────── */}
+        {isOrganizer && showCancelConfirm && (
+          <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-4">
+            <p className="text-sm font-bold text-red-800 dark:text-red-300 mb-1">¿Cancelar el partido?</p>
+            <p className="text-xs text-red-700/80 dark:text-red-400/70 mb-3">Esta acción no se puede deshacer y los jugadores serán notificados.</p>
+            <div className="flex gap-2">
+              <Button size="sm" disabled={cancellingMatch} className="bg-red-600 hover:bg-red-700 text-white rounded-xl flex-1" onClick={handleCancelMatch}>
+                {cancellingMatch ? "Cancelando…" : "Sí, cancelar partido"}
+              </Button>
+              <Button size="sm" variant="outline" disabled={cancellingMatch} onClick={() => setShowCancelConfirm(false)} className="rounded-xl">
+                No, volver
+              </Button>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide mb-0.5">Dónde</p>
-            <p className="text-sm font-semibold">{match.location}</p>
-          </div>
-        </div>
+        )}
 
         {/* ── 5. INVITATION ─────────────────────────────────────────────── */}
         {myInvitation && myInvitation.status === "pending" && !isJoined && (
@@ -646,36 +660,12 @@ export default function MatchDetailPage() {
             )}
 
             {/* Organizer controls */}
-            {isOrganizer && (
+            {isOrganizer && isJoined && !isConfirmed && (
               <div className="p-5">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">Panel del organizador</p>
-                <div className="flex flex-col gap-2">
-                  {/* Confirm attendance if not confirmed */}
-                  {isJoined && !isConfirmed && (
-                    <Button size="sm" onClick={handleConfirm} disabled={confirming} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
-                      <CheckCircle2 className="size-4 mr-2" />{confirming ? "Confirmando…" : "Confirmar mi asistencia"}
-                    </Button>
-                  )}
-                  {/* Cancel match */}
-                  {!showCancelConfirm ? (
-                    <Button size="sm" variant="outline" onClick={() => setShowCancelConfirm(true)} className="w-full rounded-xl border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30">
-                      <XCircle className="size-4 mr-2" /> Cancelar partido
-                    </Button>
-                  ) : (
-                    <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-4">
-                      <p className="text-sm font-bold text-red-800 dark:text-red-300 mb-1">¿Cancelar el partido?</p>
-                      <p className="text-xs text-red-700/80 dark:text-red-400/70 mb-3">Esta acción notificará a los jugadores y no se puede deshacer.</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" disabled={cancellingMatch} className="bg-red-600 hover:bg-red-700 text-white rounded-xl flex-1" onClick={handleCancelMatch}>
-                          {cancellingMatch ? "Cancelando…" : "Sí, cancelar"}
-                        </Button>
-                        <Button size="sm" variant="outline" disabled={cancellingMatch} onClick={() => setShowCancelConfirm(false)} className="rounded-xl">
-                          No, volver
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <Button size="sm" onClick={handleConfirm} disabled={confirming} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <CheckCircle2 className="size-4 mr-2" />{confirming ? "Confirmando…" : "Confirmar mi asistencia"}
+                </Button>
               </div>
             )}
           </div>
