@@ -89,7 +89,11 @@ export default function ProfilePage() {
       .from("avatars").upload(path, file, { upsert: true, contentType: file.type });
 
     if (uploadErr) {
-      toast.error("No se pudo subir la foto: " + uploadErr.message);
+      if (uploadErr.message?.includes("row-level security") || uploadErr.message?.includes("policy")) {
+        toast.error("Falta configurar el permiso de Storage en Supabase. Ejecutá la migración 003 en el SQL Editor.");
+      } else {
+        toast.error("No se pudo subir la foto: " + uploadErr.message);
+      }
       setUploadingAvatar(false);
       return;
     }
