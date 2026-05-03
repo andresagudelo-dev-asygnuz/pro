@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getCanchaById, getAvailableSlots, createBooking } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin, Users, Phone, MessageCircle, CheckCircle2 } from "lucide-react";
+import { BottomNav } from "@/components/BottomNav";
 import { SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, type Cancha, type TimeSlot } from "@/lib/types/db";
 import { toast } from "sonner";
 
@@ -114,8 +115,8 @@ export default function CanchaDetailPage() {
   const isOwner = user?.id === cancha.owner_id;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-8">
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center gap-3">
           <Link href="/canchas">
             <Button variant="ghost" size="icon"><ArrowLeft className="size-4" /></Button>
@@ -278,6 +279,7 @@ export default function CanchaDetailPage() {
           )}
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Link } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifCount } from "@/context/NotifContext";
 import { formatMatchDate, initialsFromName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
@@ -36,11 +37,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function FeedPage() {
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
+  const { unreadCount } = useNotifCount();
   const [matches, setMatches] = useState<Match[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [sportsMap, setSportsMap] = useState<Map<string, Sport>>(new Map());
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -71,15 +72,6 @@ export default function FeedPage() {
     load();
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("notifications")
-      .select("id", { count: "exact" })
-      .eq("user_id", user.id)
-      .is("read_at", null)
-      .then(({ count }: { count: number | null }) => setUnreadCount(count ?? 0));
-  }, [user]);
 
   const filtered = useMemo(() => {
     return matches.filter((m) => {
@@ -118,11 +110,7 @@ export default function FeedPage() {
             </Link>
             <Link href="/perfil">
               <Avatar className="size-8 cursor-pointer ring-2 ring-violet-100 dark:ring-violet-900">
-                {profile?.avatar_url && (
-                  <AvatarFallback className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-bold">
-                    {initialsFromName(profile.full_name ?? profile.username)}
-                  </AvatarFallback>
-                )}
+                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Avatar" />}
                 <AvatarFallback className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-bold">
                   {initialsFromName(profile?.full_name ?? profile?.username)}
                 </AvatarFallback>

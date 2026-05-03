@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { initialsFromName } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNav } from "@/components/BottomNav";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -109,9 +110,12 @@ export default function ProfilePage() {
           <div className="h-16 bg-gradient-to-br from-violet-600 to-violet-800" />
           <div className="px-5 pb-5 -mt-8">
             <div className="flex items-end gap-4 mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-violet-100 dark:bg-violet-900/50 border-4 border-white dark:border-zinc-900 flex items-center justify-center text-xl font-black text-violet-700 dark:text-violet-300 shrink-0 shadow-sm">
-                {initials}
-              </div>
+              <Avatar className="w-16 h-16 rounded-2xl border-4 border-white dark:border-zinc-900 shadow-sm shrink-0">
+                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Avatar" className="rounded-2xl object-cover" />}
+                <AvatarFallback className="rounded-2xl bg-violet-100 dark:bg-violet-900/50 text-xl font-black text-violet-700 dark:text-violet-300">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
               <div className="pb-1 min-w-0">
                 <h1 className="text-lg font-bold text-zinc-900 dark:text-white leading-tight truncate">
                   {profile?.full_name || "Sin nombre"}

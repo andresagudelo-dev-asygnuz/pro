@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { AppLayout } from "@/components/AppLayout";
 import { initialsFromName } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -171,7 +172,8 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
+    <AppLayout>
+    <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -209,5 +211,6 @@ export default function PublicProfilePage() {
         )}
       </section>
     </div>
+    </AppLayout>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { CANCHAS_SPORT_OPTIONS, type CanchaSportType } from "@/lib/types/db";
 import { ArrowLeft } from "lucide-react";
+import { BottomNav } from "@/components/BottomNav";
 
 const supabase = createClient();
 
@@ -103,8 +104,8 @@ export default function NuevaCanchaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-8">
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center gap-3">
           <Link href="/mis-canchas">
             <Button variant="ghost" size="icon"><ArrowLeft className="size-4" /></Button>
@@ -195,6 +196,7 @@ export default function NuevaCanchaPage() {
           </form>
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 }

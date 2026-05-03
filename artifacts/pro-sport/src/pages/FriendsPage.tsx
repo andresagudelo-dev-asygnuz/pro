@@ -20,6 +20,7 @@ import {
 import type { Profile } from "@/lib/types/db";
 import { Users, UserPlus, Search, UserCheck, Clock, X, Check } from "lucide-react";
 import { toast } from "sonner";
+import { BottomNav } from "@/components/BottomNav";
 
 const supabase = createClient();
 
@@ -107,8 +108,8 @@ export default function FriendsPage() {
   const pendingCount = received.length;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center">
           <h1 className="text-lg font-bold text-zinc-900 dark:text-white">Amigos</h1>
         </div>
@@ -424,42 +425,7 @@ export default function FriendsPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-t border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-around h-14">
-            <Link
-              href="/feed"
-              className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-              <span>🏠</span><span>Inicio</span>
-            </Link>
-            <Link
-              href="/tournaments"
-              className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-              <span>🏆</span><span>Torneos</span>
-            </Link>
-            <Link
-              href="/matches/new"
-              className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-              <span>➕</span><span>Crear</span>
-            </Link>
-            <Link
-              href="/amigos"
-              className="flex flex-col items-center gap-0.5 text-xs font-medium text-brand-primary"
-            >
-              <span>👥</span><span>Amigos</span>
-            </Link>
-            <Link
-              href="/perfil"
-              className="flex flex-col items-center gap-0.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-              <span>👤</span><span>Perfil</span>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 }

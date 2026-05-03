@@ -11,6 +11,7 @@ import {
 } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, XCircle, Pencil, Users } from "lucide-react";
+import { BottomNav } from "@/components/BottomNav";
 import {
   DAY_LABELS,
   type Cancha,
@@ -186,7 +187,7 @@ export default function CanchaAgendaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-8">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
       <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center gap-3">
           <Link href="/mis-canchas">
@@ -383,6 +384,7 @@ export default function CanchaAgendaPage() {
           )}
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 }
