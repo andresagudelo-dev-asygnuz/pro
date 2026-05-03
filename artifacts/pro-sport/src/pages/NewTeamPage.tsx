@@ -85,6 +85,7 @@ export default function NewTeamPage() {
   const [maxMembers, setMaxMembers] = useState(20);
   const [isPublic, setIsPublic] = useState(true);
   const [rlsSql, setRlsSql] = useState<string | null>(null);
+  const [rawError, setRawError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,6 +95,7 @@ export default function NewTeamPage() {
 
     setPending(true);
     setRlsSql(null);
+    setRawError(null);
     try {
       const slug = generateSlug(name) + "-" + Math.random().toString(36).slice(2, 6);
       const team = await createTeam({
@@ -109,10 +111,12 @@ export default function NewTeamPage() {
       toast.success("¡Equipo creado!");
       setLocation(`/equipos/${team.id}`);
     } catch (err: any) {
+      console.error("[createTeam] raw error:", JSON.stringify(err, null, 2));
       if (err instanceof RlsPolicyError) {
         setRlsSql(err.sql);
       } else {
-        toast.error(err?.message ?? "No se pudo crear el equipo.");
+        const detail = err?.code ? ` (code: ${err.code})` : "";
+        setRawError((err?.message ?? "Error desconocido") + detail);
       }
     }
     setPending(false);
@@ -124,6 +128,12 @@ export default function NewTeamPage() {
 
       <main className="container mx-auto px-4 py-6 max-w-lg space-y-4">
         {rlsSql && <RlsErrorBanner sql={rlsSql} />}
+        {rawError && (
+          <div className="rounded-2xl border border-red-300 bg-red-50 dark:bg-red-950/40 dark:border-red-700 p-4">
+            <p className="font-semibold text-red-700 dark:text-red-300 text-sm mb-1">Error al crear equipo</p>
+            <p className="text-red-600 dark:text-red-400 text-xs font-mono break-all">{rawError}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 p-5 shadow-sm space-y-4">
