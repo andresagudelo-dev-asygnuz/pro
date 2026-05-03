@@ -15,6 +15,28 @@ import { toast } from "sonner";
 
 const supabase = createClient();
 
+/* ─── Resize image to data URL via Canvas ─────────────────────────────── */
+function resizeToDataUrl(file: File, maxPx = 512, quality = 0.88): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+      const w = Math.round(img.width  * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement("canvas");
+      canvas.width  = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("No se pudo leer la imagen.")); };
+    img.src = objectUrl;
+  });
+}
+
 /* ─── Level config ────────────────────────────────────────────────────── */
 const LEVEL_CONFIG: Record<string, { label: string; glow: string; badge: string }> = {
   principiante: { label: "Principiante", glow: "bg-amber-500",  badge: "bg-amber-500/15 text-amber-300 border-amber-500/30" },
@@ -70,35 +92,27 @@ export default function ProfilePage() {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("La imagen no puede superar 5 MB."); return; }
     if (!file.type.startsWith("image/")) { toast.error("Solo se permiten imágenes."); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("La imagen no puede superar 10 MB."); return; }
 
     setUploadingAvatar(true);
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${user.id}/avatar.${ext}`;
-
-    await supabase.storage.createBucket("avatars", { public: true }).catch(() => {});
-
-    const { error: uploadErr } = await supabase.storage
-      .from("avatars").upload(path, file, { upsert: true, contentType: file.type });
-
-    if (uploadErr) {
-      if (uploadErr.message?.includes("row-level security") || uploadErr.message?.includes("policy")) {
-        toast.error("Permiso de Storage no configurado. Ejecutá la migración 003 en Supabase SQL Editor.");
-      } else {
-        toast.error("Error al subir: " + uploadErr.message);
-      }
+    try {
+      // Resize in-browser via Canvas → no storage bucket needed
+      const dataUrl = await resizeToDataUrl(file, 512, 0.88);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: dataUrl, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+      if (error) throw error;
+      await refreshProfile();
+      toast.success("¡Foto actualizada!");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error("Error al guardar la foto: " + msg);
+    } finally {
       setUploadingAvatar(false);
-      return;
+      e.target.value = "";
     }
-
-    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-    const url = `${publicUrl}?t=${Date.now()}`;
-    await supabase.from("profiles").update({ avatar_url: url, updated_at: new Date().toISOString() }).eq("id", user.id);
-    await refreshProfile();
-    toast.success("¡Foto actualizada!");
-    setUploadingAvatar(false);
-    e.target.value = "";
   }
 
   if (loading) {
