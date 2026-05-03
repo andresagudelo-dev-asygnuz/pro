@@ -138,16 +138,15 @@ export default function ProfilePage() {
       />
 
       {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-      <div className="relative bg-zinc-950 overflow-hidden pt-8 pb-14">
-        {/* Ambient glow behind card */}
+      <div className="relative overflow-hidden pt-8 pb-16" style={{ background: "linear-gradient(160deg, #2e1065 0%, #1e1b4b 35%, #312e81 65%, #1a1a2e 100%)" }}>
+        {/* Ambient glow — level-tinted */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
-          <div className={`w-80 h-80 rounded-full blur-[100px] opacity-20 ${lvlCfg.glow}`} />
+          <div className={`w-96 h-96 rounded-full blur-[120px] opacity-30 ${lvlCfg.glow}`} />
         </div>
-        {/* Subtle grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.03] pointer-events-none"
-          style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "32px 32px" }}
-        />
+        {/* Top fade from page header */}
+        <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
+        {/* Bottom fade to page bg */}
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-b from-transparent to-zinc-100 dark:to-zinc-950 pointer-events-none" />
 
         {/* Card */}
         <div className="relative z-10">
