@@ -19,6 +19,7 @@ import {
   ENABLED_CITIES,
   SPORT_TYPE_LABELS,
   SPORT_TYPE_ICONS,
+  SPORT_ID_TO_CANCHA_TYPES,
   type Cancha,
   type TimeSlot,
   type Sport,
@@ -91,11 +92,12 @@ export default function NewMatchPage() {
     setLoadingCanchas(true);
     setSelectedCancha(null);
     setSelectedSlot(null);
-    getAllCanchas(supabase, { city }).then(({ data }) => {
+    const sportTypes = SPORT_ID_TO_CANCHA_TYPES[s1.sport_id] ?? [];
+    getAllCanchas(supabase, { city, sportTypes }).then(({ data }) => {
       setCanchas(data ?? []);
       setLoadingCanchas(false);
     });
-  }, [city]);
+  }, [city, s1.sport_id]);
 
   useEffect(() => {
     if (!selectedCancha || !startsAt) {
@@ -422,7 +424,14 @@ export default function NewMatchPage() {
                 <div className="space-y-3 border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-800/40">
                   <div className="flex items-center gap-2">
                     <Building2 className="size-4 text-muted-foreground" />
-                    <p className="text-sm font-semibold">Canchas en {city}</p>
+                    <p className="text-sm font-semibold">
+                      Canchas en {city}
+                      {s1.sport_id && sports.find(sp => sp.id === s1.sport_id) && (
+                        <span className="ml-1 text-muted-foreground font-normal">
+                          · {sports.find(sp => sp.id === s1.sport_id)!.icon} {sports.find(sp => sp.id === s1.sport_id)!.name}
+                        </span>
+                      )}
+                    </p>
                   </div>
 
                   {loadingCanchas ? (
@@ -431,7 +440,10 @@ export default function NewMatchPage() {
                     </div>
                   ) : canchas.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-1">
-                      No hay canchas registradas en {city} aún.
+                      {s1.sport_id && (SPORT_ID_TO_CANCHA_TYPES[s1.sport_id] ?? []).length > 0
+                        ? `No hay canchas de ${sports.find(sp => sp.id === s1.sport_id)?.name ?? "este deporte"} registradas en ${city} aún.`
+                        : `No hay canchas registradas en ${city} aún.`
+                      }
                     </p>
                   ) : (
                     <div className="space-y-2">

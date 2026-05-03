@@ -16,11 +16,15 @@ function generateHourlySlots(opensAt: string, closesAt: string): string[] {
 
 export async function getAllCanchas(
   supabase: SupabaseClient,
-  filters?: { city?: string; sportType?: CanchaSportType | "" },
+  filters?: { city?: string; sportType?: CanchaSportType | ""; sportTypes?: CanchaSportType[] },
 ): Promise<ApiResult<Cancha[]>> {
   let query = supabase.from("canchas").select("*").eq("is_active", true).order("name");
   if (filters?.city) query = query.ilike("city", `%${filters.city}%`);
-  if (filters?.sportType) query = query.eq("sport_type", filters.sportType);
+  if (filters?.sportTypes && filters.sportTypes.length > 0) {
+    query = query.in("sport_type", filters.sportTypes);
+  } else if (filters?.sportType) {
+    query = query.eq("sport_type", filters.sportType);
+  }
   const { data, error } = await query;
   if (error) return { error: mapDbError(error), data: null };
   return { error: null, data: (data ?? []) as Cancha[] };

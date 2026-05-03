@@ -290,6 +290,15 @@ export const CANCHAS_SPORT_OPTIONS: { value: CanchaSportType; label: string }[] 
 
 export const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
+export const SPORT_ID_TO_CANCHA_TYPES: Record<string, CanchaSportType[]> = {
+  futbol:  ["futbol_5", "futbol_9", "futbol_11", "futbol_sala"],
+  padel:   ["padel"],
+  tenis:   ["tenis"],
+  basket:  ["basket"],
+  voley:   ["voleibol"],
+  running: [],
+};
+
 export const ENABLED_CITIES: string[] = [
   "Manizales",
   "Bogotá",
