@@ -102,7 +102,7 @@ export default function OwnerProfilePage() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
+      <div className="-mx-4 -mt-6 min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
 
         {/* ── Banner ── */}
         <div className="relative w-full h-44 sm:h-56 bg-gradient-to-br from-violet-900 via-violet-800 to-indigo-900 overflow-hidden group">
@@ -224,7 +224,7 @@ export default function OwnerProfilePage() {
         </div>
 
         {/* ── Content ── */}
-        <main className="max-w-2xl mx-auto space-y-4">
+        <main className="max-w-2xl mx-auto space-y-3 px-3 pt-3">
 
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-3">
@@ -250,7 +250,7 @@ export default function OwnerProfilePage() {
                 { href: "/mis-canchas/dashboard", icon: <LayoutDashboard className="size-4" />, bg: "bg-blue-100 dark:bg-blue-900/30", color: "text-blue-600", label: "Dashboard", sub: "Estadísticas consolidadas" },
               ].map(({ href, icon, bg, color, label, sub }) => (
                 <Link key={href} href={href}>
-                  <div className="flex items-center gap-3 mx-3 px-3 py-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
                     <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center shrink-0`}>{icon}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-zinc-900 dark:text-white">{label}</p>
@@ -269,7 +269,7 @@ export default function OwnerProfilePage() {
               <p className="px-5 pt-4 pb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Mis canchas</p>
               <div className="pb-2">
                 {canchas.map((c) => (
-                  <div key={c.id} className="mx-3 mb-1">
+                  <div key={c.id} className="px-3 mb-1">
                     <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-border/30">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center text-lg shrink-0 shadow-sm">
                         🏟️
