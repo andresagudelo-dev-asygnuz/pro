@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Match, Profile, Sport, Team } from "@/lib/types/db";
+import { PLAYER_POSITIONS } from "@/lib/types/db";
 import type { Friendship } from "@/lib/types/db";
 import {
   getFriendshipBetween,
@@ -120,6 +121,9 @@ export default function UserProfilePage() {
     ((profile.skill_pace ?? 50) + (profile.skill_shooting ?? 50) + (profile.skill_passing ?? 50) +
      (profile.skill_dribbling ?? 50) + (profile.skill_defending ?? 50) + (profile.skill_physical ?? 50)) / 6
   );
+  const positionInfo = profile.position
+    ? (PLAYER_POSITIONS.find(p => p.value === profile.position) ?? null)
+    : null;
 
   async function handleSendRequest() {
     if (!user) return;
@@ -211,7 +215,7 @@ export default function UserProfilePage() {
 
         {/* ── Stats row (glassmorphism) ── */}
         <div className="relative z-10 px-4 pt-3 pb-4">
-          <div className="grid grid-cols-4 divide-x divide-white/10 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 overflow-hidden">
+          <div className="grid grid-cols-4 divide-x divide-white/10 bg-white/15 rounded-2xl border border-white/15 overflow-hidden">
             {[
               { value: ovr,                                             label: "OVR",      icon: <Star className="size-3" />,   color: "text-violet-200" },
               { value: profile.matches_played ?? 0,                     label: "Partidos", icon: <Zap className="size-3" />,   color: "text-white" },
@@ -232,12 +236,18 @@ export default function UserProfilePage() {
           <PlayerCard profile={profile} editable={false} />
         </div>
 
-        {/* ── Level badge ── */}
-        <div className="flex justify-center mt-5 z-10 relative">
-          <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest backdrop-blur-sm ${lvlCfg.badge}`}>
+        {/* ── Level + Position badges ── */}
+        <div className="flex justify-center gap-2 mt-5 z-10 relative flex-wrap px-4">
+          <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest ${lvlCfg.badge}`}>
             <span className="size-1.5 rounded-full bg-current opacity-70" />
             {lvlCfg.label}
           </span>
+          {positionInfo && (
+            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-white text-xs font-bold uppercase tracking-widest">
+              <span className="text-white/50 text-[10px] font-black">{positionInfo.abbr}</span>
+              {positionInfo.label}
+            </span>
+          )}
         </div>
       </div>
 
@@ -249,7 +259,14 @@ export default function UserProfilePage() {
           <div className="flex items-center justify-between px-5 pt-5 pb-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Habilidades</p>
-              <p className="text-sm font-black text-zinc-900 dark:text-white mt-0.5">OVR <span className="text-violet-600">{ovr}</span></p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-sm font-black text-zinc-900 dark:text-white">OVR <span className="text-violet-600">{ovr}</span></p>
+                {positionInfo && (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-violet-600 bg-violet-50 dark:bg-violet-900/30 px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-700/40">
+                    {positionInfo.abbr} · {positionInfo.label}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="px-5 pb-5 grid grid-cols-2 gap-x-8 gap-y-3.5">

@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { PlayerCard } from "@/components/PlayerCard";
 import { getMyTeams, type TeamWithCount } from "@/lib/teams/api";
+import { PLAYER_POSITIONS } from "@/lib/types/db";
 import {
   LogOut, Pencil, Shield, Trophy, Zap, Building2, Bell, Users,
   Calendar, Bookmark, ChevronRight, Star, MapPin, Target, Flame,
@@ -130,6 +131,9 @@ export default function ProfilePage() {
     ? Math.round(((profile.skill_pace ?? 50) + (profile.skill_shooting ?? 50) + (profile.skill_passing ?? 50) +
                   (profile.skill_dribbling ?? 50) + (profile.skill_defending ?? 50) + (profile.skill_physical ?? 50)) / 6)
     : 50;
+  const positionInfo = profile?.position
+    ? (PLAYER_POSITIONS.find(p => p.value === profile.position) ?? null)
+    : null;
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
@@ -191,12 +195,18 @@ export default function ProfilePage() {
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         </div>
 
-        {/* ── Level badge ── */}
-        <div className="flex justify-center mt-5 z-10 relative">
+        {/* ── Level + Position badges ── */}
+        <div className="flex justify-center gap-2 mt-5 z-10 relative flex-wrap px-4">
           <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest ${lvlCfg.badge}`}>
             <span className="size-1.5 rounded-full bg-current opacity-70" />
             {lvlCfg.label}
           </span>
+          {positionInfo && (
+            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-white text-xs font-bold uppercase tracking-widest">
+              <span className="text-white/50 text-[10px] font-black">{positionInfo.abbr}</span>
+              {positionInfo.label}
+            </span>
+          )}
         </div>
       </div>
 
@@ -208,7 +218,14 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between px-5 pt-5 pb-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Habilidades</p>
-              <p className="text-sm font-black text-zinc-900 dark:text-white mt-0.5">OVR <span className="text-violet-600">{ovr}</span></p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-sm font-black text-zinc-900 dark:text-white">OVR <span className="text-violet-600">{ovr}</span></p>
+                {positionInfo && (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-violet-600 bg-violet-50 dark:bg-violet-900/30 px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-700/40">
+                    {positionInfo.abbr} · {positionInfo.label}
+                  </span>
+                )}
+              </div>
             </div>
             <Link href="/perfil/editar">
               <button className="text-xs font-semibold text-violet-600 hover:text-violet-700 transition-colors px-3 py-1.5 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/20">
