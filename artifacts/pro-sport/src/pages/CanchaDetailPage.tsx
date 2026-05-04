@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { getCanchaById, getAvailableSlots, createBooking } from "@/lib/canchas/api";
+import { sendNotification } from "@/lib/notifications/api";
 import { Button } from "@/components/ui/button";
 import { MapPin, Users, Phone, MessageCircle, CheckCircle2 } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -84,6 +85,23 @@ export default function CanchaDetailPage() {
       setBooked(true);
       setSelectedSlot(null);
       toast.success("¡Reserva enviada! El dueño de la cancha confirmará en breve.");
+      // Notify cancha owner about new booking request
+      const { data: bookerProfile } = await supabase
+        .from("profiles")
+        .select("full_name, username")
+        .eq("id", user.id)
+        .single();
+      await sendNotification(supabase, cancha.owner_id, "booking_new_request", {
+        cancha_id: cancha.id,
+        cancha_name: cancha.name,
+        booking_date: selectedDate,
+        start_time: selectedSlot!.start,
+        end_time: selectedSlot!.end,
+        booker_name: (bookerProfile as { full_name: string | null; username: string | null } | null)?.full_name
+          || (bookerProfile as { full_name: string | null; username: string | null } | null)?.username
+          || "Un usuario",
+        booker_id: user.id,
+      });
       getAvailableSlots(supabase, cancha.id, selectedDate).then(({ data }) => {
         setSlots(data ?? []);
       });

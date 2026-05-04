@@ -192,18 +192,29 @@ export default function NotificationsPage() {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case "match_request": return <UserPlus className="size-4 text-blue-500" />;
-      case "match_accepted": return <CheckCircle2 className="size-4 text-green-500" />;
-      case "match_invite": return <MessageSquare className="size-4 text-violet-500" />;
-      case "match_updated": return <Bell className="size-4 text-amber-500" />;
-      case "booking_cancelled": return <X className="size-4 text-red-500" />;
-      case "booking_created": return <CheckCircle2 className="size-4 text-emerald-500" />;
-      default: return <Bell className="size-4 text-muted-foreground" />;
+      case "match_request":       return <UserPlus className="size-4 text-blue-500" />;
+      case "match_accepted":      return <CheckCircle2 className="size-4 text-green-500" />;
+      case "match_invite":        return <MessageSquare className="size-4 text-violet-500" />;
+      case "match_updated":       return <Bell className="size-4 text-amber-500" />;
+      case "booking_new_request": return <Bell className="size-4 text-amber-500" />;
+      case "booking_confirmed":   return <CheckCircle2 className="size-4 text-emerald-500" />;
+      case "booking_cancelled_owner":
+      case "booking_cancelled":   return <X className="size-4 text-red-500" />;
+      case "booking_created":     return <CheckCircle2 className="size-4 text-emerald-500" />;
+      default:                    return <Bell className="size-4 text-muted-foreground" />;
     }
   };
 
   const getMessage = (n: Notification) => {
-    const { player_name, match_title, changes, needs_reconfirm, cancha_name, booking_date, start_time } = n.data as Record<string, unknown>;
+    const d = n.data as Record<string, unknown>;
+    const { player_name, match_title, changes, needs_reconfirm,
+            cancha_name, booking_date, start_time, booker_name } = d;
+
+    const dateStr = booking_date
+      ? new Date(`${booking_date as string}T12:00:00`).toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" })
+      : null;
+    const timeStr = start_time ? (start_time as string).substring(0, 5) + "h" : null;
+
     switch (n.type) {
       case "match_request":
         return <span><strong>{(player_name as string) || "Un usuario"}</strong> solicitó unirse a tu partido.</span>;
@@ -219,25 +230,53 @@ export default function NotificationsPage() {
             {needs_reconfirm ? <strong> Debés re-confirmar tu asistencia.</strong> : ""}
           </span>
         );
+      case "booking_new_request":
+        return (
+          <span>
+            🏟️ <strong>{(booker_name as string) || "Un usuario"}</strong> solicitó un turno en{" "}
+            <strong>{(cancha_name as string) || "tu cancha"}</strong>
+            {dateStr ? <> el {dateStr}</> : ""}
+            {timeStr ? <> a las {timeStr}</> : ""}.
+          </span>
+        );
+      case "booking_confirmed":
+        return (
+          <span>
+            ✅ Tu reserva en <strong>{(cancha_name as string) || "la cancha"}</strong>
+            {dateStr ? <> del {dateStr}</> : ""}
+            {timeStr ? <> a las {timeStr}</> : ""} fue <strong>confirmada</strong>.
+          </span>
+        );
+      case "booking_cancelled_owner":
       case "booking_cancelled":
         return (
           <span>
-            La reserva de <strong>{(cancha_name as string) || "tu cancha"}</strong>
-            {booking_date ? <> del {booking_date as string}</> : ""}
-            {start_time ? <> a las {(start_time as string).substring(0, 5)}h</> : ""} fue <strong>cancelada</strong>.
+            ❌ Tu reserva en <strong>{(cancha_name as string) || "la cancha"}</strong>
+            {dateStr ? <> del {dateStr}</> : ""}
+            {timeStr ? <> a las {timeStr}</> : ""} fue <strong>cancelada</strong>.
           </span>
         );
       case "booking_created":
         return (
           <span>
-            Nueva reserva en <strong>{(cancha_name as string) || "tu cancha"}</strong>
-            {booking_date ? <> para el {booking_date as string}</> : ""}
-            {start_time ? <> a las {(start_time as string).substring(0, 5)}h</> : ""}.
+            🏟️ Nueva reserva en <strong>{(cancha_name as string) || "tu cancha"}</strong>
+            {dateStr ? <> para el {dateStr}</> : ""}
+            {timeStr ? <> a las {timeStr}</> : ""}.
           </span>
         );
       default:
         return <span>Nueva notificación recibida.</span>;
     }
+  };
+
+  const getNotifLink = (n: Notification): string => {
+    const d = n.data as Record<string, unknown>;
+    if (d.match_id) return `/matches/${d.match_id as string}`;
+    if (d.cancha_id) {
+      if (n.type === "booking_new_request") return `/canchas/${d.cancha_id as string}/agenda`;
+      return `/canchas/${d.cancha_id as string}`;
+    }
+    return "#";
   };
 
   const hasActionable = friendRequests.length > 0 || matchInvitations.length > 0;
@@ -374,7 +413,7 @@ export default function NotificationsPage() {
                       </div>
                       <div className="flex-1 flex flex-col gap-1">
                         <Link
-                          href={n.data.match_id ? `/matches/${n.data.match_id}` : "#"}
+                          href={getNotifLink(n)}
                           className="text-sm hover:underline"
                         >
                           {getMessage(n)}

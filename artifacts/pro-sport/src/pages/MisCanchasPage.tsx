@@ -28,6 +28,7 @@ import {
   Building2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { sendNotification } from "@/lib/notifications/api";
 
 const supabase = createClient();
 
@@ -117,6 +118,7 @@ export default function MisCanchasPage() {
     action: "confirmada" | "cancelada",
   ) {
     setActioningBooking(bookingId);
+    const booking = pending.find((b) => b.id === bookingId);
     const { error } = await supabase
       .from("cancha_bookings")
       .update({ status: action })
@@ -126,6 +128,18 @@ export default function MisCanchasPage() {
     } else {
       setPending((prev) => prev.filter((b) => b.id !== bookingId));
       toast.success(action === "confirmada" ? "Reserva confirmada." : "Reserva cancelada.");
+      // Notify the booker
+      if (booking) {
+        const notifType = action === "confirmada" ? "booking_confirmed" : "booking_cancelled_owner";
+        await sendNotification(supabase, booking.booked_by, notifType, {
+          cancha_id: booking.cancha_id,
+          cancha_name: booking.canchas?.name || "la cancha",
+          booking_date: booking.booking_date,
+          start_time: booking.start_time,
+          end_time: booking.end_time,
+          total_price: booking.total_price,
+        });
+      }
     }
     setActioningBooking(null);
   }

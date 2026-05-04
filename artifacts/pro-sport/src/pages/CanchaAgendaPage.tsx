@@ -13,6 +13,7 @@ import {
 } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Pencil, Users, AlertCircle, RefreshCw } from "lucide-react";
+import { sendNotification } from "@/lib/notifications/api";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -221,6 +222,16 @@ export default function CanchaAgendaPage() {
       toast.success(action === "confirmada" ? "Reserva confirmada." : "Reserva cancelada.");
       setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: action } : b)));
       loadWeekSummary();
+      // Notify the booker about the status change
+      const notifType = action === "confirmada" ? "booking_confirmed" : "booking_cancelled_owner";
+      await sendNotification(supabase, booking.booked_by, notifType, {
+        cancha_id: cancha!.id,
+        cancha_name: cancha!.name,
+        booking_date: booking.booking_date,
+        start_time: booking.start_time,
+        end_time: booking.end_time,
+        total_price: booking.total_price,
+      });
     }
   }
 
