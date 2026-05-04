@@ -1,4 +1,5 @@
 {
+  "framework": null,
   "buildCommand": "pnpm --filter @workspace/pro-sport run build",
   "outputDirectory": "artifacts/pro-sport/dist/public",
   "installCommand": "pnpm install",
