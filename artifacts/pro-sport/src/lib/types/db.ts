@@ -45,6 +45,7 @@ export interface Profile {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  banner_url: string | null;
   bio: string | null;
   city: string | null;
   primary_sport_id: string | null;
@@ -61,6 +62,10 @@ export interface Profile {
   skill_dribbling: number;
   skill_defending: number;
   skill_physical: number;
+  business_name: string | null;
+  business_phone: string | null;
+  business_whatsapp: string | null;
+  business_website: string | null;
   created_at: string;
   updated_at: string;
 }

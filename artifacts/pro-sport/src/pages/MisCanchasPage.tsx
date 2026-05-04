@@ -30,6 +30,7 @@ import {
   BarChart2,
   Shield,
   LayoutDashboard,
+  UserCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { sendNotification } from "@/lib/notifications/api";
@@ -187,7 +188,12 @@ export default function MisCanchasPage() {
               Gestioná tus canchas, reservas y horarios.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" asChild className="rounded-xl gap-1.5">
+              <Link href="/mis-canchas/perfil">
+                <UserCircle2 className="size-4" /> Mi Perfil
+              </Link>
+            </Button>
             <Button variant="outline" asChild className="rounded-xl gap-1.5">
               <Link href="/mis-canchas/dashboard">
                 <LayoutDashboard className="size-4" /> Dashboard

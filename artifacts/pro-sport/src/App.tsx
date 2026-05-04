@@ -52,6 +52,8 @@ import CanchaClientesPage from "@/pages/CanchaClientesPage";
 import CanchaStatsPage from "@/pages/CanchaStatsPage";
 import CanchaEquipoPage from "@/pages/CanchaEquipoPage";
 import OwnerDashboardPage from "@/pages/OwnerDashboardPage";
+import OwnerProfilePage from "@/pages/OwnerProfilePage";
+import OwnerProfileEditPage from "@/pages/OwnerProfileEditPage";
 
 const queryClient = new QueryClient();
 
@@ -139,6 +141,12 @@ function Router() {
       </Route>
 
       {/* Canchas (protected management) */}
+      <Route path="/mis-canchas/perfil/editar">
+        <ProtectedRoute component={OwnerProfileEditPage} />
+      </Route>
+      <Route path="/mis-canchas/perfil">
+        <ProtectedRoute component={OwnerProfilePage} />
+      </Route>
       <Route path="/mis-canchas/dashboard">
         <ProtectedRoute component={OwnerDashboardPage} />
       </Route>
