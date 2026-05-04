@@ -33,6 +33,13 @@ function showBrowserNotification(title: string, body: string) {
 }
 
 function notifMessage(type: string, data: Record<string, unknown>): string {
+  const cancha = (data.cancha_name as string) || "la cancha";
+  const booker = (data.booker_name as string) || "Un usuario";
+  const dateStr = data.booking_date
+    ? new Date(`${data.booking_date as string}T12:00:00`).toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" })
+    : "";
+  const timeStr = data.start_time ? ` a las ${(data.start_time as string).substring(0, 5)}h` : "";
+
   switch (type) {
     case "match_request":
       return `${data.player_name || "Un usuario"} quiere unirse a tu partido`;
@@ -41,11 +48,16 @@ function notifMessage(type: string, data: Record<string, unknown>): string {
     case "match_invite":
       return "Fuiste invitado a un partido";
     case "match_updated":
-      return `El partido ${data.match_title || ""} fue actualizado`;
-    case "booking_created":
-      return `Nueva reserva en ${data.cancha_name || "tu cancha"}`;
+      return `El partido ${data.match_title || ""} fue actualizado${data.needs_reconfirm ? " — reconfirmá asistencia" : ""}`;
+    case "booking_new_request":
+      return `🏟️ ${booker} solicitó turno en ${cancha}${dateStr ? " — " + dateStr : ""}${timeStr}`;
+    case "booking_confirmed":
+      return `✅ Reserva confirmada en ${cancha}${dateStr ? " — " + dateStr : ""}${timeStr}`;
+    case "booking_cancelled_owner":
     case "booking_cancelled":
-      return `Reserva cancelada en ${data.cancha_name || "tu cancha"}`;
+      return `❌ Reserva cancelada en ${cancha}${dateStr ? " — " + dateStr : ""}${timeStr}`;
+    case "booking_created":
+      return `Nueva reserva en ${cancha}${dateStr ? " — " + dateStr : ""}${timeStr}`;
     default:
       return "Nueva notificación";
   }
