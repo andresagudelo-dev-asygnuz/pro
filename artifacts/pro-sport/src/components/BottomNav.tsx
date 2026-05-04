@@ -130,11 +130,7 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
                     active ? "text-violet-600 dark:text-violet-400" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <div
-                    className={`relative flex items-center justify-center w-8 h-8 rounded-xl transition-colors duration-200 ${
-                      active ? "bg-violet-100 dark:bg-violet-900/30" : ""
-                    }`}
-                  >
+                  <div className="relative flex items-center justify-center w-8 h-8 transition-colors duration-200">
                     <Icon
                       className={`transition-all duration-200 ${active ? "size-[19px]" : "size-[18px]"}`}
                       strokeWidth={active ? 2.5 : 2}
