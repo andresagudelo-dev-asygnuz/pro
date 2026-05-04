@@ -31,6 +31,7 @@ import {
   Send,
 } from "lucide-react";
 import type { Match, Sport } from "@/lib/types/db";
+import { checkMatchConflict } from "@/lib/matches/conflicts";
 import { ENABLED_CITIES } from "@/lib/types/db";
 
 const supabase = createClient();
@@ -223,6 +224,18 @@ export default function FeedPage() {
   async function handleSendRequest(matchId: string) {
     if (!user) return;
     setSendingRequest(matchId);
+
+    // Conflict check before inserting
+    const match = matches.find((m) => m.id === matchId);
+    if (match) {
+      const conflict = await checkMatchConflict(supabase, user.id, match);
+      if (conflict.conflict) {
+        toast.error(conflict.reason, { duration: 6000 });
+        setSendingRequest(null);
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from("match_participants")
       .insert({ match_id: matchId, user_id: user.id, status: "requested" });

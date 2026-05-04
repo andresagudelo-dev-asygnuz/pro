@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import type { Match, MatchParticipant, Profile, Sport, CanchaBooking, MatchInvitation, MatchWaitlist } from "@/lib/types/db";
 import { getMyMatchInvitation, respondToMatchInvitation, getMatchInvitations, getFriends, sendMatchInvitations } from "@/lib/friends/api";
+import { checkMatchConflict } from "@/lib/matches/conflicts";
 import type { FriendWithProfile } from "@/lib/friends/api";
 
 const supabase = createClient();
@@ -341,6 +342,15 @@ export default function MatchDetailPage() {
   async function handleRequestJoin() {
     if (!match || !user) return;
     setRequesting(true);
+
+    // Conflict check before inserting
+    const conflict = await checkMatchConflict(supabase, user.id, match);
+    if (conflict.conflict) {
+      toast.error(conflict.reason, { duration: 6000 });
+      setRequesting(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("match_participants")
       .insert({ match_id: match.id, user_id: user.id, status: "requested" });
