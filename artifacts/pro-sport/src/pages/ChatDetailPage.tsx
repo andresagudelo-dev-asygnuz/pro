@@ -55,6 +55,7 @@ export default function ChatDetailPage() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [chatClosed, setChatClosed] = useState<string | null>(null); // reason string or null
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
@@ -75,8 +76,20 @@ export default function ChatDetailPage() {
       ]);
 
       if (!convRes.data) { setLocation("/chat"); return; }
-      setConversation(convRes.data as Conversation);
+      const conv = convRes.data as Conversation;
+      setConversation(conv);
       if (myProfRes.data) setMyProfile(myProfRes.data as UserProfile);
+
+      // For match-type conversations, check if the match is closed
+      if (conv.type === "match" && conv.reference_id) {
+        const { data: match } = await supabase
+          .from("matches")
+          .select("status")
+          .eq("id", conv.reference_id)
+          .single();
+        if (match?.status === "cancelled") setChatClosed("Este partido fue cancelado.");
+        else if (match?.status === "completed") setChatClosed("Este partido finalizó.");
+      }
 
       // Other participant
       const { data: parts } = await supabase
@@ -179,19 +192,21 @@ export default function ChatDetailPage() {
     const { error } = await sendMessage(supabase, id, user.id, content);
 
     if (error) {
-      // Give realtime 1.5s to arrive and replace the optimistic before giving up
-      setTimeout(() => {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === tempId)) {
-            // Realtime didn't replace it — INSERT truly failed
-            toast.error("No se pudo enviar. Revisá tu conexión.");
-            return prev.filter((m) => m.id !== tempId);
-          }
-          return prev; // Already replaced by realtime — all good
-        });
-      }, 1500);
+      // INSERT truly failed — remove optimistic immediately and restore text
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setText(content);
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        autoResize(textareaRef.current);
+      }
+      if (error.includes("match_closed")) {
+        setChatClosed("Este partido fue cancelado.");
+        toast.error("No se pueden enviar mensajes a un partido cerrado.");
+      } else {
+        toast.error("No se pudo enviar. Revisá tu conexión.");
+      }
     }
-    // If no error: realtime will deliver the real message and replace the optimistic
+    // If no error: realtime replaces the optimistic when it arrives
 
     setSending(false);
     inputRef.current?.focus();
@@ -388,53 +403,64 @@ export default function ChatDetailPage() {
         </div>
       </div>
 
-      {/* ── Input bar ── */}
-      <div className="shrink-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-t border-border/50">
-        <div className="flex items-end gap-2 px-3 py-3 max-w-2xl mx-auto">
-          {/* My avatar in input bar */}
-          {myProfile && (
-            <Avatar className="size-8 shrink-0 self-end mb-1">
-              {myProfile.avatar_url && <AvatarImage src={myProfile.avatar_url} />}
-              <AvatarFallback className="text-[10px] font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
-                {initialsFromName(myProfile.full_name ?? myProfile.username ?? null)}
-              </AvatarFallback>
-            </Avatar>
-          )}
-
-          {/* Textarea */}
-          <div className="flex-1 flex items-end bg-zinc-100 dark:bg-zinc-800 rounded-2xl border border-border/40 focus-within:border-violet-400 focus-within:ring-1 focus-within:ring-violet-400/30 transition-all overflow-hidden">
-            <textarea
-              ref={(el) => {
-                (inputRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
-                (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
-              }}
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                autoResize(e.target);
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Escribí un mensaje..."
-              rows={1}
-              className="flex-1 resize-none bg-transparent px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none max-h-[120px] overflow-y-auto leading-relaxed"
-            />
+      {/* ── Input bar / Closed banner ── */}
+      {chatClosed ? (
+        <div className="shrink-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-t border-border/50">
+          <div className="flex items-center justify-center gap-2 px-4 py-4 max-w-2xl mx-auto">
+            <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 rounded-2xl px-4 py-3 w-full justify-center">
+              <span className="text-sm text-muted-foreground">{chatClosed}</span>
+              <span className="text-xs text-muted-foreground/60">· No se pueden enviar mensajes.</span>
+            </div>
           </div>
-
-          {/* Send button */}
-          <button
-            onClick={handleSend}
-            disabled={!text.trim() || sending}
-            className="shrink-0 w-10 h-10 rounded-2xl bg-violet-600 hover:bg-violet-700 active:bg-violet-800 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-95 shadow-md shadow-violet-500/25 self-end"
-          >
-            {sending
-              ? <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : <Send className="size-4 text-white" />}
-          </button>
         </div>
-        <p className="text-center text-[10px] text-muted-foreground/40 pb-2 -mt-1">
-          Enter para enviar · Shift+Enter nueva línea
-        </p>
-      </div>
+      ) : (
+        <div className="shrink-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-t border-border/50">
+          <div className="flex items-end gap-2 px-3 py-3 max-w-2xl mx-auto">
+            {/* My avatar in input bar */}
+            {myProfile && (
+              <Avatar className="size-8 shrink-0 self-end mb-1">
+                {myProfile.avatar_url && <AvatarImage src={myProfile.avatar_url} />}
+                <AvatarFallback className="text-[10px] font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+                  {initialsFromName(myProfile.full_name ?? myProfile.username ?? null)}
+                </AvatarFallback>
+              </Avatar>
+            )}
+
+            {/* Textarea */}
+            <div className="flex-1 flex items-end bg-zinc-100 dark:bg-zinc-800 rounded-2xl border border-border/40 focus-within:border-violet-400 focus-within:ring-1 focus-within:ring-violet-400/30 transition-all overflow-hidden">
+              <textarea
+                ref={(el) => {
+                  (inputRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
+                  (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
+                }}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  autoResize(e.target);
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Escribí un mensaje..."
+                rows={1}
+                className="flex-1 resize-none bg-transparent px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none max-h-[120px] overflow-y-auto leading-relaxed"
+              />
+            </div>
+
+            {/* Send button */}
+            <button
+              onClick={handleSend}
+              disabled={!text.trim() || sending}
+              className="shrink-0 w-10 h-10 rounded-2xl bg-violet-600 hover:bg-violet-700 active:bg-violet-800 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-95 shadow-md shadow-violet-500/25 self-end"
+            >
+              {sending
+                ? <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <Send className="size-4 text-white" />}
+            </button>
+          </div>
+          <p className="text-center text-[10px] text-muted-foreground/40 pb-2 -mt-1">
+            Enter para enviar · Shift+Enter nueva línea
+          </p>
+        </div>
+      )}
     </div>
   );
 }
