@@ -96,7 +96,7 @@ export default function MisPartidosPage() {
         }
       />
 
-      <div className="sticky top-14 z-40 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-b border-border/50 px-4 pb-3 pt-2 flex gap-2">
+      <div className="sticky top-14 z-40 bg-white dark:bg-zinc-900 border-b border-border/50 px-4 pb-3 pt-2 flex gap-2">
         <button
           onClick={() => setTab("organizados")}
           className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${

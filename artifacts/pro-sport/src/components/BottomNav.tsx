@@ -101,7 +101,7 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
-      <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-t border-border/50 shadow-[0_-2px_20px_rgba(0,0,0,0.06)]">
+      <div className="bg-white dark:bg-zinc-950 border-t border-border/50 shadow-[0_-2px_20px_rgba(0,0,0,0.06)]">
         <div className="flex items-end justify-around h-[62px] max-w-lg mx-auto px-1 pb-1">
           {navItems.map((item) => {
             const { href, label, Icon, isAction } = item;

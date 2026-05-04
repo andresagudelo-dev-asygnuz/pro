@@ -17,7 +17,7 @@ export function CanchaOwnerTabs({ canchaId, canchaName }: Props) {
   ];
 
   return (
-    <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-border/50 sticky top-0 z-20">
+    <div className="bg-white dark:bg-zinc-900 border-b border-border/50 sticky top-0 z-20">
       {/* Cancha name + back */}
       <div className="flex items-center gap-2 px-4 pt-3 pb-1">
         <Link href="/mis-canchas">

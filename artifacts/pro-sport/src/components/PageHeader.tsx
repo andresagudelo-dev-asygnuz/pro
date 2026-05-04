@@ -15,7 +15,7 @@ export function PageHeader({ title, backHref, actions }: PageHeaderProps) {
   const { profile } = useAuth();
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
+    <header className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-border/50">
       <div className="container mx-auto px-4 h-14 flex items-center gap-3">
 
         {backHref ? (

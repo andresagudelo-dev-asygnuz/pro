@@ -240,7 +240,7 @@ export default function ChatDetailPage() {
     <div className="flex flex-col h-[100dvh] bg-zinc-50 dark:bg-zinc-950">
 
       {/* ── Header ── */}
-      <div className="shrink-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-border/50 shadow-sm z-10">
+      <div className="shrink-0 bg-white dark:bg-zinc-950 border-b border-border/50 shadow-sm z-10">
         <div className="flex items-center gap-3 px-3 py-3 max-w-2xl mx-auto">
           <button
             onClick={() => setLocation("/chat")}
@@ -405,7 +405,7 @@ export default function ChatDetailPage() {
 
       {/* ── Input bar / Closed banner ── */}
       {chatClosed ? (
-        <div className="shrink-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-t border-border/50">
+        <div className="shrink-0 bg-white dark:bg-zinc-950 border-t border-border/50">
           <div className="flex items-center justify-center gap-2 px-4 py-4 max-w-2xl mx-auto">
             <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 rounded-2xl px-4 py-3 w-full justify-center">
               <span className="text-sm text-muted-foreground">{chatClosed}</span>
@@ -414,7 +414,7 @@ export default function ChatDetailPage() {
           </div>
         </div>
       ) : (
-        <div className="shrink-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-t border-border/50">
+        <div className="shrink-0 bg-white dark:bg-zinc-950 border-t border-border/50">
           <div className="flex items-end gap-2 px-3 py-3 max-w-2xl mx-auto">
             {/* My avatar in input bar */}
             {myProfile && (

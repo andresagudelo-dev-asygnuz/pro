@@ -112,7 +112,7 @@ export default function FriendsPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
       <PageHeader title="Amigos" />
 
-      <div className="sticky top-14 z-40 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-b border-border">
+      <div className="sticky top-14 z-40 bg-white dark:bg-zinc-900 border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex">
             {(

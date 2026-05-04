@@ -136,7 +136,7 @@ export default function CanchasPage() {
       />
 
       {/* Search + sport filters */}
-      <div className="sticky top-14 z-40 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-b border-border/50 px-4 pb-3 pt-2 space-y-2">
+      <div className="sticky top-14 z-40 bg-white dark:bg-zinc-900 border-b border-border/50 px-4 pb-3 pt-2 space-y-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input

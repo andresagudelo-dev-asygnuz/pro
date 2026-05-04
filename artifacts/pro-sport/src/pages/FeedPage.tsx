@@ -249,7 +249,7 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-b border-border/50">
+      <header className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-border/50">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl font-black italic tracking-tighter text-zinc-900 dark:text-white">
