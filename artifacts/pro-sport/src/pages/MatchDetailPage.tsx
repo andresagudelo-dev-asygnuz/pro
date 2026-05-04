@@ -63,6 +63,8 @@ export default function MatchDetailPage() {
 
   // Action state
   const [joining, setJoining]           = useState(false);
+  const [requesting, setRequesting]     = useState(false);
+  const [acceptingRequest, setAcceptingRequest] = useState<string | null>(null);
   const [confirming, setConfirming]     = useState(false);
   const [cancellingMatch, setCancellingMatch] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -191,6 +193,11 @@ export default function MatchDetailPage() {
           setParticipants((prev) => prev.some((p) => p.user_id === newPart.user_id) ? prev : [...prev, newPart]);
           const { data } = await supabase.from("profiles").select("*").eq("id", newPart.user_id).maybeSingle();
           if (data) setProfilesById((prev) => new Map([...prev, [data.id, data as Profile]]));
+        })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "match_participants", filter: `match_id=eq.${id}` },
+        (payload: { new: Record<string, unknown> }) => {
+          const updated = payload.new as unknown as MatchParticipant;
+          setParticipants((prev) => prev.map((p) => p.user_id === updated.user_id ? updated : p));
         })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "match_participants", filter: `match_id=eq.${id}` },
         (payload: { old: Record<string, unknown> }) => {
@@ -330,6 +337,62 @@ export default function MatchDetailPage() {
     setSubmittingRatings(false);
   }
 
+  // ── Join as REQUEST ────────────────────────────────────────────────────────
+  async function handleRequestJoin() {
+    if (!match || !user) return;
+    setRequesting(true);
+    const { error } = await supabase
+      .from("match_participants")
+      .insert({ match_id: match.id, user_id: user.id, status: "requested" });
+    if (error) {
+      toast.error("No se pudo enviar la solicitud.");
+    } else {
+      setParticipants((prev) => [
+        ...prev,
+        { match_id: match.id, user_id: user.id, status: "requested", joined_at: new Date().toISOString() } as MatchParticipant,
+      ]);
+      toast.success("¡Solicitud enviada! El organizador la revisará pronto.");
+    }
+    setRequesting(false);
+  }
+
+  // ── Accept / Reject join request (organizer) ───────────────────────────────
+  async function handleAcceptRequest(userId: string) {
+    if (!match) return;
+    setAcceptingRequest(userId);
+    const { error } = await supabase
+      .from("match_participants")
+      .update({ status: "joined" })
+      .eq("match_id", match.id)
+      .eq("user_id", userId);
+    if (error) {
+      toast.error("No se pudo aceptar la solicitud.");
+    } else {
+      setParticipants((prev) =>
+        prev.map((p) => p.user_id === userId ? { ...p, status: "joined" } : p),
+      );
+      toast.success("Solicitud aceptada. El jugador ya puede ver el partido.");
+    }
+    setAcceptingRequest(null);
+  }
+
+  async function handleRejectRequest(userId: string) {
+    if (!match) return;
+    setAcceptingRequest(userId);
+    const { error } = await supabase
+      .from("match_participants")
+      .delete()
+      .eq("match_id", match.id)
+      .eq("user_id", userId);
+    if (error) {
+      toast.error("No se pudo rechazar la solicitud.");
+    } else {
+      setParticipants((prev) => prev.filter((p) => p.user_id !== userId));
+      toast.success("Solicitud rechazada.");
+    }
+    setAcceptingRequest(null);
+  }
+
   async function handleOpenInvitePanel() {
     setShowInvitePanel(true);
     if (!friendsLoaded && user) {
@@ -371,8 +434,102 @@ export default function MatchDetailPage() {
     </AppLayout>
   );
 
+  // ── Access guard: must be organizer or joined participant ──────────────────
+  {
+    const _isOrg = match.organizer_id === user?.id;
+    const _myPart = participants.find((p) => p.user_id === user?.id);
+    const _isJoined = _myPart?.status === "joined";
+
+    if (!_isOrg && !_isJoined) {
+      const _myStatus = _myPart?.status ?? null;
+      const _hasPendingInvite = myInvitation?.status === "pending";
+
+      // Pending invitation → show accept/reject screen
+      if (_hasPendingInvite) {
+        return (
+          <AppLayout>
+            <div className="flex flex-col gap-4 max-w-md mx-auto py-8">
+              <button onClick={() => setLocation("/feed")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground self-start">
+                <ArrowLeft className="size-4" /> Volver al feed
+              </button>
+              <div className="rounded-2xl border border-violet-200 dark:border-violet-700 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/30 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-2xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
+                    <Mail className="size-5 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-violet-900 dark:text-violet-200">Te invitaron a un partido</p>
+                    <p className="text-xs text-violet-700/70 dark:text-violet-400/70">Aceptá para ver todos los detalles</p>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-foreground mb-4">{match.title}</p>
+                <div className="flex gap-2">
+                  <Button disabled={respondingInvite} onClick={() => handleRespondInvitation("accepted")} className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl flex-1">
+                    Aceptar e ingresar
+                  </Button>
+                  <Button variant="outline" disabled={respondingInvite} onClick={() => handleRespondInvitation("rejected")} className="border-violet-300 text-violet-700 dark:text-violet-300 rounded-xl">
+                    Rechazar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </AppLayout>
+        );
+      }
+
+      // Pending join request → show waiting screen
+      if (_myStatus === "requested") {
+        return (
+          <AppLayout>
+            <div className="flex flex-col gap-4 max-w-md mx-auto py-8">
+              <button onClick={() => setLocation("/feed")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground self-start">
+                <ArrowLeft className="size-4" /> Volver al feed
+              </button>
+              <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 p-6 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center mx-auto mb-4">
+                  <Clock className="size-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <p className="font-bold text-amber-900 dark:text-amber-200 text-lg mb-1">Solicitud enviada</p>
+                <p className="text-sm text-amber-700/80 dark:text-amber-400/70 mb-2">
+                  Tu solicitud para <span className="font-semibold">{match.title}</span> está pendiente de aprobación.
+                </p>
+                <p className="text-xs text-muted-foreground">El organizador te aceptará pronto. Recibirás una notificación cuando sea aprobada.</p>
+              </div>
+            </div>
+          </AppLayout>
+        );
+      }
+
+      // No connection → access denied
+      return (
+        <AppLayout>
+          <div className="flex flex-col gap-4 max-w-md mx-auto py-8">
+            <button onClick={() => setLocation("/feed")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground self-start">
+              <ArrowLeft className="size-4" /> Volver al feed
+            </button>
+            <div className="rounded-2xl border border-border bg-white dark:bg-zinc-900 p-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                <Lock className="size-8 text-muted-foreground/50" />
+              </div>
+              <p className="font-bold text-foreground text-lg mb-1">Acceso restringido</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                {match.is_public
+                  ? "Enviá una solicitud para unirte a este partido y ver todos sus detalles."
+                  : "Este partido es privado. Solo los amigos del organizador pueden solicitar unirse."}
+              </p>
+              <Button onClick={() => setLocation("/feed")} variant="outline" className="rounded-xl">
+                Volver al feed
+              </Button>
+            </div>
+          </div>
+        </AppLayout>
+      );
+    }
+  }
+
   // ── Derived state ─────────────────────────────────────────────────────────
   const joinedParts    = participants.filter((p) => p.status === "joined");
+  const requestedParts = participants.filter((p) => p.status === "requested");
   const joinedCount    = joinedParts.length;
   const myPart         = participants.find((p) => p.user_id === user?.id);
   const isJoined       = !!myPart && myPart.status === "joined";
@@ -644,15 +801,15 @@ export default function MatchDetailPage() {
               </div>
             )}
 
-            {/* Non-organizer: not joined, not full */}
+            {/* Non-organizer: not joined, not full → send request */}
             {!isOrganizer && !isJoined && !isFull && (
               <div className="p-5 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/20">
                 <p className="font-bold text-violet-900 dark:text-violet-200 text-sm mb-0.5">¿Querés jugar?</p>
                 <p className="text-xs text-violet-700/70 dark:text-violet-400/70 mb-3">
-                  Quedan {spotsLeft} cupo{spotsLeft !== 1 ? "s" : ""} · Unite ahora
+                  Quedan {spotsLeft} cupo{spotsLeft !== 1 ? "s" : ""} · Enviá tu solicitud al organizador
                 </p>
-                <Button onClick={handleJoin} disabled={joining} className="w-full rounded-xl font-bold bg-violet-600 hover:bg-violet-700 text-white h-11">
-                  {joining ? "Uniéndote…" : "¡Unirme al partido!"}
+                <Button onClick={handleRequestJoin} disabled={requesting} className="w-full rounded-xl font-bold bg-violet-600 hover:bg-violet-700 text-white h-11">
+                  <Send className="size-4 mr-2" />{requesting ? "Enviando solicitud…" : "Enviar solicitud para unirme"}
                 </Button>
               </div>
             )}
@@ -713,6 +870,67 @@ export default function MatchDetailPage() {
                 );
               })}
             </ul>
+          </div>
+        )}
+
+        {/* ── 7b. PENDING JOIN REQUESTS (organizer only) ────────────────── */}
+        {isOrganizer && requestedParts.length > 0 && (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-violet-200 dark:border-violet-800 overflow-hidden">
+            <div className="px-5 py-4 border-b border-violet-200/60 dark:border-violet-800/40 flex items-center gap-2 bg-violet-50/60 dark:bg-violet-950/20">
+              <UserPlus className="size-4 text-violet-600 dark:text-violet-400" />
+              <h2 className="text-sm font-bold text-violet-900 dark:text-violet-200">Solicitudes de ingreso</h2>
+              <span className="ml-auto flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 animate-pulse">
+                {requestedParts.length} pendiente{requestedParts.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <ul className="divide-y divide-border/40">
+              {requestedParts.map((p) => {
+                const pp = profilesById.get(p.user_id);
+                const isAccepting = acceptingRequest === p.user_id;
+                return (
+                  <li key={p.user_id} className="flex items-center gap-3 px-5 py-3">
+                    <Avatar className="size-9 shrink-0">
+                      {pp?.avatar_url && <AvatarImage src={pp.avatar_url} />}
+                      <AvatarFallback className="text-xs bg-violet-100 dark:bg-violet-900/30 text-violet-700">{initialsFromName(pp?.full_name ?? null)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{pp?.full_name ?? pp?.username ?? "Jugador"}</p>
+                      {(pp?.rating_count ?? 0) > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          <Star className="size-2.5 inline fill-amber-400 text-amber-400 mr-0.5" />
+                          {pp?.rating_avg?.toFixed(1)} ({pp?.rating_count})
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        size="sm"
+                        disabled={isAccepting || isFull}
+                        onClick={() => handleAcceptRequest(p.user_id)}
+                        className="h-7 rounded-lg text-xs px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        <Check className="size-3 mr-1" />
+                        {isAccepting ? "…" : isFull ? "Lleno" : "Aceptar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isAccepting}
+                        onClick={() => handleRejectRequest(p.user_id)}
+                        className="h-7 rounded-lg text-xs px-2.5 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {isFull && (
+              <div className="px-5 py-3 bg-amber-50 dark:bg-amber-950/20 border-t border-amber-200/60 dark:border-amber-800/40">
+                <p className="text-xs text-amber-700 dark:text-amber-400">El partido está lleno. Liberá un cupo antes de aceptar nuevas solicitudes.</p>
+              </div>
+            )}
           </div>
         )}
 

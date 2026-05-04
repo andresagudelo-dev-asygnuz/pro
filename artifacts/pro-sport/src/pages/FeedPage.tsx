@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifCount } from "@/context/NotifContext";
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import {
   Calendar,
   MapPin,
@@ -26,6 +27,8 @@ import {
   Users,
   Flame,
   ChevronRight,
+  Lock,
+  Send,
 } from "lucide-react";
 import type { Match, Sport } from "@/lib/types/db";
 import { ENABLED_CITIES } from "@/lib/types/db";
@@ -126,12 +129,19 @@ function getBarColor(pct: number): string {
 }
 
 export default function FeedPage() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { unreadCount } = useNotifCount();
+  const [, setLocation] = useLocation();
   const [matches, setMatches] = useState<Match[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [sportsMap, setSportsMap] = useState<Map<string, Sport>>(new Map());
   const [participantCounts, setParticipantCounts] = useState<Map<string, number>>(new Map());
+  // match_id → participant status of current user ('joined' | 'requested' | etc.)
+  const [myStatuses, setMyStatuses] = useState<Map<string, string>>(new Map());
+  // set of user IDs that are friends of the current user (to check private match access)
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  // match_id being requested right now
+  const [sendingRequest, setSendingRequest] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -160,22 +170,70 @@ export default function FeedPage() {
       setMatches(ms);
 
       if (ms.length > 0) {
-        const { data: countData } = await supabase
-          .from("match_participants")
-          .select("match_id")
-          .in("match_id", ms.map((m) => m.id))
-          .eq("status", "joined");
+        const matchIds = ms.map((m) => m.id);
+
+        // Joined counts + my participation statuses in parallel
+        const [{ data: countData }, { data: myPartsData }, friendsRes] = await Promise.all([
+          supabase
+            .from("match_participants")
+            .select("match_id")
+            .in("match_id", matchIds)
+            .eq("status", "joined"),
+          user
+            ? supabase
+                .from("match_participants")
+                .select("match_id, status")
+                .in("match_id", matchIds)
+                .eq("user_id", user.id)
+            : Promise.resolve({ data: [] }),
+          user
+            ? supabase
+                .from("friendships")
+                .select("requester_id, addressee_id")
+                .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+                .eq("status", "accepted")
+            : Promise.resolve({ data: [] }),
+        ]);
+
         const counts = new Map<string, number>();
         (countData ?? []).forEach((row: { match_id: string }) => {
           counts.set(row.match_id, (counts.get(row.match_id) ?? 0) + 1);
         });
         setParticipantCounts(counts);
+
+        const statuses = new Map<string, string>();
+        ((myPartsData ?? []) as { match_id: string; status: string }[]).forEach((row) => {
+          statuses.set(row.match_id, row.status);
+        });
+        setMyStatuses(statuses);
+
+        const friends = new Set<string>();
+        ((friendsRes.data ?? []) as { requester_id: string; addressee_id: string }[]).forEach((f) => {
+          if (f.requester_id !== user?.id) friends.add(f.requester_id);
+          if (f.addressee_id !== user?.id) friends.add(f.addressee_id);
+        });
+        setFriendIds(friends);
       }
 
       setLoading(false);
     }
     load();
-  }, []);
+  }, [user]);
+
+  async function handleSendRequest(matchId: string) {
+    if (!user) return;
+    setSendingRequest(matchId);
+    const { error } = await supabase
+      .from("match_participants")
+      .insert({ match_id: matchId, user_id: user.id, status: "requested" });
+    if (error) {
+      toast.error("No se pudo enviar la solicitud.");
+    } else {
+      setMyStatuses((prev) => new Map([...prev, [matchId, "requested"]]));
+      toast.success("¡Solicitud enviada! El organizador la revisará pronto.");
+    }
+    setSendingRequest(null);
+  }
 
   const filtered = useMemo(() => {
     return matches.filter((m) => {
@@ -373,106 +431,172 @@ export default function FeedPage() {
               const barColor = getBarColor(pct);
               const isHot = urgency.urgent;
 
-              return (
-                <Link key={match.id} href={`/matches/${match.id}`}>
-                  <div
-                    className={`group relative bg-gradient-to-br ${theme.bg} rounded-2xl border border-border/60 border-l-4 ${theme.accent} shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden`}
+              // ── Privacy & access logic ──────────────────────────────────
+              const myStatus = myStatuses.get(match.id) ?? null;
+              const isMyMatch = match.organizer_id === user?.id;
+              const isJoined = myStatus === "joined";
+              const isFull = joinedCount >= match.max_players && !isJoined;
+              // Public matches: anyone can request. Private: only friends of organizer.
+              const canRequest = match.is_public || friendIds.has(match.organizer_id);
+              const canEnterDetail = isMyMatch || isJoined;
+
+              // ── CTA element ─────────────────────────────────────────────
+              let ctaEl: React.ReactNode;
+              if (isMyMatch) {
+                ctaEl = (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLocation(`/matches/${match.id}`); }}
+                    className="flex items-center gap-0.5 text-xs font-bold text-violet-600 dark:text-violet-400"
                   >
-                    {/* Hot badge overlay */}
-                    {isHot && (
-                      <div className="absolute top-3 right-3 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
-                        <Flame className="size-2.5" />
-                        HOT
-                      </div>
-                    )}
+                    Gestionar <ChevronRight className="size-3.5" />
+                  </button>
+                );
+              } else if (isJoined) {
+                ctaEl = (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setLocation(`/matches/${match.id}`); }}
+                    className="flex items-center gap-0.5 text-xs font-bold text-violet-600 dark:text-violet-400"
+                  >
+                    Ver partido <ChevronRight className="size-3.5" />
+                  </button>
+                );
+              } else if (myStatus === "requested") {
+                ctaEl = (
+                  <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    Solicitud enviada
+                  </span>
+                );
+              } else if (isFull) {
+                ctaEl = (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                    Sin cupos
+                  </span>
+                );
+              } else if (!canRequest) {
+                ctaEl = (
+                  <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                    <Lock className="size-3" /> Solo amigos
+                  </span>
+                );
+              } else {
+                ctaEl = (
+                  <button
+                    disabled={sendingRequest === match.id}
+                    onClick={(e) => { e.stopPropagation(); handleSendRequest(match.id); }}
+                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-60"
+                  >
+                    <Send className="size-3" />
+                    {sendingRequest === match.id ? "Enviando…" : "Enviar solicitud"}
+                  </button>
+                );
+              }
 
-                    <div className="p-4 pb-3">
-                      <div className="flex items-start gap-3">
-                        {/* Sport icon */}
-                        <div
-                          className={`w-12 h-12 rounded-2xl ${theme.iconBg} flex items-center justify-center text-2xl shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200`}
-                        >
-                          {sport?.icon ?? "🏃"}
-                        </div>
-
-                        <div className="flex-1 min-w-0 pr-8">
-                          {/* Metadata row */}
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
-                            <span className="font-medium">{sport?.name ?? "Deporte"}</span>
-                            <span>·</span>
-                            <span>{match.city}</span>
-                            {match.skill_level && (
-                              <>
-                                <span>·</span>
-                                <span className="capitalize">{match.skill_level}</span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Title */}
-                          <h3 className="font-bold text-[15px] leading-tight text-zinc-900 dark:text-white group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors line-clamp-2">
-                            {match.title}
-                          </h3>
-
-                          {/* Time row */}
-                          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300">
-                              <Clock className="size-3 shrink-0" />
-                              {relTime}
-                            </span>
-                            <span className="text-[11px] text-muted-foreground/70">
-                              {new Date(match.starts_at).toLocaleString("es-CO", {
-                                weekday: "short",
-                                day: "2-digit",
-                                month: "short",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Location */}
-                      {match.location && (
-                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2.5 truncate">
-                          <MapPin className="size-3 shrink-0 text-muted-foreground/70" />
-                          {match.location}
-                        </p>
-                      )}
+              const cardInner = (
+                <div
+                  onClick={canEnterDetail ? () => setLocation(`/matches/${match.id}`) : undefined}
+                  className={`group relative bg-gradient-to-br ${theme.bg} rounded-2xl border border-border/60 border-l-4 ${theme.accent} shadow-sm ${canEnterDetail ? "hover:shadow-lg cursor-pointer" : "cursor-default"} transition-all duration-300 overflow-hidden`}
+                >
+                  {/* Privacy badge */}
+                  {!match.is_public && (
+                    <div className="absolute top-3 left-16 flex items-center gap-1 bg-zinc-700/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      <Lock className="size-2.5" /> Privado
                     </div>
+                  )}
 
-                    {/* Progress & CTA footer */}
-                    <div className="px-4 pb-4">
-                      {/* Occupancy bar */}
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-                            style={{ width: `${Math.min(pct * 100, 100)}%` }}
-                          />
-                        </div>
-                        <span className="text-[11px] font-semibold tabular-nums text-muted-foreground whitespace-nowrap">
-                          {joinedCount}/{match.max_players}
-                        </span>
+                  {/* Hot badge overlay */}
+                  {isHot && !myStatus && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                      <Flame className="size-2.5" />
+                      HOT
+                    </div>
+                  )}
+
+                  <div className="p-4 pb-3">
+                    <div className="flex items-start gap-3">
+                      {/* Sport icon */}
+                      <div
+                        className={`w-12 h-12 rounded-2xl ${theme.iconBg} flex items-center justify-center text-2xl shrink-0 shadow-sm ${canEnterDetail ? "group-hover:scale-105" : ""} transition-transform duration-200`}
+                      >
+                        {sport?.icon ?? "🏃"}
                       </div>
 
-                      {/* Footer row */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Users className="size-3 text-muted-foreground" />
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${urgency.color}`}>
-                            {urgency.label}
+                      <div className="flex-1 min-w-0 pr-8">
+                        {/* Metadata row */}
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+                          <span className="font-medium">{sport?.name ?? "Deporte"}</span>
+                          <span>·</span>
+                          <span>{match.city}</span>
+                          {match.skill_level && (
+                            <>
+                              <span>·</span>
+                              <span className="capitalize">{match.skill_level}</span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Title */}
+                        <h3 className={`font-bold text-[15px] leading-tight text-zinc-900 dark:text-white ${canEnterDetail ? "group-hover:text-violet-700 dark:group-hover:text-violet-300" : ""} transition-colors line-clamp-2`}>
+                          {match.title}
+                        </h3>
+
+                        {/* Time row */}
+                        <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300">
+                            <Clock className="size-3 shrink-0" />
+                            {relTime}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground/70">
+                            {new Date(match.starts_at).toLocaleString("es-CO", {
+                              weekday: "short",
+                              day: "2-digit",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </span>
                         </div>
-                        <span className="flex items-center gap-0.5 text-xs font-bold text-violet-600 dark:text-violet-400 group-hover:gap-1.5 transition-all duration-200">
-                          Ver partido <ChevronRight className="size-3.5" />
-                        </span>
                       </div>
                     </div>
+
+                    {/* Location */}
+                    {match.location && (
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2.5 truncate">
+                        <MapPin className="size-3 shrink-0 text-muted-foreground/70" />
+                        {match.location}
+                      </p>
+                    )}
                   </div>
-                </Link>
+
+                  {/* Progress & CTA footer */}
+                  <div className="px-4 pb-4">
+                    {/* Occupancy bar */}
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                          style={{ width: `${Math.min(pct * 100, 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-semibold tabular-nums text-muted-foreground whitespace-nowrap">
+                        {joinedCount}/{match.max_players}
+                      </span>
+                    </div>
+
+                    {/* Footer row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="size-3 text-muted-foreground" />
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${urgency.color}`}>
+                          {urgency.label}
+                        </span>
+                      </div>
+                      {ctaEl}
+                    </div>
+                  </div>
+                </div>
               );
+
+              return <div key={match.id}>{cardInner}</div>;
             })}
           </div>
         )}
