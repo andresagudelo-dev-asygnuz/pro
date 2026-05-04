@@ -12,7 +12,7 @@ import {
   type DaySummary,
 } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Pencil, Users, AlertCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, XCircle, Pencil, Users, AlertCircle, RefreshCw, Copy, Clock, Repeat2 } from "lucide-react";
 import { sendNotification } from "@/lib/notifications/api";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
@@ -90,6 +90,10 @@ export default function CanchaAgendaPage() {
   const [loadingCancha, setLoadingCancha] = useState(true);
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [slotMinutes, setSlotMinutes] = useState<number>(() => {
+    if (!id) return 60;
+    return parseInt(localStorage.getItem(`cancha_slot_${id}`) || "60", 10);
+  });
 
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const [bookings, setBookings] = useState<CanchaBooking[]>([]);
@@ -206,11 +210,58 @@ export default function CanchaAgendaPage() {
     );
   }
 
+  function applyToGroup(target: "all" | "laborales" | "finde", sourceDay: number) {
+    const source = schedule.find((d) => d.day_of_week === sourceDay);
+    if (!source) return;
+    const targets =
+      target === "all" ? [0, 1, 2, 3, 4, 5, 6] :
+      target === "laborales" ? [1, 2, 3, 4, 5] :
+      [0, 6];
+    setSchedule((prev) =>
+      prev.map((d) =>
+        targets.includes(d.day_of_week)
+          ? { ...d, opens_at: source.opens_at, closes_at: source.closes_at, is_available: source.is_available }
+          : d,
+      ),
+    );
+    toast.success("Horario aplicado.");
+  }
+
+  function applyPreset(preset: "laboral_full" | "finde_only" | "todos_full" | "manana" | "tarde") {
+    const presets: Record<string, { opens_at: string; closes_at: string; days: number[] }> = {
+      laboral_full: { opens_at: "08:00", closes_at: "22:00", days: [1, 2, 3, 4, 5] },
+      finde_only:   { opens_at: "08:00", closes_at: "22:00", days: [0, 6] },
+      todos_full:   { opens_at: "08:00", closes_at: "22:00", days: [0, 1, 2, 3, 4, 5, 6] },
+      manana:       { opens_at: "07:00", closes_at: "13:00", days: [0, 1, 2, 3, 4, 5, 6] },
+      tarde:        { opens_at: "14:00", closes_at: "22:00", days: [0, 1, 2, 3, 4, 5, 6] },
+    };
+    const p = presets[preset];
+    setSchedule((prev) =>
+      prev.map((d) => ({
+        ...d,
+        opens_at: p.days.includes(d.day_of_week) ? p.opens_at : d.opens_at,
+        closes_at: p.days.includes(d.day_of_week) ? p.closes_at : d.closes_at,
+        is_available: preset === "finde_only"
+          ? [0, 6].includes(d.day_of_week)
+          : preset === "laboral_full"
+          ? [1, 2, 3, 4, 5].includes(d.day_of_week)
+          : true,
+      })),
+    );
+    toast.success("Preset aplicado. Revisá y guardá.");
+  }
+
+  function changeSlotDuration(mins: number) {
+    setSlotMinutes(mins);
+    localStorage.setItem(`cancha_slot_${id}`, String(mins));
+    toast.success(`Turno de ${mins < 60 ? mins + " min" : mins / 60 + "h"} configurado.`);
+  }
+
   async function saveSchedule() {
     setSavingSchedule(true);
     const { error } = await upsertCanchaSchedules(supabase, id, schedule);
     if (error) toast.error(error);
-    else toast.success("Horarios guardados.");
+    else toast.success("Horarios guardados. Se aplican automáticamente cada semana.");
     setSavingSchedule(false);
   }
 
@@ -439,66 +490,155 @@ export default function CanchaAgendaPage() {
           </div>
         </div>
 
-        {/* Horario semanal (colapsable) */}
+        {/* Configuración semanal */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
           <button
             onClick={() => setShowSchedule((v) => !v)}
             className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors"
           >
-            <div>
-              <h2 className="font-semibold text-base text-left">Horario semanal</h2>
-              <p className="text-xs text-muted-foreground mt-0.5 text-left">
-                Configurá los días y rangos horarios disponibles.
-              </p>
+            <div className="flex items-center gap-2.5">
+              <Repeat2 className="size-4 text-violet-600" />
+              <div className="text-left">
+                <h2 className="font-semibold text-base">Configuración semanal</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Se repite automáticamente cada semana · Configurá una vez
+                </p>
+              </div>
             </div>
-            <span className={`text-xs font-medium text-muted-foreground transition-transform duration-200 ${showSchedule ? "rotate-180" : ""}`}>
-              ▾
-            </span>
+            <span className={`text-xs font-medium text-muted-foreground transition-transform duration-200 ${showSchedule ? "rotate-180" : ""}`}>▾</span>
           </button>
 
           {showSchedule && (
-            <div className="px-5 pb-5 space-y-4 border-t border-border/50">
-              <div className="space-y-2 pt-4">
-                {schedule.map((day) => (
-                  <div
-                    key={day.day_of_week}
-                    className={`flex items-center gap-3 rounded-xl p-3 border transition-colors ${
-                      day.is_available
-                        ? "border-border/60 bg-background"
-                        : "border-transparent bg-muted/40"
-                    }`}
-                  >
-                    <label className="flex items-center gap-2 shrink-0 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={day.is_available}
-                        onChange={(e) => updateDay(day.day_of_week, "is_available", e.target.checked)}
-                        className="size-4 rounded border-input accent-violet-600"
-                      />
-                      <span className={`text-sm font-medium w-8 ${!day.is_available ? "text-muted-foreground" : ""}`}>
-                        {DAY_LABELS[day.day_of_week]}
-                      </span>
-                    </label>
-                    <div className="flex items-center gap-2 flex-1">
-                      <input
-                        type="time"
-                        value={day.opens_at}
-                        disabled={!day.is_available}
-                        onChange={(e) => updateDay(day.day_of_week, "opens_at", e.target.value)}
-                        className="border border-border/60 rounded-lg px-2 py-1.5 text-sm bg-background disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-500 flex-1"
-                      />
-                      <span className="text-xs text-muted-foreground shrink-0">a</span>
-                      <input
-                        type="time"
-                        value={day.closes_at}
-                        disabled={!day.is_available}
-                        onChange={(e) => updateDay(day.day_of_week, "closes_at", e.target.value)}
-                        className="border border-border/60 rounded-lg px-2 py-1.5 text-sm bg-background disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-500 flex-1"
-                      />
-                    </div>
-                  </div>
-                ))}
+            <div className="px-5 pb-5 space-y-5 border-t border-border/50 pt-5">
+
+              {/* Duración de turno */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Clock className="size-3.5 text-muted-foreground" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Duración del turno</p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {[30, 60, 90, 120].map((mins) => (
+                    <button
+                      key={mins}
+                      onClick={() => changeSlotDuration(mins)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                        slotMinutes === mins
+                          ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                          : "border-border/60 hover:border-violet-400 hover:text-violet-600"
+                      }`}
+                    >
+                      {mins < 60 ? `${mins} min` : `${mins / 60}h`}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Cada jugador reserva bloques de {slotMinutes < 60 ? `${slotMinutes} min` : `${slotMinutes / 60}h`}.
+                </p>
               </div>
+
+              {/* Presets rápidos */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Presets rápidos</p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { key: "todos_full",   label: "Todos los días 8–22" },
+                    { key: "laboral_full", label: "Lun–Vie 8–22" },
+                    { key: "finde_only",   label: "Solo finde" },
+                    { key: "manana",       label: "Solo mañana 7–13" },
+                    { key: "tarde",        label: "Solo tarde 14–22" },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => applyPreset(key as Parameters<typeof applyPreset>[0])}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border/60 hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-600 transition-all"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Editor por día */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Días y horarios</p>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Copy className="size-3" />
+                    <span>Copiar día seleccionado →</span>
+                    {["all", "laborales", "finde"].map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => {
+                          const firstAvail = schedule.find((d) => d.is_available);
+                          if (firstAvail) applyToGroup(t as "all" | "laborales" | "finde", firstAvail.day_of_week);
+                        }}
+                        className="px-2 py-0.5 rounded-md bg-muted hover:bg-violet-100 dark:hover:bg-violet-900/20 hover:text-violet-600 transition-colors font-medium"
+                      >
+                        {t === "all" ? "Todos" : t === "laborales" ? "Lun–Vie" : "Sáb–Dom"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {schedule.map((day) => (
+                    <div
+                      key={day.day_of_week}
+                      className={`flex items-center gap-3 rounded-xl p-3 border transition-colors ${
+                        day.is_available ? "border-border/60 bg-background" : "border-transparent bg-muted/40"
+                      }`}
+                    >
+                      <label className="flex items-center gap-2 shrink-0 cursor-pointer min-w-[72px]">
+                        <input
+                          type="checkbox"
+                          checked={day.is_available}
+                          onChange={(e) => updateDay(day.day_of_week, "is_available", e.target.checked)}
+                          className="size-4 rounded border-input accent-violet-600"
+                        />
+                        <span className={`text-sm font-semibold ${!day.is_available ? "text-muted-foreground" : ""}`}>
+                          {DAY_LABELS[day.day_of_week]}
+                        </span>
+                      </label>
+
+                      {day.is_available ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="time"
+                            value={day.opens_at}
+                            onChange={(e) => updateDay(day.day_of_week, "opens_at", e.target.value)}
+                            className="border border-border/60 rounded-lg px-2 py-1.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-violet-500 flex-1"
+                          />
+                          <span className="text-xs text-muted-foreground shrink-0">a</span>
+                          <input
+                            type="time"
+                            value={day.closes_at}
+                            onChange={(e) => updateDay(day.day_of_week, "closes_at", e.target.value)}
+                            className="border border-border/60 rounded-lg px-2 py-1.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-violet-500 flex-1"
+                          />
+                          <div className="flex gap-1 shrink-0">
+                            {(["all", "laborales", "finde"] as const).map((t) => (
+                              <button
+                                key={t}
+                                onClick={() => applyToGroup(t, day.day_of_week)}
+                                title={`Copiar a ${t === "all" ? "todos" : t === "laborales" ? "Lun–Vie" : "Sáb–Dom"}`}
+                                className="h-7 px-2 text-[10px] font-medium rounded-md border border-border/60 hover:border-violet-400 hover:text-violet-600 transition-colors"
+                              >
+                                {t === "all" ? "Todos" : t === "laborales" ? "L–V" : "S–D"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Cerrado</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <Button
                 onClick={saveSchedule}
                 disabled={savingSchedule}

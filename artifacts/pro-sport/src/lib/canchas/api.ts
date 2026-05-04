@@ -4,12 +4,16 @@ import type { Cancha, CanchaSchedule, CanchaBooking, CanchaSportType, TimeSlot }
 
 type ApiResult<T> = { error: string | null; data: T | null };
 
-function generateHourlySlots(opensAt: string, closesAt: string): string[] {
-  const openHour = parseInt(opensAt.split(":")[0], 10);
-  const closeHour = parseInt(closesAt.split(":")[0], 10);
+function generateSlots(opensAt: string, closesAt: string, durationMinutes = 60): string[] {
+  const [openH, openM] = opensAt.split(":").map(Number);
+  const [closeH, closeM] = closesAt.split(":").map(Number);
+  const openTotal = openH * 60 + (openM || 0);
+  const closeTotal = closeH * 60 + (closeM || 0);
   const slots: string[] = [];
-  for (let h = openHour; h < closeHour; h++) {
-    slots.push(`${String(h).padStart(2, "0")}:00`);
+  for (let t = openTotal; t + durationMinutes <= closeTotal; t += durationMinutes) {
+    const h = Math.floor(t / 60);
+    const m = t % 60;
+    slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
   }
   return slots;
 }
@@ -133,6 +137,7 @@ export async function getAvailableSlots(
   supabase: SupabaseClient,
   canchaId: string,
   date: string,
+  slotMinutes = 60,
 ): Promise<ApiResult<TimeSlot[]>> {
   const dayOfWeek = new Date(date + "T12:00:00").getDay();
 
@@ -157,7 +162,7 @@ export async function getAvailableSlots(
   const schedule = scheduleResult.data;
   if (!schedule || !schedule.is_available) return { error: null, data: [] };
 
-  const allStarts = generateHourlySlots(schedule.opens_at, schedule.closes_at);
+  const allStarts = generateSlots(schedule.opens_at, schedule.closes_at, slotMinutes);
   const bookedStarts = new Set(
     ((bookingsResult.data ?? []) as { start_time: string }[]).map((b) =>
       b.start_time.substring(0, 5),
@@ -165,8 +170,11 @@ export async function getAvailableSlots(
   );
 
   const slots: TimeSlot[] = allStarts.map((start) => {
-    const hour = parseInt(start.split(":")[0], 10);
-    const end = `${String(hour + 1).padStart(2, "0")}:00`;
+    const [h, m] = start.split(":").map(Number);
+    const endTotal = h * 60 + m + slotMinutes;
+    const endH = Math.floor(endTotal / 60);
+    const endM = endTotal % 60;
+    const end = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
     return { start, end, isAvailable: !bookedStarts.has(start) };
   });
 
