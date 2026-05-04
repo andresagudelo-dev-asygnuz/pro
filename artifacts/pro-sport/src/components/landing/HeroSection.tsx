@@ -27,7 +27,7 @@ export function HeroSection() {
         <div className="flex flex-col items-center text-center max-w-7xl mx-auto mb-16">
           <h1 className="w-full font-black mb-10 tracking-tighter leading-[0.85] italic uppercase text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] pr-3" style={{ fontSize: "clamp(2rem, 10.5vw, 8rem)" }}>
             PASIÓN <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary via-purple-300 to-brand-secondary bg-[length:200%_auto] animate-gradient-x">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary via-purple-300 to-brand-secondary bg-[length:200%_auto] animate-gradient-x" style={{ paddingRight: "0.2em", marginRight: "-0.2em" }}>
               SIN FRONTERAS
             </span>
           </h1>
