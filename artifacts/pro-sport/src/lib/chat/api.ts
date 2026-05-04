@@ -42,7 +42,6 @@ export async function getOrCreateConversation(
   subtitle?: string,
   metadata?: Record<string, unknown>
 ): Promise<{ data: { id: string } | null; error: string | null }> {
-  // Look for existing conversation with this reference_id
   const { data: existing } = await supabase
     .from("conversations")
     .select("id")
@@ -52,7 +51,6 @@ export async function getOrCreateConversation(
 
   if (existing) return { data: existing, error: null };
 
-  // Create new conversation
   const { data: conv, error: convErr } = await supabase
     .from("conversations")
     .insert({ type, reference_id: referenceId, title, subtitle: subtitle ?? null, metadata: metadata ?? {} })
@@ -61,14 +59,12 @@ export async function getOrCreateConversation(
 
   if (convErr || !conv) return { data: null, error: convErr?.message ?? "Error creando conversación" };
 
-  // Add participants (deduplicated)
   const unique = [...new Set(participantIds)];
   const { error: partErr } = await supabase
     .from("conversation_participants")
     .insert(unique.map((uid) => ({ conversation_id: conv.id, user_id: uid })));
 
   if (partErr) return { data: null, error: partErr.message };
-
   return { data: conv, error: null };
 }
 
@@ -77,7 +73,6 @@ export async function getMyConversations(
   supabase: SupabaseClient,
   userId: string
 ): Promise<{ data: Conversation[]; error: string | null }> {
-  // Get conversation_ids for this user
   const { data: myParts, error: e1 } = await supabase
     .from("conversation_participants")
     .select("conversation_id, last_read_at")
@@ -89,7 +84,6 @@ export async function getMyConversations(
   const convIds = myParts.map((p) => p.conversation_id as string);
   const lastReadMap = new Map(myParts.map((p) => [p.conversation_id as string, p.last_read_at as string]));
 
-  // Get conversations
   const { data: convs, error: e2 } = await supabase
     .from("conversations")
     .select("*")
@@ -99,7 +93,6 @@ export async function getMyConversations(
   if (e2) return { data: [], error: e2.message };
   const conversations = (convs ?? []) as Conversation[];
 
-  // Get all other participants to resolve names/avatars
   const { data: allParts } = await supabase
     .from("conversation_participants")
     .select("conversation_id, user_id")
@@ -122,7 +115,6 @@ export async function getMyConversations(
     if (!otherPartMap.has(p.conversation_id as string)) otherPartMap.set(p.conversation_id as string, p.user_id as string);
   });
 
-  // Compute unread count per conversation (messages after last_read_at)
   const enriched = await Promise.all(
     conversations.map(async (c) => {
       const lastRead = lastReadMap.get(c.id);
@@ -149,7 +141,7 @@ export async function getMyConversations(
 export async function getConversationMessages(
   supabase: SupabaseClient,
   conversationId: string,
-  limit = 50
+  limit = 80
 ): Promise<{ data: ChatMessage[]; error: string | null }> {
   const { data, error } = await supabase
     .from("messages")
@@ -163,20 +155,21 @@ export async function getConversationMessages(
 }
 
 // ── Send a message ────────────────────────────────────────────────────────────
+// Only INSERT — do NOT .select() after insert, since RLS SELECT policies may
+// block reading the row back immediately (causing a false error). The realtime
+// channel delivers the message to the sender reliably.
 export async function sendMessage(
   supabase: SupabaseClient,
   conversationId: string,
   senderId: string,
   content: string
-): Promise<{ data: ChatMessage | null; error: string | null }> {
-  const { data, error } = await supabase
+): Promise<{ error: string | null }> {
+  const { error } = await supabase
     .from("messages")
-    .insert({ conversation_id: conversationId, sender_id: senderId, content: content.trim() })
-    .select()
-    .single();
+    .insert({ conversation_id: conversationId, sender_id: senderId, content: content.trim() });
 
-  if (error) return { data: null, error: error.message };
-  return { data: data as ChatMessage, error: null };
+  if (error) return { error: error.message };
+  return { error: null };
 }
 
 // ── Mark conversation as read ─────────────────────────────────────────────────
