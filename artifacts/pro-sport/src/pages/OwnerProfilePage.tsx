@@ -145,9 +145,9 @@ export default function OwnerProfilePage() {
         </div>
 
         {/* ── Profile photo + name row ── */}
-        <div className="relative px-4 max-w-2xl mx-auto">
+        <div className="relative max-w-2xl mx-auto">
           {/* Avatar — overlaid on banner bottom edge */}
-          <div className="absolute -top-12 left-4 sm:left-6">
+          <div className="absolute -top-12 left-4">
             <div className="relative">
               <Avatar className="size-24 border-4 border-white dark:border-zinc-950 shadow-xl ring-2 ring-violet-200 dark:ring-violet-800">
                 {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={displayName} />}
@@ -169,7 +169,7 @@ export default function OwnerProfilePage() {
           </div>
 
           {/* Edit button top-right */}
-          <div className="flex justify-end pt-3">
+          <div className="flex justify-end pt-3 pr-4">
             <Link href="/mis-canchas/perfil/editar">
               <button className="flex items-center gap-1.5 border border-border/60 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-sm gap-2">
                 <Pencil className="size-3.5" /> Editar perfil
@@ -178,7 +178,7 @@ export default function OwnerProfilePage() {
           </div>
 
           {/* Name + info */}
-          <div className="mt-10 pb-4">
+          <div className="mt-10 pb-4 px-4">
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight">{displayName}</h1>
             {profile?.full_name && profile.business_name && (
               <p className="text-sm text-muted-foreground mt-0.5">@{profile.username || profile.full_name}</p>
@@ -224,7 +224,7 @@ export default function OwnerProfilePage() {
         </div>
 
         {/* ── Content ── */}
-        <main className="px-4 max-w-2xl mx-auto space-y-4">
+        <main className="max-w-2xl mx-auto space-y-4">
 
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-3">
