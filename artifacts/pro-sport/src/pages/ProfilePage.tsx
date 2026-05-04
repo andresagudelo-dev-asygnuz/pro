@@ -164,7 +164,7 @@ export default function ProfilePage() {
 
         {/* ── Stats row (arriba, glassmorphism) ── */}
         <div className="relative z-10 px-4 pt-5 pb-4">
-          <div className="grid grid-cols-4 divide-x divide-white/10 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 overflow-hidden">
+          <div className="grid grid-cols-4 divide-x divide-white/10 bg-white/15 rounded-2xl border border-white/15 overflow-hidden">
             {[
               { value: ovr,                                    label: "OVR",      icon: <Star className="size-3" />,   color: "text-violet-200" },
               { value: profile?.matches_played ?? 0,           label: "Partidos", icon: <Zap className="size-3" />,   color: "text-white" },
@@ -193,7 +193,7 @@ export default function ProfilePage() {
 
         {/* ── Level badge ── */}
         <div className="flex justify-center mt-5 z-10 relative">
-          <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest backdrop-blur-sm ${lvlCfg.badge}`}>
+          <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest ${lvlCfg.badge}`}>
             <span className="size-1.5 rounded-full bg-current opacity-70" />
             {lvlCfg.label}
           </span>
