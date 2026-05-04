@@ -1,7 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { Home, Trophy, Plus, Building2, User } from "lucide-react";
+import { Home, Trophy, Plus, Building2, User, MessageCircle } from "lucide-react";
 import { useNotifCount } from "@/context/NotifContext";
 import { useAuth } from "@/context/AuthContext";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { getTotalUnreadMessages } from "@/lib/chat/api";
+
+const supabase = createClient();
 
 type NavItem = {
   href: string;
@@ -16,13 +21,13 @@ const BASE_NAV_ITEMS: NavItem[] = [
     href: "/feed",
     label: "Inicio",
     Icon: Home,
-    matchPaths: ["/feed", "/matches"],
+    matchPaths: ["/feed", "/matches", "/tournaments"],
   },
   {
-    href: "/tournaments",
-    label: "Torneos",
-    Icon: Trophy,
-    matchPaths: ["/tournaments"],
+    href: "/chat",
+    label: "Chat",
+    Icon: MessageCircle,
+    matchPaths: ["/chat"],
   },
   {
     href: "/matches/new",
@@ -53,7 +58,26 @@ const BASE_NAV_ITEMS: NavItem[] = [
 export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number }) {
   const [location] = useLocation();
   const { unreadCount } = useNotifCount();
-  const { roles } = useAuth();
+  const { roles, user } = useAuth();
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => {});
+    const interval = setInterval(() => {
+      getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  // Reset unread count when entering chat
+  useEffect(() => {
+    if (location.startsWith("/chat")) {
+      setTimeout(() => {
+        if (user) getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => {});
+      }, 1000);
+    }
+  }, [location, user]);
 
   const navItems: NavItem[] = BASE_NAV_ITEMS.map((item) => {
     if (item.href === "/canchas" && roles?.is_cancha) {
@@ -67,10 +91,7 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
     if (item.matchPaths) {
       return item.matchPaths.some((p) => {
         if (p === "/matches") {
-          return (
-            location.startsWith("/matches") &&
-            !location.startsWith("/matches/new")
-          );
+          return location.startsWith("/matches") && !location.startsWith("/matches/new");
         }
         return location === p || location.startsWith(p + "/");
       });
@@ -85,7 +106,8 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
           {navItems.map((item) => {
             const { href, label, Icon, isAction } = item;
             const active = isActive(item);
-            const isPerfil = href === "/perfil";
+            const isPerfil  = href === "/perfil";
+            const isChat    = href === "/chat";
             const isCanchas = item.matchPaths?.includes("/mis-canchas");
 
             if (isAction) {
@@ -105,9 +127,7 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
               <Link key={href} href={href}>
                 <div
                   className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 ${
-                    active
-                      ? "text-violet-600 dark:text-violet-400"
-                      : "text-muted-foreground hover:text-foreground"
+                    active ? "text-violet-600 dark:text-violet-400" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <div
@@ -125,6 +145,11 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
                     {isPerfil && unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
                         {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                    {isChat && unreadMessages > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
+                        {unreadMessages > 99 ? "99+" : unreadMessages}
                       </span>
                     )}
                     {isCanchas && roles?.is_cancha && pendingBookings > 0 && (

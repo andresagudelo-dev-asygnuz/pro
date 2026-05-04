@@ -46,6 +46,8 @@ import TeamsPage from "@/pages/TeamsPage";
 import NewTeamPage from "@/pages/NewTeamPage";
 import TeamDetailPage from "@/pages/TeamDetailPage";
 import EditMatchPage from "@/pages/EditMatchPage";
+import ChatListPage from "@/pages/ChatListPage";
+import ChatDetailPage from "@/pages/ChatDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -147,6 +149,14 @@ function Router() {
       </Route>
       {/* Public cancha detail — must come AFTER specific sub-routes */}
       <Route path="/canchas/:id" component={CanchaDetailPage} />
+
+      {/* Chat */}
+      <Route path="/chat/:id">
+        <ProtectedRoute component={ChatDetailPage} />
+      </Route>
+      <Route path="/chat">
+        <ProtectedRoute component={ChatListPage} />
+      </Route>
 
       <Route path="/amigos">
         <ProtectedRoute component={FriendsPage} />

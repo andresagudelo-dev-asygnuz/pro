@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -12,8 +12,9 @@ import {
   type DaySummary,
 } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Pencil, Users, AlertCircle, RefreshCw, Copy, Clock, Repeat2 } from "lucide-react";
+import { CheckCircle2, XCircle, Pencil, Users, AlertCircle, RefreshCw, Copy, Clock, Repeat2, MessageCircle, ExternalLink } from "lucide-react";
 import { sendNotification } from "@/lib/notifications/api";
+import { getOrCreateConversation } from "@/lib/chat/api";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -24,7 +25,7 @@ import {
   type Profile,
 } from "@/lib/types/db";
 import { initialsFromName } from "@/lib/format";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
 const supabase = createClient();
@@ -81,9 +82,12 @@ function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
 
+type BookingFilter = "all" | "pendiente" | "confirmada" | "cancelada";
+
 export default function CanchaAgendaPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   const [cancha, setCancha] = useState<Cancha | null>(null);
   const [schedule, setSchedule] = useState<ScheduleState[]>(DEFAULT_SCHEDULE);
@@ -99,6 +103,8 @@ export default function CanchaAgendaPage() {
   const [bookings, setBookings] = useState<CanchaBooking[]>([]);
   const [bookerProfiles, setBookerProfiles] = useState<Map<string, Profile>>(new Map());
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingFilter, setBookingFilter] = useState<BookingFilter>("all");
+  const [openingChat, setOpeningChat] = useState<string | null>(null);
 
   const [weekSummary, setWeekSummary] = useState<DaySummary[]>([]);
   const weekDays = getNext7Days();
@@ -273,7 +279,6 @@ export default function CanchaAgendaPage() {
       toast.success(action === "confirmada" ? "Reserva confirmada." : "Reserva cancelada.");
       setBookings((prev) => prev.map((b) => (b.id === booking.id ? { ...b, status: action } : b)));
       loadWeekSummary();
-      // Notify the booker about the status change
       const notifType = action === "confirmada" ? "booking_confirmed" : "booking_cancelled_owner";
       await sendNotification(supabase, booking.booked_by, notifType, {
         cancha_id: cancha!.id,
@@ -284,6 +289,25 @@ export default function CanchaAgendaPage() {
         total_price: booking.total_price,
       });
     }
+  }
+
+  async function openChat(booking: CanchaBooking) {
+    if (!user || !cancha) return;
+    setOpeningChat(booking.id);
+    const booker = bookerProfiles.get(booking.booked_by);
+    const bookerName = booker?.full_name ?? booker?.username ?? "Jugador";
+    const { data, error } = await getOrCreateConversation(
+      supabase,
+      "booking",
+      booking.id,
+      [user.id, booking.booked_by],
+      `Reserva — ${cancha.name}`,
+      `${booking.booking_date} · ${booking.start_time.substring(0, 5)}–${booking.end_time.substring(0, 5)} · ${bookerName}`,
+      { cancha_id: cancha.id, cancha_name: cancha.name, booking_date: booking.booking_date }
+    );
+    setOpeningChat(null);
+    if (error || !data) { toast.error("No se pudo abrir el chat."); return; }
+    setLocation(`/chat/${data.id}`);
   }
 
   if (loadingCancha) {
@@ -304,6 +328,16 @@ export default function CanchaAgendaPage() {
   }
 
   const pendingBookings = bookings.filter((b) => b.status === "pendiente").length;
+  const filteredBookings = bookingFilter === "all" ? bookings : bookings.filter((b) => b.status === bookingFilter);
+  const filterCounts: Record<BookingFilter, number> = {
+    all: bookings.length,
+    pendiente: bookings.filter((b) => b.status === "pendiente").length,
+    confirmada: bookings.filter((b) => b.status === "confirmada").length,
+    cancelada: bookings.filter((b) => b.status === "cancelada").length,
+  };
+  const FILTER_LABELS: Record<BookingFilter, string> = {
+    all: "Todas", pendiente: "Pendientes", confirmada: "Confirmadas", cancelada: "Canceladas",
+  };
   const today = todayStr();
 
   return (
@@ -386,14 +420,13 @@ export default function CanchaAgendaPage() {
 
         {/* Reservas del día seleccionado */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+          {/* Header + date picker */}
           <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border/50">
             <div>
               <h2 className="font-semibold text-base">
                 Reservas —{" "}
                 {new Date(selectedDate + "T12:00:00").toLocaleDateString("es-CO", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
+                  weekday: "long", day: "numeric", month: "long",
                 })}
               </h2>
               {pendingBookings > 0 && (
@@ -413,40 +446,76 @@ export default function CanchaAgendaPage() {
             />
           </div>
 
-          <div className="p-5">
+          {/* Filtros de estado */}
+          {bookings.length > 0 && (
+            <div className="flex gap-2 px-5 pt-3 pb-1 overflow-x-auto scrollbar-none">
+              {(["all", "pendiente", "confirmada", "cancelada"] as BookingFilter[]).map((f) => {
+                const count = filterCounts[f];
+                if (f !== "all" && count === 0) return null;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setBookingFilter(f)}
+                    className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                      bookingFilter === f
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "border-border/60 hover:border-violet-400 bg-background"
+                    }`}
+                  >
+                    {FILTER_LABELS[f]}{count > 0 ? ` (${count})` : ""}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="p-5 pt-3">
             {loadingBookings ? (
               <div className="flex justify-center py-6">
                 <div className="w-6 h-6 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : bookings.length === 0 ? (
+            ) : filteredBookings.length === 0 ? (
               <div className="text-center py-6">
                 <Users className="size-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No hay reservas para este día.</p>
+                <p className="text-sm text-muted-foreground">
+                  {bookings.length === 0 ? "No hay reservas para este día." : "Sin reservas con este filtro."}
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
-                {bookings.map((b) => {
+                {filteredBookings.map((b) => {
                   const booker = bookerProfiles.get(b.booked_by);
                   const cfg = STATUS_CONFIG[b.status] ?? STATUS_CONFIG.pendiente;
+                  const bookerName = booker?.full_name ?? booker?.username ?? "Usuario";
+                  const isOpeningThisChat = openingChat === b.id;
                   return (
                     <div
                       key={b.id}
-                      className={`flex items-center justify-between gap-3 rounded-xl p-3.5 border transition-colors ${
+                      className={`rounded-xl border transition-colors ${
                         b.status === "pendiente"
                           ? "border-amber-200 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-900/10"
-                          : "border-border/60"
+                          : "border-border/60 bg-background"
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="size-9 shrink-0">
-                          <AvatarFallback className="text-xs bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">
-                            {initialsFromName(booker?.full_name ?? booker?.username ?? null)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate">
-                            {booker?.full_name ?? booker?.username ?? "Usuario desconocido"}
-                          </p>
+                      {/* Row 1: avatar + info + status */}
+                      <div className="flex items-center gap-3 p-3.5">
+                        <Link href={`/profile/${b.booked_by}`}>
+                          <Avatar className="size-10 shrink-0 cursor-pointer ring-2 ring-offset-1 ring-violet-200 dark:ring-violet-800">
+                            {booker?.avatar_url && <AvatarImage src={booker.avatar_url} />}
+                            <AvatarFallback className="text-xs font-semibold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">
+                              {initialsFromName(bookerName)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Link>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-semibold">{bookerName}</p>
+                            {booker?.city && (
+                              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                                📍 {booker.city}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {b.start_time.substring(0, 5)} – {b.end_time.substring(0, 5)} ·{" "}
                             <span className="font-medium text-violet-600 dark:text-violet-400">
@@ -457,27 +526,50 @@ export default function CanchaAgendaPage() {
                             <p className="text-xs text-muted-foreground truncate">📝 {b.notes}</p>
                           )}
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.style}`}>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${cfg.style}`}>
                           {cfg.label}
                         </span>
+                      </div>
+
+                      {/* Row 2: actions */}
+                      <div className="flex items-center gap-2 px-3.5 pb-3 border-t border-border/30 pt-2.5">
+                        {/* Ver perfil */}
+                        <Link href={`/profile/${b.booked_by}`}>
+                          <button className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                            <ExternalLink className="size-3" /> Ver perfil
+                          </button>
+                        </Link>
+
+                        {/* Chat */}
+                        <button
+                          onClick={() => openChat(b)}
+                          disabled={isOpeningThisChat}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors disabled:opacity-50 font-medium"
+                        >
+                          {isOpeningThisChat
+                            ? <div className="size-3 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+                            : <MessageCircle className="size-3" />}
+                          {isOpeningThisChat ? "Abriendo..." : "Chat"}
+                        </button>
+
+                        <div className="flex-1" />
+
+                        {/* Confirm / Cancel */}
                         {b.status === "pendiente" && (
                           <div className="flex gap-1">
                             <button
                               onClick={() => handleBookingAction(b, "confirmada")}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors font-medium"
                               title="Confirmar"
                             >
-                              <CheckCircle2 className="size-4" />
+                              <CheckCircle2 className="size-3.5" /> Confirmar
                             </button>
                             <button
                               onClick={() => handleBookingAction(b, "cancelada")}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-destructive hover:bg-destructive/10 transition-colors font-medium"
                               title="Cancelar"
                             >
-                              <XCircle className="size-4" />
+                              <XCircle className="size-3.5" /> Cancelar
                             </button>
                           </div>
                         )}
