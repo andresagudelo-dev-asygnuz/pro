@@ -18,11 +18,8 @@ import {
 import {
   Plus,
   Calendar,
-  ToggleLeft,
-  ToggleRight,
   Pencil,
   Clock,
-  AlertCircle,
   CheckCircle2,
   XCircle,
   Building2,
@@ -31,6 +28,11 @@ import {
   Shield,
   LayoutDashboard,
   UserCircle2,
+  ChevronRight,
+  Bell,
+  MapPin,
+  Zap,
+  Power,
 } from "lucide-react";
 import { toast } from "sonner";
 import { sendNotification } from "@/lib/notifications/api";
@@ -47,6 +49,18 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" });
 }
 
+const SPORT_GRADIENTS: Record<string, string> = {
+  futbol_11:   "from-green-600 to-green-800",
+  futbol_9:    "from-green-500 to-emerald-700",
+  futbol_5:    "from-emerald-500 to-teal-700",
+  futbol_sala: "from-teal-500 to-cyan-700",
+  padel:       "from-violet-600 to-purple-800",
+  tenis:       "from-yellow-500 to-amber-700",
+  basket:      "from-orange-500 to-red-700",
+  voleibol:    "from-blue-500 to-indigo-700",
+  otro:        "from-zinc-500 to-zinc-700",
+};
+
 export default function MisCanchasPage() {
   const { user, roles } = useAuth();
   const [, setLocation] = useLocation();
@@ -55,6 +69,7 @@ export default function MisCanchasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actioningBooking, setActioningBooking] = useState<string | null>(null);
+  const [togglingCancha, setTogglingCancha] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -69,71 +84,48 @@ export default function MisCanchasPage() {
     });
   }, [user]);
 
-  // Realtime: new booking arrives
   useEffect(() => {
     if (!user || canchas.length === 0) return;
     const canchaIds = canchas.map((c) => c.id);
-
     const channel = supabase
       .channel(`owner-bookings-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "cancha_bookings" },
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cancha_bookings" },
         async (payload: { new: { cancha_id: string; status: string } }) => {
           if (!canchaIds.includes(payload.new.cancha_id)) return;
           if (payload.new.status !== "pendiente") return;
           const { data } = await getOwnerPendingBookings(supabase, user!.id);
-          if (data) {
-            setPending(data);
-            toast.info("¡Nueva reserva pendiente!", { icon: "🏟️" });
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "cancha_bookings" },
+          if (data) { setPending(data); toast.info("¡Nueva reserva pendiente!", { icon: "🏟️" }); }
+        })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "cancha_bookings" },
         async () => {
           const { data } = await getOwnerPendingBookings(supabase, user!.id);
           if (data) setPending(data);
-        }
-      )
+        })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [user, canchas]);
 
   async function toggleActive(cancha: Cancha) {
-    const { error } = await updateCancha(supabase, cancha.id, {
-      is_active: !cancha.is_active,
-    });
+    setTogglingCancha(cancha.id);
+    const { error } = await updateCancha(supabase, cancha.id, { is_active: !cancha.is_active });
     if (error) {
       toast.error("No se pudo actualizar.");
     } else {
-      setCanchas((prev) =>
-        prev.map((c) =>
-          c.id === cancha.id ? { ...c, is_active: !c.is_active } : c,
-        ),
-      );
-      toast.success(cancha.is_active ? "Cancha desactivada." : "Cancha activada.");
+      setCanchas((prev) => prev.map((c) => c.id === cancha.id ? { ...c, is_active: !c.is_active } : c));
+      toast.success(cancha.is_active ? "Cancha desactivada." : "¡Cancha activada!");
     }
+    setTogglingCancha(null);
   }
 
-  async function handleBookingAction(
-    bookingId: string,
-    action: "confirmada" | "cancelada",
-  ) {
+  async function handleBookingAction(bookingId: string, action: "confirmada" | "cancelada") {
     setActioningBooking(bookingId);
     const booking = pending.find((b) => b.id === bookingId);
-    const { error } = await supabase
-      .from("cancha_bookings")
-      .update({ status: action })
-      .eq("id", bookingId);
+    const { error } = await supabase.from("cancha_bookings").update({ status: action }).eq("id", bookingId);
     if (error) {
       toast.error("No se pudo actualizar la reserva.");
     } else {
       setPending((prev) => prev.filter((b) => b.id !== bookingId));
-      toast.success(action === "confirmada" ? "Reserva confirmada." : "Reserva cancelada.");
-      // Notify the booker
+      toast.success(action === "confirmada" ? "✅ Reserva confirmada." : "Reserva cancelada.");
       if (booking) {
         const notifType = action === "confirmada" ? "booking_confirmed" : "booking_cancelled_owner";
         await sendNotification(supabase, booking.booked_by, notifType, {
@@ -154,15 +146,11 @@ export default function MisCanchasPage() {
       <AppLayout>
         <div className="container py-8 max-w-lg mx-auto">
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-6 text-center">
-            <p className="text-lg font-semibold text-amber-800 dark:text-amber-300 mb-2">
-              Rol de Cancha no activado
-            </p>
+            <p className="text-lg font-semibold text-amber-800 dark:text-amber-300 mb-2">Rol de Cancha no activado</p>
             <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
               Necesitás activar el rol de Administrador de Cancha para registrar y gestionar tus canchas.
             </p>
-            <Button className="rounded-xl" onClick={() => setLocation("/perfil")}>
-              Ir a mi perfil
-            </Button>
+            <Button className="rounded-xl" onClick={() => setLocation("/perfil")}>Ir a mi perfil</Button>
           </div>
         </div>
       </AppLayout>
@@ -175,250 +163,288 @@ export default function MisCanchasPage() {
 
   return (
     <AppLayout>
-      <div className="container py-6 max-w-4xl mx-auto space-y-6">
+      <div className="-mx-4 -mt-6 min-h-screen bg-zinc-100 dark:bg-zinc-950">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Building2 className="size-6 text-violet-600" />
-              Panel de Canchas
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Gestioná tus canchas, reservas y horarios.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" asChild className="rounded-xl gap-1.5">
+        {/* ── Hero header ────────────────────────────────────────────── */}
+        <div className="bg-gradient-to-br from-violet-900 via-violet-800 to-indigo-900 pt-6 pb-8 px-5">
+          {/* Top row: back + actions */}
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h1 className="text-xl font-bold text-white leading-tight">Panel de Canchas</h1>
+              <p className="text-violet-300 text-xs mt-0.5">Gestioná tus canchas, reservas y horarios</p>
+            </div>
+            <div className="flex items-center gap-2">
               <Link href="/mis-canchas/perfil">
-                <UserCircle2 className="size-4" /> Mi Perfil
+                <button className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                  <UserCircle2 className="size-4 text-white" />
+                </button>
               </Link>
-            </Button>
-            <Button variant="outline" asChild className="rounded-xl gap-1.5">
               <Link href="/mis-canchas/dashboard">
-                <LayoutDashboard className="size-4" /> Dashboard
+                <button className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                  <LayoutDashboard className="size-4 text-white" />
+                </button>
               </Link>
-            </Button>
-            <Button asChild className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
-              <Link href="/canchas/nueva">
-                <Plus className="size-4" /> Nueva cancha
-              </Link>
-            </Button>
+            </div>
           </div>
+
+          {/* Stats chips */}
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            <div className="bg-white/10 rounded-2xl p-3 text-center">
+              <p className="text-2xl font-black text-white tabular-nums">{loading ? "—" : canchas.length}</p>
+              <p className="text-[11px] text-violet-200 mt-0.5 font-medium">Canchas</p>
+            </div>
+            <div className="bg-white/10 rounded-2xl p-3 text-center">
+              <p className={`text-2xl font-black tabular-nums ${activeCanchas > 0 ? "text-emerald-300" : "text-white"}`}>
+                {loading ? "—" : activeCanchas}
+              </p>
+              <p className="text-[11px] text-violet-200 mt-0.5 font-medium">Activas</p>
+            </div>
+            <div className={`rounded-2xl p-3 text-center ${pending.length > 0 ? "bg-amber-400/20 ring-1 ring-amber-400/40" : "bg-white/10"}`}>
+              <p className={`text-2xl font-black tabular-nums ${pending.length > 0 ? "text-amber-300" : "text-white"}`}>
+                {loading ? "—" : pending.length}
+              </p>
+              <p className={`text-[11px] mt-0.5 font-medium ${pending.length > 0 ? "text-amber-200" : "text-violet-200"}`}>
+                {pending.length > 0 ? "⚡ Pendientes" : "Pendientes"}
+              </p>
+            </div>
+          </div>
+
+          {/* Nueva cancha CTA */}
+          <Link href="/canchas/nueva">
+            <button className="w-full flex items-center justify-center gap-2 bg-white text-violet-700 font-bold text-sm py-2.5 rounded-xl hover:bg-violet-50 transition-colors shadow-md">
+              <Plus className="size-4" /> Registrar nueva cancha
+            </button>
+          </Link>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : error ? (
-          <div className="bg-destructive/15 text-destructive p-4 rounded-2xl text-sm">{error}</div>
-        ) : (
-          <>
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white dark:bg-zinc-900 border border-border/60 rounded-2xl p-4 text-center shadow-sm">
-                <p className="text-2xl font-bold text-violet-600">{canchas.length}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Canchas</p>
-              </div>
-              <div className="bg-white dark:bg-zinc-900 border border-border/60 rounded-2xl p-4 text-center shadow-sm">
-                <p className="text-2xl font-bold text-green-600">{activeCanchas}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Activas</p>
-              </div>
-              <div className={`border rounded-2xl p-4 text-center shadow-sm ${pending.length > 0 ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700" : "bg-white dark:bg-zinc-900 border-border/60"}`}>
-                <p className={`text-2xl font-bold ${pending.length > 0 ? "text-amber-600" : "text-foreground"}`}>
-                  {pending.length}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">Pendientes</p>
-              </div>
+        {/* ── Content ──────────────────────────────────────────────────── */}
+        <div className="px-3 pt-4 pb-28 space-y-4 max-w-2xl mx-auto">
+
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
             </div>
-
-            {/* Pending bookings */}
-            {pending.length > 0 && (
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-amber-200 dark:border-amber-700/60 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-amber-100 dark:border-amber-900/40 bg-amber-50/80 dark:bg-amber-900/10">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="size-4 text-amber-600" />
-                    <h2 className="font-semibold text-sm text-amber-800 dark:text-amber-300">
-                      Reservas pendientes de confirmación
-                    </h2>
-                  </div>
-                  <span className="text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">
-                    {pending.length}
-                  </span>
-                </div>
-                <div className="divide-y divide-border/40">
-                  {pending.map((b) => {
-                    const isToday = b.booking_date === today;
-                    return (
-                      <div key={b.id} className="flex items-center gap-3 px-5 py-3.5">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold truncate">
-                              {b.canchas?.name || "Cancha"}
-                            </span>
-                            {isToday && (
-                              <span className="text-[10px] font-bold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded-full">
-                                Hoy
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <Clock className="size-3 text-muted-foreground" />
-                            <p className="text-xs text-muted-foreground">
-                              {formatDate(b.booking_date)} · {b.start_time.substring(0, 5)} – {b.end_time.substring(0, 5)}
-                            </p>
-                            <span className="text-xs font-medium text-violet-600 dark:text-violet-400 ml-1">
-                              ${Number(b.total_price).toLocaleString("es-CO")}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex gap-1.5 shrink-0">
-                          <Link href={`/canchas/${b.cancha_id}/agenda`}>
-                            <button className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors">
-                              Ver agenda
-                            </button>
-                          </Link>
-                          <button
-                            disabled={actioningBooking === b.id}
-                            onClick={() => handleBookingAction(b.id, "confirmada")}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
-                            title="Confirmar"
-                          >
-                            <CheckCircle2 className="size-4" />
-                          </button>
-                          <button
-                            disabled={actioningBooking === b.id}
-                            onClick={() => handleBookingAction(b.id, "cancelada")}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                            title="Cancelar"
-                          >
-                            <XCircle className="size-4" />
-                          </button>
-                        </div>
+          ) : error ? (
+            <div className="bg-destructive/10 text-destructive p-4 rounded-2xl text-sm">{error}</div>
+          ) : (
+            <>
+              {/* ── Pending bookings banner ─────────────────────────── */}
+              {pending.length > 0 && (
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-amber-200 dark:border-amber-700/50 shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/40">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
+                        <Bell className="size-3 text-white" />
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                      <span className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                        {pending.length} reserva{pending.length > 1 ? "s" : ""} esperando confirmación
+                      </span>
+                    </div>
+                    {todayPending > 0 && (
+                      <span className="text-[10px] font-bold bg-violet-600 text-white px-2 py-0.5 rounded-full">
+                        {todayPending} hoy
+                      </span>
+                    )}
+                  </div>
 
-            {/* Canchas list */}
-            {canchas.length === 0 ? (
-              <div className="text-center py-12 border border-border/60 rounded-2xl bg-muted/20">
-                <p className="text-4xl mb-4">🏟️</p>
-                <p className="text-muted-foreground mb-4">Todavía no registraste ninguna cancha.</p>
-                <Button asChild className="rounded-xl">
-                  <Link href="/canchas/nueva">Registrar mi primera cancha</Link>
-                </Button>
-              </div>
-            ) : (
-              <>
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Mis canchas ({canchas.length})
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="divide-y divide-border/40">
+                    {pending.map((b) => {
+                      const isToday = b.booking_date === today;
+                      const isBusy = actioningBooking === b.id;
+                      return (
+                        <div key={b.id} className="px-4 py-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
+                                  {b.canchas?.name || "Cancha"}
+                                </span>
+                                {isToday && (
+                                  <span className="text-[10px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded-full shrink-0">
+                                    Hoy
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="size-3" />
+                                  {formatDate(b.booking_date)} · {b.start_time.substring(0, 5)}–{b.end_time.substring(0, 5)}
+                                </span>
+                                <span className="font-semibold text-violet-600 dark:text-violet-400">
+                                  ${Number(b.total_price).toLocaleString("es-CO")}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Link href={`/canchas/${b.cancha_id}/agenda`}>
+                                <button className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted/50 transition-colors">
+                                  Agenda
+                                </button>
+                              </Link>
+                              <button
+                                disabled={isBusy}
+                                onClick={() => handleBookingAction(b.id, "confirmada")}
+                                className="w-8 h-8 flex items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors disabled:opacity-40"
+                                title="Confirmar"
+                              >
+                                {isBusy ? (
+                                  <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="size-4" />
+                                )}
+                              </button>
+                              <button
+                                disabled={isBusy}
+                                onClick={() => handleBookingAction(b.id, "cancelada")}
+                                className="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-40"
+                                title="Cancelar"
+                              >
+                                <XCircle className="size-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Canchas list ─────────────────────────────────────── */}
+              {canchas.length === 0 ? (
+                <div className="text-center py-16 border-2 border-dashed border-border/50 rounded-2xl bg-white dark:bg-zinc-900">
+                  <p className="text-5xl mb-4">🏟️</p>
+                  <p className="font-semibold text-zinc-900 dark:text-white mb-1">Sin canchas registradas</p>
+                  <p className="text-sm text-muted-foreground mb-5">Registrá tu primera cancha para empezar a recibir reservas.</p>
+                  <Link href="/canchas/nueva">
+                    <button className="bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm px-6 py-2.5 rounded-xl transition-colors">
+                      + Registrar cancha
+                    </button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
+                    Mis canchas · {canchas.length}
+                  </p>
                   {canchas.map((c) => {
-                    const canchaBookingsPending = pending.filter((b) => b.cancha_id === c.id).length;
-                    const todayBookings = pending.filter((b) => b.cancha_id === c.id && b.booking_date === today).length;
+                    const cPending = pending.filter((b) => b.cancha_id === c.id).length;
+                    const gradient = SPORT_GRADIENTS[c.sport_type] ?? SPORT_GRADIENTS.otro;
+                    const isToggling = togglingCancha === c.id;
                     return (
-                      <div
-                        key={c.id}
-                        className="border border-border/60 rounded-2xl p-5 bg-white dark:bg-zinc-900 shadow-sm space-y-4"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xl">{SPORT_TYPE_ICONS[c.sport_type]}</span>
-                              <span className="text-xs text-muted-foreground">{SPORT_TYPE_LABELS[c.sport_type]}</span>
-                              {canchaBookingsPending > 0 && (
-                                <span className="text-[10px] font-bold bg-amber-500 text-white px-1.5 py-0.5 rounded-full">
-                                  {canchaBookingsPending} pend.
+                      <div key={c.id} className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm overflow-hidden border border-border/50">
+
+                        {/* Sport color band */}
+                        <div className={`bg-gradient-to-r ${gradient} px-4 py-3 flex items-center justify-between`}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">{SPORT_TYPE_ICONS[c.sport_type]}</span>
+                            <div>
+                              <p className="text-white font-bold text-sm leading-tight">{c.name}</p>
+                              <p className="text-white/70 text-xs">{SPORT_TYPE_LABELS[c.sport_type]}</p>
+                            </div>
+                          </div>
+                          {/* Active toggle */}
+                          <button
+                            onClick={() => toggleActive(c)}
+                            disabled={isToggling}
+                            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-colors shrink-0 ${
+                              c.is_active
+                                ? "bg-emerald-400/20 text-emerald-100 hover:bg-emerald-400/30"
+                                : "bg-white/10 text-white/60 hover:bg-white/20"
+                            }`}
+                          >
+                            {isToggling ? (
+                              <div className="w-3 h-3 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Power className="size-3" />
+                            )}
+                            {c.is_active ? "Activa" : "Inactiva"}
+                          </button>
+                        </div>
+
+                        {/* Card body */}
+                        <div className="px-4 py-3">
+                          {/* Location + price row */}
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="size-3" /> {c.city}
+                              {c.address && <span className="truncate max-w-[120px]"> · {c.address}</span>}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-black text-violet-600 dark:text-violet-400">
+                                ${c.price_per_hour.toLocaleString("es-CO")}<span className="font-normal text-xs text-muted-foreground">/h</span>
+                              </span>
+                              {c.discount_percent > 0 && (
+                                <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-full">
+                                  -{c.discount_percent}%
                                 </span>
                               )}
                             </div>
-                            <h3 className="font-semibold truncate">{c.name}</h3>
-                            <p className="text-xs text-muted-foreground">📍 {c.city}</p>
-                            {todayBookings > 0 && (
-                              <p className="text-xs text-amber-600 font-medium mt-0.5">
-                                ⚡ {todayBookings} reserva{todayBookings > 1 ? "s" : ""} pendiente{todayBookings > 1 ? "s" : ""} hoy
-                              </p>
-                            )}
                           </div>
-                          <button
-                            onClick={() => toggleActive(c)}
-                            className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border transition-colors shrink-0 ${
-                              c.is_active
-                                ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700"
-                                : "bg-muted text-muted-foreground border-transparent"
-                            }`}
-                            title={c.is_active ? "Desactivar cancha" : "Activar cancha"}
-                          >
-                            {c.is_active ? (
-                              <><ToggleRight className="size-3.5" /> Activa</>
-                            ) : (
-                              <><ToggleLeft className="size-3.5" /> Inactiva</>
-                            )}
-                          </button>
-                        </div>
 
-                        <div className="text-sm">
-                          <span className="font-bold text-violet-600 dark:text-violet-400">
-                            ${c.price_per_hour.toLocaleString("es-CO")}/h
-                          </span>
-                          {c.discount_percent > 0 && (
-                            <span className="ml-2 text-xs text-green-600 font-medium">
-                              -{c.discount_percent}% dto.
-                            </span>
+                          {/* Pending alert for this cancha */}
+                          {cPending > 0 && (
+                            <div className="flex items-center gap-1.5 mb-3 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-xl">
+                              <Zap className="size-3 shrink-0" />
+                              {cPending} reserva{cPending > 1 ? "s" : ""} pendiente{cPending > 1 ? "s" : ""} de confirmación
+                            </div>
                           )}
-                        </div>
 
-                        {/* Quick nav: 5 actions */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`rounded-xl text-xs gap-1 ${canchaBookingsPending > 0 ? "border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20" : ""}`}
-                            asChild
-                          >
+                          {/* Action buttons */}
+                          <div className="grid grid-cols-4 gap-1.5">
                             <Link href={`/canchas/${c.id}/agenda`}>
-                              <Calendar className="size-3.5" /> Agenda
-                              {canchaBookingsPending > 0 && (
-                                <span className="ml-0.5 size-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
-                                  {canchaBookingsPending}
-                                </span>
-                              )}
+                              <button className={`relative flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-center w-full transition-colors text-xs font-medium ${
+                                cPending > 0
+                                  ? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100"
+                                  : "bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                              }`}>
+                                <Calendar className="size-4" />
+                                Agenda
+                                {cPending > 0 && (
+                                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
+                                    {cPending}
+                                  </span>
+                                )}
+                              </button>
                             </Link>
-                          </Button>
-                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
                             <Link href={`/canchas/${c.id}/clientes`}>
-                              <Users className="size-3.5" /> Clientes
+                              <button className="flex flex-col items-center gap-1 py-2 px-1 rounded-xl w-full bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs font-medium">
+                                <Users className="size-4" />
+                                Clientes
+                              </button>
                             </Link>
-                          </Button>
-                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
                             <Link href={`/canchas/${c.id}/equipo`}>
-                              <Shield className="size-3.5" /> Equipo
+                              <button className="flex flex-col items-center gap-1 py-2 px-1 rounded-xl w-full bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs font-medium">
+                                <Shield className="size-4" />
+                                Equipo
+                              </button>
                             </Link>
-                          </Button>
-                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
                             <Link href={`/canchas/${c.id}/stats`}>
-                              <BarChart2 className="size-3.5" /> Estadísticas
+                              <button className="flex flex-col items-center gap-1 py-2 px-1 rounded-xl w-full bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs font-medium">
+                                <BarChart2 className="size-4" />
+                                Stats
+                              </button>
                             </Link>
-                          </Button>
-                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1 col-span-2" asChild>
-                            <Link href={`/canchas/${c.id}/editar`}>
-                              <Pencil className="size-3.5" /> Editar cancha
-                            </Link>
-                          </Button>
+                          </div>
+
+                          {/* Edit full-width */}
+                          <Link href={`/canchas/${c.id}/editar`}>
+                            <button className="mt-1.5 w-full flex items-center justify-between px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                              <div className="flex items-center gap-1.5">
+                                <Pencil className="size-3.5" /> Editar cancha
+                              </div>
+                              <ChevronRight className="size-3.5" />
+                            </button>
+                          </Link>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </div>
     </AppLayout>
   );
