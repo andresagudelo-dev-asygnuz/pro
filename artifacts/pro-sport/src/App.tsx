@@ -48,6 +48,8 @@ import TeamDetailPage from "@/pages/TeamDetailPage";
 import EditMatchPage from "@/pages/EditMatchPage";
 import ChatListPage from "@/pages/ChatListPage";
 import ChatDetailPage from "@/pages/ChatDetailPage";
+import CanchaClientesPage from "@/pages/CanchaClientesPage";
+import CanchaStatsPage from "@/pages/CanchaStatsPage";
 
 const queryClient = new QueryClient();
 
@@ -147,6 +149,13 @@ function Router() {
       <Route path="/canchas/:id/editar">
         <ProtectedRoute component={EditCanchaPage} />
       </Route>
+      <Route path="/canchas/:id/clientes">
+        <ProtectedRoute component={CanchaClientesPage} />
+      </Route>
+      <Route path="/canchas/:id/stats">
+        <ProtectedRoute component={CanchaStatsPage} />
+      </Route>
+
       {/* Public cancha detail — must come AFTER specific sub-routes */}
       <Route path="/canchas/:id" component={CanchaDetailPage} />
 

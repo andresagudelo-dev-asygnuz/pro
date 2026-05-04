@@ -16,7 +16,7 @@ import { CheckCircle2, XCircle, Pencil, Users, AlertCircle, RefreshCw, Copy, Clo
 import { sendNotification } from "@/lib/notifications/api";
 import { getOrCreateConversation } from "@/lib/chat/api";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
+import { CanchaOwnerTabs } from "@/components/CanchaOwnerTabs";
 import {
   DAY_LABELS,
   type Cancha,
@@ -342,28 +342,25 @@ export default function CanchaAgendaPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title={cancha.name}
-        backHref="/mis-canchas"
-        actions={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { loadBookings(selectedDate); loadWeekSummary(); }}
-              className="w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-              title="Actualizar"
-            >
-              <RefreshCw className="size-3.5" />
-            </button>
-            <Link href={`/canchas/${id}/editar`}>
-              <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs">
-                <Pencil className="size-3.5" /> Editar
-              </Button>
-            </Link>
-          </div>
-        }
-      />
+      <CanchaOwnerTabs canchaId={id!} canchaName={cancha.name} />
 
-      <main className="container mx-auto px-4 py-5 max-w-2xl space-y-5">
+      {/* Editar + Refresh */}
+      <div className="flex items-center justify-end gap-2 px-4 pt-3 max-w-2xl mx-auto">
+        <button
+          onClick={() => { loadBookings(selectedDate); loadWeekSummary(); }}
+          className="w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          title="Actualizar"
+        >
+          <RefreshCw className="size-3.5" />
+        </button>
+        <Link href={`/canchas/${id}/editar`}>
+          <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs">
+            <Pencil className="size-3.5" /> Editar
+          </Button>
+        </Link>
+      </div>
+
+      <main className="container mx-auto px-4 py-3 max-w-2xl space-y-5">
 
         {/* Week strip */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 p-4 shadow-sm">

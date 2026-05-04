@@ -26,6 +26,8 @@ import {
   CheckCircle2,
   XCircle,
   Building2,
+  Users,
+  BarChart2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { sendNotification } from "@/lib/notifications/api";
@@ -356,29 +358,37 @@ export default function MisCanchasPage() {
                           )}
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
+                        {/* Quick nav: 4 actions */}
+                        <div className="grid grid-cols-2 gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            className={`rounded-xl text-xs ${canchaBookingsPending > 0 ? "border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20" : ""}`}
+                            className={`rounded-xl text-xs gap-1 ${canchaBookingsPending > 0 ? "border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20" : ""}`}
                             asChild
                           >
                             <Link href={`/canchas/${c.id}/agenda`}>
-                              <Calendar className="size-3.5 mr-1" /> Agenda
+                              <Calendar className="size-3.5" /> Agenda
                               {canchaBookingsPending > 0 && (
-                                <span className="ml-1 size-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
+                                <span className="ml-0.5 size-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
                                   {canchaBookingsPending}
                                 </span>
                               )}
                             </Link>
                           </Button>
-                          <Button variant="outline" size="sm" className="rounded-xl text-xs" asChild>
-                            <Link href={`/canchas/${c.id}/editar`}>
-                              <Pencil className="size-3.5 mr-1" /> Editar
+                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
+                            <Link href={`/canchas/${c.id}/clientes`}>
+                              <Users className="size-3.5" /> Clientes
                             </Link>
                           </Button>
-                          <Button variant="outline" size="sm" className="rounded-xl text-xs" asChild>
-                            <Link href={`/canchas/${c.id}`}>Ver</Link>
+                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
+                            <Link href={`/canchas/${c.id}/stats`}>
+                              <BarChart2 className="size-3.5" /> Estadísticas
+                            </Link>
+                          </Button>
+                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
+                            <Link href={`/canchas/${c.id}/editar`}>
+                              <Pencil className="size-3.5" /> Editar
+                            </Link>
                           </Button>
                         </div>
                       </div>
