@@ -247,3 +247,64 @@ export async function updateBookingStatus(
   if (error) return { error: mapDbError(error), data: null };
   return { error: null, data: data as CanchaBooking };
 }
+
+export type PendingBookingWithCancha = CanchaBooking & {
+  canchas: { name: string; sport_type: string };
+};
+
+export async function getOwnerPendingBookings(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ApiResult<PendingBookingWithCancha[]>> {
+  const { data: myCanchas } = await supabase
+    .from("canchas")
+    .select("id")
+    .eq("owner_id", userId);
+  if (!myCanchas?.length) return { error: null, data: [] };
+  const ids = myCanchas.map((c: { id: string }) => c.id);
+  const { data, error } = await supabase
+    .from("cancha_bookings")
+    .select("*, canchas(name, sport_type)")
+    .in("cancha_id", ids)
+    .eq("status", "pendiente")
+    .order("booking_date")
+    .order("start_time");
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data: (data ?? []) as PendingBookingWithCancha[] };
+}
+
+export type DaySummary = {
+  booking_date: string;
+  total: number;
+  pending: number;
+};
+
+export async function getWeeklyBookingSummary(
+  supabase: SupabaseClient,
+  canchaId: string,
+  startDate: string,
+  endDate: string,
+): Promise<ApiResult<DaySummary[]>> {
+  const { data, error } = await supabase
+    .from("cancha_bookings")
+    .select("booking_date, status")
+    .eq("cancha_id", canchaId)
+    .gte("booking_date", startDate)
+    .lte("booking_date", endDate);
+  if (error) return { error: mapDbError(error), data: null };
+  const grouped: Record<string, { total: number; pending: number }> = {};
+  for (const b of (data ?? []) as { booking_date: string; status: string }[]) {
+    if (!grouped[b.booking_date])
+      grouped[b.booking_date] = { total: 0, pending: 0 };
+    grouped[b.booking_date].total++;
+    if (b.status === "pendiente") grouped[b.booking_date].pending++;
+  }
+  return {
+    error: null,
+    data: Object.entries(grouped).map(([booking_date, s]) => ({
+      booking_date,
+      total: s.total,
+      pending: s.pending,
+    })),
+  };
+}
