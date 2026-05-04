@@ -58,6 +58,18 @@ function notifMessage(type: string, data: Record<string, unknown>): string {
       return `❌ Reserva cancelada en ${cancha}${dateStr ? " — " + dateStr : ""}${timeStr}`;
     case "booking_created":
       return `Nueva reserva en ${cancha}${dateStr ? " — " + dateStr : ""}${timeStr}`;
+    case "tournament_registered":
+      return `Te inscribiste en ${(data.tournament_name as string) || "el torneo"} — inscripción pendiente`;
+    case "tournament_accepted":
+      return `🏆 Inscripción aceptada en ${(data.tournament_name as string) || "el torneo"}`;
+    case "tournament_rejected":
+      return `Inscripción rechazada en ${(data.tournament_name as string) || "el torneo"}`;
+    case "tournament_match_scheduled":
+      return `Partido programado en ${(data.tournament_name as string) || "el torneo"}${data.opponent ? ` vs ${data.opponent as string}` : ""}`;
+    case "tournament_result":
+      return `Resultado cargado en ${(data.tournament_name as string) || "el torneo"}${data.result ? ` — ${data.result as string}` : ""}`;
+    case "tournament_cancelled":
+      return `El torneo ${(data.tournament_name as string) || ""} fue cancelado`;
     default:
       return "Nueva notificación";
   }

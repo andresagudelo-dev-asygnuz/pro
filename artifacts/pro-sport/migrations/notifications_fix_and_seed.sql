@@ -22,6 +22,7 @@ alter table public.notifications enable row level security;
 drop policy if exists "Users read own notifications"         on public.notifications;
 drop policy if exists "Users update own notifications"       on public.notifications;
 drop policy if exists "Authenticated insert notifications"   on public.notifications;
+drop policy if exists "Authenticated delete notifications"   on public.notifications;
 
 -- 4. Recrear policies correctas
 -- Lectura: solo las propias
@@ -40,16 +41,26 @@ create policy "Authenticated insert notifications"
   on public.notifications for insert
   with check (auth.uid() is not null);
 
+-- Eliminar: solo las propias
+create policy "Authenticated delete notifications"
+  on public.notifications for delete
+  using (auth.uid() = user_id);
+
 -- ─── SEED: Notificaciones de prueba para andres.agudelo@asygnuz.com ──────────
 -- ID del usuario Andres Agudelo (andres_asy): d2b3edfb-be53-4e21-9b99-9be6e0298d9d
 
 do $$
 declare
   uid uuid := 'd2b3edfb-be53-4e21-9b99-9be6e0298d9d';
+  tid1 text := 'bbbbbbbb-bbbb-bbbb-bbbb-000000000001'; -- Copa Manizales
+  tid3 text := 'bbbbbbbb-bbbb-bbbb-bbbb-000000000003'; -- Torneo Pádel Mixto
+  tid4 text := 'bbbbbbbb-bbbb-bbbb-bbbb-000000000004'; -- Torneo Basket
 begin
 
   -- Borrar seed anterior para no duplicar
-  delete from public.notifications where user_id = uid and created_at > now() - interval '1 hour';
+  delete from public.notifications where user_id = uid;
+
+  -- ── RESERVAS ──────────────────────────────────────────────────────────────
 
   -- 1. Solicitud de reserva nueva (como dueño de cancha)
   insert into public.notifications (user_id, type, data, created_at) values
@@ -85,6 +96,8 @@ begin
     'total_price',  40000
   ), now() - interval '1 hour');
 
+  -- ── PARTIDOS ───────────────────────────────────────────────────────────────
+
   -- 4. Solicitud de partido (match_request)
   insert into public.notifications (user_id, type, data, created_at) values
   (uid, 'match_request', jsonb_build_object(
@@ -94,7 +107,7 @@ begin
     'match_title',  'Fútbol 5 - Sábado tarde'
   ), now() - interval '2 hours');
 
-  -- 5. Match invitación aceptada
+  -- 5. Solicitud aceptada
   insert into public.notifications (user_id, type, data, created_at) values
   (uid, 'match_accepted', jsonb_build_object(
     'player_name',  'Pedro Promotor',
@@ -102,21 +115,66 @@ begin
     'match_title',  'Pádel dobles - Domingo'
   ), now() - interval '3 hours');
 
-  -- 6. Partido actualizado
+  -- 6. Partido actualizado (requiere reconfirmación)
   insert into public.notifications (user_id, type, data, created_at) values
   (uid, 'match_updated', jsonb_build_object(
     'match_id',        'match-test-001',
     'match_title',     'Fútbol 5 - Sábado tarde',
-    'changes',         'Cambio de hora: ahora es a las 16:00',
+    'changes',         'Cambio de hora: ahora a las 16:00',
     'needs_reconfirm', true
   ), now() - interval '4 hours');
 
-  raise notice 'Seed de notificaciones creado para usuario %', uid;
+  -- ── TORNEOS ────────────────────────────────────────────────────────────────
+
+  -- 7. Inscripción enviada a Copa Manizales
+  insert into public.notifications (user_id, type, data, created_at) values
+  (uid, 'tournament_registered', jsonb_build_object(
+    'tournament_id',   tid1,
+    'tournament_name', 'Copa Manizales'
+  ), now() - interval '30 minutes');
+
+  -- 8. Inscripción aceptada en Torneo Pádel Mixto
+  insert into public.notifications (user_id, type, data, created_at) values
+  (uid, 'tournament_accepted', jsonb_build_object(
+    'tournament_id',   tid3,
+    'tournament_name', 'Torneo Pádel Mixto'
+  ), now() - interval '5 hours');
+
+  -- 9. Partido programado en Copa Manizales (cuartos de final)
+  insert into public.notifications (user_id, type, data, created_at) values
+  (uid, 'tournament_match_scheduled', jsonb_build_object(
+    'tournament_id',   tid1,
+    'tournament_name', 'Copa Manizales',
+    'round',           'Cuartos de final',
+    'opponent',        'Equipo Los Cóndores',
+    'match_date',      to_char(now() + interval '5 days', 'YYYY-MM-DD'),
+    'start_time',      '15:00'
+  ), now() - interval '6 hours');
+
+  -- 10. Resultado cargado en Pádel Mixto
+  insert into public.notifications (user_id, type, data, created_at) values
+  (uid, 'tournament_result', jsonb_build_object(
+    'tournament_id',   tid3,
+    'tournament_name', 'Torneo Pádel Mixto',
+    'round',           'Fase de grupos',
+    'result',          'Ganaste 6-3, 6-4',
+    'points_earned',   3
+  ), now() - interval '1 day');
+
+  -- 11. Inscripción rechazada en Torneo Basket
+  insert into public.notifications (user_id, type, data, created_at) values
+  (uid, 'tournament_rejected', jsonb_build_object(
+    'tournament_id',   tid4,
+    'tournament_name', 'Torneo Basket',
+    'reason',          'Cupos completos'
+  ), now() - interval '2 days');
+
+  raise notice 'Seed de notificaciones creado exitosamente para usuario %', uid;
 end;
 $$;
 
--- Verificar que se insertaron
-select type, created_at, read_at
+-- Verificar resultado
+select type, created_at::date as fecha, read_at is null as no_leida
 from public.notifications
 where user_id = 'd2b3edfb-be53-4e21-9b99-9be6e0298d9d'
 order by created_at desc;

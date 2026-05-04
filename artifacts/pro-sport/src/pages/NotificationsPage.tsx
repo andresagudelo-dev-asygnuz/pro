@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNotifCount } from "@/context/NotifContext";
 import {
   Bell, CheckCircle2, MessageSquare, UserPlus, Mail,
-  Check, X, Trash2, Eye, CalendarCheck, Building2,
+  Check, X, Trash2, Eye, CalendarCheck, Building2, Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,17 +31,21 @@ type MatchInviteWithMatch = MatchInvitation & {
   inviterProfile?: { full_name: string | null; avatar_url: string | null; username: string | null };
 };
 
-type Filter = "all" | "unread" | "reservas" | "partidos";
+type Filter = "all" | "unread" | "reservas" | "partidos" | "torneos";
 
 const FILTER_LABELS: Record<Filter, string> = {
-  all: "Todas", unread: "No leídas", reservas: "Reservas", partidos: "Partidos",
+  all: "Todas", unread: "No leídas", reservas: "Reservas", partidos: "Partidos", torneos: "Torneos",
 };
 
-function isBookingType(type: string) {
-  return ["booking_new_request","booking_confirmed","booking_cancelled","booking_cancelled_owner","booking_created"].includes(type);
+function isBookingType(t: string) {
+  return ["booking_new_request","booking_confirmed","booking_cancelled","booking_cancelled_owner","booking_created"].includes(t);
 }
-function isMatchType(type: string) {
-  return ["match_request","match_accepted","match_invite","match_updated"].includes(type);
+function isMatchType(t: string) {
+  return ["match_request","match_accepted","match_invite","match_updated"].includes(t);
+}
+function isTournamentType(t: string) {
+  return ["tournament_registered","tournament_accepted","tournament_rejected",
+          "tournament_match_scheduled","tournament_result","tournament_cancelled"].includes(t);
 }
 
 export default function NotificationsPage() {
@@ -69,7 +73,10 @@ export default function NotificationsPage() {
     if (rawInvites.length > 0) {
       const { data: profiles } = await supabase.from("profiles")
         .select("id, full_name, avatar_url, username").in("id", rawInvites.map((i) => i.inviter_id));
-      const map = new Map(((profiles ?? []) as { id: string; full_name: string | null; avatar_url: string | null; username: string | null }[]).map((p) => [p.id, p]));
+      const map = new Map(
+        ((profiles ?? []) as { id: string; full_name: string | null; avatar_url: string | null; username: string | null }[])
+          .map((p) => [p.id, p])
+      );
       setMatchInvitations(rawInvites.map((inv) => ({ ...inv, inviterProfile: map.get(inv.inviter_id) })));
     } else setMatchInvitations([]);
     setLoading(false);
@@ -158,17 +165,25 @@ export default function NotificationsPage() {
     if (type === "booking_confirmed")        return <CalendarCheck className="size-4 text-emerald-500" />;
     if (type === "booking_cancelled" || type === "booking_cancelled_owner") return <X className="size-4 text-red-500" />;
     if (type === "booking_created")          return <CalendarCheck className="size-4 text-emerald-500" />;
+    if (type === "tournament_registered")    return <Trophy className="size-4 text-violet-500" />;
+    if (type === "tournament_accepted")      return <Trophy className="size-4 text-emerald-500" />;
+    if (type === "tournament_rejected")      return <Trophy className="size-4 text-red-500" />;
+    if (type === "tournament_match_scheduled") return <Trophy className="size-4 text-blue-500" />;
+    if (type === "tournament_result")        return <Trophy className="size-4 text-amber-500" />;
+    if (type === "tournament_cancelled")     return <Trophy className="size-4 text-red-400" />;
     return <Bell className="size-4 text-muted-foreground" />;
   };
 
   const getMessage = (n: Notification) => {
-    const d = n.data;
+    const d = n.data as Record<string, unknown>;
     const { player_name, match_title, changes, needs_reconfirm,
-            cancha_name, booking_date, start_time, booker_name } = d as Record<string, unknown>;
-    const dateStr = booking_date
+            cancha_name, booking_date, start_time, booker_name,
+            tournament_name, tournament_id: _tid, round, opponent, result } = d;
+
+    const dateStr = (booking_date as string | undefined)
       ? new Date(`${booking_date as string}T12:00:00`).toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" })
       : null;
-    const timeStr = start_time ? (start_time as string).substring(0, 5) + "h" : null;
+    const timeStr = (start_time as string | undefined) ? (start_time as string).substring(0, 5) + "h" : null;
 
     switch (n.type) {
       case "match_request":
@@ -188,6 +203,18 @@ export default function NotificationsPage() {
         return <span>❌ Tu reserva en <strong>{(cancha_name as string) || "la cancha"}</strong>{dateStr ? <> del {dateStr}</> : ""}{timeStr ? <> a las {timeStr}</> : ""} fue <strong>cancelada</strong>.</span>;
       case "booking_created":
         return <span>🏟️ Nueva reserva en <strong>{(cancha_name as string) || "tu cancha"}</strong>{dateStr ? <> para el {dateStr}</> : ""}{timeStr ? <> a las {timeStr}</> : ""}.</span>;
+      case "tournament_registered":
+        return <span>🏆 Te inscribiste en <strong>{(tournament_name as string) || "el torneo"}</strong>. Tu inscripción está <strong>pendiente de aprobación</strong>.</span>;
+      case "tournament_accepted":
+        return <span>🏆 ¡Tu inscripción en <strong>{(tournament_name as string) || "el torneo"}</strong> fue <strong>aceptada</strong>! Ya sos parte del torneo.</span>;
+      case "tournament_rejected":
+        return <span>🏆 Tu inscripción en <strong>{(tournament_name as string) || "el torneo"}</strong> fue <strong>rechazada</strong>.</span>;
+      case "tournament_match_scheduled":
+        return <span>🏆 Tenés un partido programado en <strong>{(tournament_name as string) || "el torneo"}</strong>{round ? <> — {round as string}</> : ""}{opponent ? <> vs <strong>{opponent as string}</strong></> : ""}.</span>;
+      case "tournament_result":
+        return <span>🏆 Resultado cargado en <strong>{(tournament_name as string) || "el torneo"}</strong>{result ? <> — {result as string}</> : ""}.</span>;
+      case "tournament_cancelled":
+        return <span>🏆 El torneo <strong>{(tournament_name as string) || ""}</strong> fue <strong>cancelado</strong>.</span>;
       default:
         return <span>Nueva notificación.</span>;
     }
@@ -195,22 +222,32 @@ export default function NotificationsPage() {
 
   const getNotifLink = (n: Notification): string => {
     const d = n.data as Record<string, unknown>;
-    if (d.match_id) return `/matches/${d.match_id as string}`;
-    if (d.cancha_id) return n.type === "booking_new_request"
+    if (d.tournament_id) return `/tournaments/${d.tournament_id as string}`;
+    if (d.match_id)      return `/matches/${d.match_id as string}`;
+    if (d.cancha_id)     return n.type === "booking_new_request"
       ? `/canchas/${d.cancha_id as string}/agenda`
       : `/canchas/${d.cancha_id as string}`;
     return "#";
   };
 
+  const countFor = (f: Filter) => {
+    if (f === "unread")    return notifications.filter((n) => !n.read_at).length;
+    if (f === "reservas")  return notifications.filter((n) => isBookingType(n.type)).length;
+    if (f === "partidos")  return notifications.filter((n) => isMatchType(n.type)).length;
+    if (f === "torneos")   return notifications.filter((n) => isTournamentType(n.type)).length;
+    return notifications.length;
+  };
+
   const filtered = notifications.filter((n) => {
-    if (filter === "unread") return !n.read_at;
+    if (filter === "unread")   return !n.read_at;
     if (filter === "reservas") return isBookingType(n.type);
     if (filter === "partidos") return isMatchType(n.type);
+    if (filter === "torneos")  return isTournamentType(n.type);
     return true;
   });
 
-  const unreadCount = notifications.filter((n) => !n.read_at).length;
-  const hasRead = notifications.some((n) => !!n.read_at);
+  const unreadCount  = notifications.filter((n) => !n.read_at).length;
+  const hasRead      = notifications.some((n) => !!n.read_at);
   const hasActionable = friendRequests.length > 0 || matchInvitations.length > 0;
 
   return (
@@ -249,18 +286,19 @@ export default function NotificationsPage() {
         {notifications.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => {
-              const count = f === "unread" ? unreadCount
-                : f === "reservas" ? notifications.filter((n) => isBookingType(n.type)).length
-                : f === "partidos" ? notifications.filter((n) => isMatchType(n.type)).length
-                : notifications.length;
+              const count = countFor(f);
+              if (f !== "all" && f !== "unread" && count === 0) return null;
               return (
-                <button key={f} onClick={() => setFilter(f)}
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
                   className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     filter === f
                       ? "bg-violet-600 text-white border-violet-600"
                       : "border-border/60 hover:border-violet-400 hover:text-violet-600 bg-white dark:bg-zinc-900"
-                  }`}>
-                  {FILTER_LABELS[f]} {count > 0 ? `(${count})` : ""}
+                  }`}
+                >
+                  {FILTER_LABELS[f]}{count > 0 ? ` (${count})` : ""}
                 </button>
               );
             })}
@@ -347,20 +385,20 @@ export default function NotificationsPage() {
               </section>
             )}
 
-            {/* Lista principal de notificaciones */}
-            {filtered.length === 0 && !hasActionable ? (
+            {/* Lista principal */}
+            {filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
                   <Bell className="size-7 text-muted-foreground/40" />
                 </div>
                 <div>
                   <p className="font-semibold text-foreground mb-1">
-                    {filter === "all" ? "Sin notificaciones" : `Sin notificaciones en "${FILTER_LABELS[filter]}"`}
+                    {filter === "all" && !hasActionable ? "Sin notificaciones" : `Sin notificaciones en "${FILTER_LABELS[filter]}"`}
                   </p>
                   <p className="text-sm text-muted-foreground">Acá aparecerán tus actividades recientes.</p>
                 </div>
               </div>
-            ) : filtered.length > 0 ? (
+            ) : (
               <section>
                 {hasActionable && (
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -374,44 +412,52 @@ export default function NotificationsPage() {
                     return (
                       <div
                         key={n.id}
-                        className={`flex items-start gap-3 p-4 transition-colors ${
-                          !n.read_at
-                            ? "bg-violet-50/60 dark:bg-violet-900/10"
-                            : "bg-background"
+                        className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                          !n.read_at ? "bg-violet-50/60 dark:bg-violet-900/10" : "bg-background"
                         } ${isClickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
                         onClick={() => isClickable && navigateTo(n)}
                       >
+                        {/* Indicador no-leído */}
+                        <div className="shrink-0 flex items-center justify-center">
+                          {!n.read_at
+                            ? <div className="size-2 rounded-full bg-violet-600" />
+                            : <div className="size-2" />
+                          }
+                        </div>
+
                         {/* Icono */}
-                        <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0">
                           {getIcon(n.type)}
                         </div>
 
                         {/* Contenido */}
-                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm leading-snug">{getMessage(n)}</p>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(n.created_at).toLocaleString("es-CO", {
-                              weekday: "short", day: "numeric", month: "short",
-                              hour: "2-digit", minute: "2-digit",
-                            })}
-                          </span>
-                          {isClickable && (
-                            <span className="text-xs text-violet-600 dark:text-violet-400 font-medium mt-0.5">
-                              Ver detalle →
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(n.created_at).toLocaleString("es-CO", {
+                                weekday: "short", day: "numeric", month: "short",
+                                hour: "2-digit", minute: "2-digit",
+                              })}
                             </span>
-                          )}
+                            {isClickable && (
+                              <span className="text-xs text-violet-600 dark:text-violet-400 font-medium">
+                                Ver detalle →
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Acciones */}
-                        <div className="flex flex-col gap-1 shrink-0 items-end" onClick={(e) => e.stopPropagation()}>
-                          {!n.read_at && (
-                            <div className="size-2 rounded-full bg-violet-600 mb-1" />
-                          )}
+                        {/* Acciones en fila */}
+                        <div
+                          className="flex items-center gap-1 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {!n.read_at && (
                             <button
                               onClick={() => markOneRead(n.id)}
                               title="Marcar como leída"
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+                              className="w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
                             >
                               <Check className="size-3.5" />
                             </button>
@@ -420,7 +466,7 @@ export default function NotificationsPage() {
                             onClick={() => deleteOne(n.id)}
                             disabled={deletingId === n.id}
                             title="Eliminar"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
+                            className="w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
                           >
                             <Trash2 className="size-3.5" />
                           </button>
@@ -430,7 +476,7 @@ export default function NotificationsPage() {
                   })}
                 </div>
               </section>
-            ) : null}
+            )}
           </>
         )}
       </main>
