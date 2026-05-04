@@ -28,6 +28,8 @@ import {
   Building2,
   Users,
   BarChart2,
+  Shield,
+  LayoutDashboard,
 } from "lucide-react";
 import { toast } from "sonner";
 import { sendNotification } from "@/lib/notifications/api";
@@ -185,11 +187,18 @@ export default function MisCanchasPage() {
               Gestioná tus canchas, reservas y horarios.
             </p>
           </div>
-          <Button asChild className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
-            <Link href="/canchas/nueva">
-              <Plus className="size-4" /> Nueva cancha
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild className="rounded-xl gap-1.5">
+              <Link href="/mis-canchas/dashboard">
+                <LayoutDashboard className="size-4" /> Dashboard
+              </Link>
+            </Button>
+            <Button asChild className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
+              <Link href="/canchas/nueva">
+                <Plus className="size-4" /> Nueva cancha
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -358,7 +367,7 @@ export default function MisCanchasPage() {
                           )}
                         </div>
 
-                        {/* Quick nav: 4 actions */}
+                        {/* Quick nav: 5 actions */}
                         <div className="grid grid-cols-2 gap-2">
                           <Button
                             variant="outline"
@@ -381,13 +390,18 @@ export default function MisCanchasPage() {
                             </Link>
                           </Button>
                           <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
+                            <Link href={`/canchas/${c.id}/equipo`}>
+                              <Shield className="size-3.5" /> Equipo
+                            </Link>
+                          </Button>
+                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
                             <Link href={`/canchas/${c.id}/stats`}>
                               <BarChart2 className="size-3.5" /> Estadísticas
                             </Link>
                           </Button>
-                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" asChild>
+                          <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1 col-span-2" asChild>
                             <Link href={`/canchas/${c.id}/editar`}>
-                              <Pencil className="size-3.5" /> Editar
+                              <Pencil className="size-3.5" /> Editar cancha
                             </Link>
                           </Button>
                         </div>

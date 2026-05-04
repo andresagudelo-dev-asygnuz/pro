@@ -50,6 +50,8 @@ import ChatListPage from "@/pages/ChatListPage";
 import ChatDetailPage from "@/pages/ChatDetailPage";
 import CanchaClientesPage from "@/pages/CanchaClientesPage";
 import CanchaStatsPage from "@/pages/CanchaStatsPage";
+import CanchaEquipoPage from "@/pages/CanchaEquipoPage";
+import OwnerDashboardPage from "@/pages/OwnerDashboardPage";
 
 const queryClient = new QueryClient();
 
@@ -137,6 +139,9 @@ function Router() {
       </Route>
 
       {/* Canchas (protected management) */}
+      <Route path="/mis-canchas/dashboard">
+        <ProtectedRoute component={OwnerDashboardPage} />
+      </Route>
       <Route path="/mis-canchas">
         <ProtectedRoute component={MisCanchasPage} />
       </Route>
@@ -154,6 +159,9 @@ function Router() {
       </Route>
       <Route path="/canchas/:id/stats">
         <ProtectedRoute component={CanchaStatsPage} />
+      </Route>
+      <Route path="/canchas/:id/equipo">
+        <ProtectedRoute component={CanchaEquipoPage} />
       </Route>
 
       {/* Public cancha detail — must come AFTER specific sub-routes */}
