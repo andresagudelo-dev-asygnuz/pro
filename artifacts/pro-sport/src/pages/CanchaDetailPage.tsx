@@ -5,11 +5,15 @@ import { useAuth } from "@/context/AuthContext";
 import { getCanchaById, getAvailableSlots, createBooking } from "@/lib/canchas/api";
 import { sendNotification } from "@/lib/notifications/api";
 import { Button } from "@/components/ui/button";
-import { MapPin, Users, Phone, MessageCircle, CheckCircle2 } from "lucide-react";
+import { MapPin, Users, Phone, MessageCircle, CheckCircle2, ArrowLeft, Star, Zap, Clock, ShieldCheck, Share2, Heart, Calendar, Info, Loader2, ChevronRight, Lock } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, type Cancha, type TimeSlot } from "@/lib/types/db";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { initialsFromName } from "@/lib/format";
+import { Label } from "@/components/ui/label";
 
 const supabase = createClient();
 
@@ -134,163 +138,271 @@ export default function CanchaDetailPage() {
   const isOwner = user?.id === cancha.owner_id;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title={cancha.name}
-        backHref="/canchas"
-        actions={isOwner ? (
-          <Link href={`/canchas/${cancha.id}/agenda`}>
-            <Button variant="outline" size="sm">Gestionar</Button>
-          </Link>
-        ) : undefined}
-      />
-
-      <main className="container mx-auto px-4 py-6 max-w-lg space-y-5">
-        {/* Info card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border p-5 shadow-sm space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">{SPORT_TYPE_ICONS[cancha.sport_type]}</span>
-                <span className="text-sm font-medium text-muted-foreground">{SPORT_TYPE_LABELS[cancha.sport_type]}</span>
-              </div>
-              <h2 className="text-xl font-bold">{cancha.name}</h2>
-            </div>
-            <div className="text-right shrink-0">
-              {cancha.discount_percent > 0 && (
-                <>
-                  <p className="text-xs text-muted-foreground line-through">${cancha.price_per_hour.toLocaleString("es-CO")}/h</p>
-                  <p className="text-xs text-green-600 font-medium">-{cancha.discount_percent}%</p>
-                </>
-              )}
-              <p className="text-xl font-black text-brand-primary">${finalPrice.toLocaleString("es-CO")}<span className="text-sm font-normal text-muted-foreground">/h</span></p>
-            </div>
-          </div>
-
-          {cancha.description && <p className="text-sm text-muted-foreground">{cancha.description}</p>}
-
-          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5"><MapPin className="size-4" />{cancha.address}, {cancha.city}</span>
-            <span className="flex items-center gap-1.5"><Users className="size-4" />{cancha.capacity} jugadores</span>
-          </div>
-
-          {(cancha.phone || cancha.whatsapp) && (
-            <div className="flex gap-3 pt-1 border-t border-border">
-              {cancha.phone && (
-                <a href={`tel:${cancha.phone}`} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-                  <Phone className="size-4" />{cancha.phone}
-                </a>
-              )}
-              {cancha.whatsapp && (
-                <a
-                  href={`https://wa.me/${cancha.whatsapp.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700"
-                >
-                  <MessageCircle className="size-4" /> WhatsApp
-                </a>
-              )}
-            </div>
-          )}
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
+      {/* ══ HERO SECTION ═══════════════════════════════════════════════════ */}
+      <div className="relative h-72 md:h-96 overflow-hidden">
+        {/* Background Image/Gradient */}
+        <div className="absolute inset-0 bg-zinc-900">
+          <img 
+            src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2000" 
+            alt={cancha.name}
+            className="w-full h-full object-cover opacity-50 blur-[1px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-100 dark:from-zinc-950 via-transparent to-black/60" />
         </div>
 
-        {/* Booking section */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border p-5 shadow-sm space-y-4">
-          <div>
-            <h3 className="font-semibold text-base">Solicitar turno</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              La solicitud queda pendiente hasta que el dueño la apruebe. El horario se reserva para vos (nadie más puede pedirlo mientras esté pendiente).
-            </p>
+        {/* Top Controls */}
+        <div className="relative z-10 flex items-center justify-between px-4 pt-4">
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-white/80 hover:text-white transition-all bg-black/20 backdrop-blur-md rounded-full px-4 py-2 border border-white/10"
+          >
+            <ArrowLeft className="size-4" /> Volver
+          </button>
+          <div className="flex gap-2">
+            <button className="p-2.5 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/80 hover:text-white">
+              <Share2 className="size-4" />
+            </button>
+            <button className="p-2.5 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/80 hover:text-brand-primary transition-colors">
+              <Heart className="size-4" />
+            </button>
           </div>
+        </div>
 
-          {booked && (
-            <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 rounded-lg p-3 text-sm">
-              <CheckCircle2 className="size-5 shrink-0" />
-              <span>¡Solicitud enviada! El dueño recibirá tu pedido y lo confirmará en breve.</span>
+        {/* Quick Stats Overlay */}
+        <div className="absolute bottom-12 left-4 right-4 z-10">
+          <div className="grid grid-cols-3 divide-x divide-white/10 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+            <div className="flex flex-col items-center py-3 px-1 gap-0.5">
+              <p className="text-sm font-black text-brand-primary">${finalPrice.toLocaleString("es-CO")}</p>
+              <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Precio / h</p>
             </div>
-          )}
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Fecha</label>
-            <input
-              type="date"
-              min={todayStr()}
-              value={selectedDate}
-              onChange={(e) => { setSelectedDate(e.target.value); setBooked(false); }}
-              className="border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          {loadingSlots ? (
-            <div className="flex justify-center py-6">
-              <div className="w-6 h-6 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+            <div className="flex flex-col items-center py-3 px-1 gap-0.5">
+              <p className="text-sm font-black text-white">{cancha.capacity}</p>
+              <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Jugadores</p>
             </div>
-          ) : slots.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No hay horarios disponibles para este día.
-            </p>
-          ) : (
-            <div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Horarios disponibles — seleccioná uno para reservar
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                {slots.map((slot) => (
-                  <button
-                    key={slot.start}
-                    disabled={!slot.isAvailable}
-                    onClick={() => setSelectedSlot(selectedSlot?.start === slot.start ? null : slot)}
-                    className={`text-xs font-medium py-2.5 px-2 rounded-lg border transition-all ${
-                      !slot.isAvailable
-                        ? "bg-zinc-100 dark:bg-zinc-800 text-muted-foreground border-transparent cursor-not-allowed"
-                        : selectedSlot?.start === slot.start
-                        ? "bg-brand-primary text-white border-brand-primary shadow-sm"
-                        : "bg-background border-border hover:border-foreground/40"
-                    }`}
-                  >
-                    {slot.start}–{slot.end}
-                    {!slot.isAvailable && <span className="block text-xs opacity-60">Ocupado</span>}
-                  </button>
-                ))}
+            <div className="flex flex-col items-center py-3 px-1 gap-0.5">
+              <div className="flex items-center gap-1">
+                <span className="text-sm">{SPORT_TYPE_ICONS[cancha.sport_type]}</span>
               </div>
+              <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">{SPORT_TYPE_LABELS[cancha.sport_type]}</p>
             </div>
-          )}
+          </div>
+        </div>
+      </div>
+
+      {/* ══ CONTENT ═══════════════════════════════════════════════════════ */}
+      <main className="container mx-auto px-4 -mt-6 relative z-20 max-w-lg space-y-6">
+        
+        {/* Profile Header Card */}
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-xl border border-border/50">
+          <div className="flex items-center gap-4 mb-5">
+            <Avatar className="size-16 border-2 border-brand-primary/20 p-0.5 bg-white dark:bg-zinc-800">
+              <AvatarImage src="" />
+              <AvatarFallback className="bg-brand-primary/10 text-brand-primary font-black text-xl">
+                {initialsFromName(cancha.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-2xl font-black italic tracking-tighter uppercase">{cancha.name}</h1>
+                <ShieldCheck className="size-5 text-brand-primary fill-brand-primary/10" />
+              </div>
+              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5 italic">
+                <MapPin className="size-3.5" /> {cancha.city}
+              </p>
+            </div>
+            {isOwner && (
+              <Link href={`/canchas/${cancha.id}/agenda`}>
+                <Button size="sm" variant="outline" className="rounded-full px-4 h-8 text-[10px] font-black uppercase tracking-widest border-brand-primary/20 text-brand-primary hover:bg-brand-primary/5">
+                  Gestionar
+                </Button>
+              </Link>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-3 bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl border border-border/50">
+              <Info className="size-5 text-brand-primary shrink-0 mt-0.5" />
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {cancha.description || "Esta cancha aún no tiene una descripción detallada. ¡Pero el juego siempre es de primer nivel!"}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between text-sm py-2 border-t border-dashed border-border/50">
+              <span className="text-muted-foreground font-medium flex items-center gap-2">
+                <MapPin className="size-4 text-brand-primary" /> Dirección
+              </span>
+              <span className="font-bold text-foreground text-right max-w-[200px] truncate">{cancha.address}</span>
+            </div>
+
+            {(cancha.phone || cancha.whatsapp) && (
+              <div className="flex gap-3 pt-4">
+                {cancha.phone && (
+                  <Button asChild variant="outline" className="flex-1 rounded-xl h-11 border-border/50 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                    <a href={`tel:${cancha.phone}`}>
+                      <Phone className="size-4 mr-2 text-brand-primary" /> Llamar
+                    </a>
+                  </Button>
+                )}
+                {cancha.whatsapp && (
+                  <Button asChild variant="outline" className="flex-1 rounded-xl h-11 border-green-500/20 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30">
+                    <a
+                      href={`https://wa.me/${cancha.whatsapp.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <MessageCircle className="size-4 mr-2" /> WhatsApp
+                    </a>
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Booking Calendar Card */}
+        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-xl border border-border/50 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="size-8 bg-brand-primary/10 rounded-lg flex items-center justify-center">
+                <Calendar className="size-4 text-brand-primary" />
+              </div>
+              <h3 className="font-black italic uppercase tracking-tighter text-lg">Solicitar turno</h3>
+            </div>
+            {booked && (
+              <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                <CheckCircle2 className="size-3" /> Turno pedido
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Fecha del encuentro</Label>
+            <div className="relative group">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-brand-primary transition-colors" />
+              <input
+                type="date"
+                min={todayStr()}
+                value={selectedDate}
+                onChange={(e) => { setSelectedDate(e.target.value); setBooked(false); }}
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-border/50 rounded-xl pl-10 pr-4 h-12 text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {loadingSlots ? (
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center py-12 gap-3"
+              >
+                <Loader2 className="size-8 text-brand-primary animate-spin" />
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Buscando horarios...</p>
+              </motion.div>
+            ) : slots.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl p-8 border border-dashed border-border text-center"
+              >
+                <Clock className="size-8 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground font-medium">No hay horarios disponibles para hoy.</p>
+                <p className="text-[10px] text-muted-foreground/60 uppercase mt-1">Intentá con otra fecha</p>
+              </motion.div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+              >
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Horarios disponibles</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {slots.map((slot) => (
+                    <button
+                      key={slot.start}
+                      disabled={!slot.isAvailable}
+                      onClick={() => setSelectedSlot(selectedSlot?.start === slot.start ? null : slot)}
+                      className={cn(
+                        "relative flex flex-col items-center justify-center py-4 rounded-2xl border transition-all duration-300 overflow-hidden group",
+                        !slot.isAvailable
+                          ? "bg-zinc-50 dark:bg-zinc-800/30 text-muted-foreground border-transparent grayscale opacity-50 cursor-not-allowed"
+                          : selectedSlot?.start === slot.start
+                          ? "bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/30 scale-[1.02]"
+                          : "bg-zinc-50 dark:bg-zinc-950/50 border-border/50 hover:border-brand-primary/50 hover:bg-brand-primary/5"
+                      )}
+                    >
+                      <span className="text-xs font-black tabular-nums">{slot.start}</span>
+                      <span className="text-[9px] opacity-60 font-bold uppercase tracking-tighter">hasta {slot.end}</span>
+                      
+                      {!slot.isAvailable && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/5">
+                          <Lock className="size-3 opacity-30" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {selectedSlot && (
-            <div className="space-y-3 border-t pt-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Horario seleccionado</span>
-                <span className="font-medium">{selectedSlot.start} – {selectedSlot.end}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-bold text-brand-primary">${finalPrice.toLocaleString("es-CO")}</span>
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+              className="space-y-4 border-t border-dashed pt-6"
+            >
+              <div className="bg-brand-primary/5 rounded-2xl p-4 space-y-2 border border-brand-primary/10">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground uppercase font-black tracking-widest">Resumen</span>
+                  <span className="font-bold text-brand-primary uppercase tracking-widest">{selectedDate}</span>
+                </div>
+                <div className="flex justify-between items-end">
+                  <span className="text-lg font-black italic tracking-tighter uppercase">{selectedSlot.start} – {selectedSlot.end}</span>
+                  <span className="text-2xl font-black text-brand-primary italic tracking-tighter">${finalPrice.toLocaleString("es-CO")}</span>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium">Notas (opcional)</label>
+              <div className="flex flex-col gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Notas para el dueño</Label>
                 <textarea
                   rows={2}
-                  placeholder="Ej: partido de cumpleaños, necesito chaleco…"
+                  placeholder="Ej: partido de cumpleaños, necesito chalecos…"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-border/50 rounded-xl p-4 text-sm focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all resize-none"
                 />
               </div>
 
-              {bookingError && <p className="text-sm text-destructive">{bookingError}</p>}
+              {bookingError && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                  <p className="text-xs text-red-500 font-bold text-center">{bookingError}</p>
+                </div>
+              )}
 
               {!user ? (
                 <Link href="/login">
-                  <Button className="w-full">Iniciá sesión para reservar</Button>
+                  <Button className="w-full h-12 rounded-xl bg-brand-primary font-black uppercase tracking-widest text-xs gap-2">
+                    Iniciá sesión para reservar
+                  </Button>
                 </Link>
               ) : (
-                <Button className="w-full" onClick={handleBook} disabled={booking}>
-                  {booking ? "Enviando solicitud…" : "Solicitar turno"}
+                <Button 
+                  className="w-full h-14 rounded-2xl bg-brand-primary hover:bg-brand-primary/90 text-white font-black uppercase tracking-widest text-sm gap-2 shadow-xl shadow-brand-primary/20 active:scale-[0.98] transition-all" 
+                  onClick={handleBook} 
+                  disabled={booking}
+                >
+                  {booking ? (
+                    <>
+                      <Loader2 className="size-5 animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      Solicitar turno
+                      <ChevronRight className="size-5" />
+                    </>
+                  )}
                 </Button>
               )}
-            </div>
+            </motion.div>
           )}
         </div>
       </main>
