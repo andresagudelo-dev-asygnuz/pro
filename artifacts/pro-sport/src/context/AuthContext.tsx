@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { User, Session } from "@supabase/supabase-js";
+import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types/db";
 
@@ -62,20 +62,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
+      const s = session as any;
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
+      setUser(s?.user ?? null);
+      if (s?.user) {
         Promise.all([
-          loadProfile(session.user.id),
-          loadRoles(session.user.id),
+          loadProfile(s.user.id),
+          loadRoles(s.user.id),
         ]).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {

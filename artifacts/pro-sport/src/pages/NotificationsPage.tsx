@@ -17,19 +17,12 @@ import {
   getPendingReceived, acceptFriendRequest, rejectFriendRequest,
   getPendingMatchInvitations, respondToMatchInvitation, type FriendWithProfile,
 } from "@/lib/friends/api";
-import type { MatchInvitation } from "@/lib/types/db";
+import type { MatchInvitation, Notification, NotificationData } from "@/lib/types/db";
+import { useNotifications, type MatchInviteWithMatch } from "@/hooks/useNotifications";
 
 const supabase = createClient();
 
-type NotificationData = { [key: string]: unknown };
-type Notification = {
-  id: string; type: string; data: NotificationData;
-  created_at: string; read_at: string | null;
-};
-type MatchInviteWithMatch = MatchInvitation & {
-  matches: { title: string; starts_at: string } | null;
-  inviterProfile?: { full_name: string | null; avatar_url: string | null; username: string | null };
-};
+// Move logic to hook
 
 type Filter = "all" | "unread" | "reservas" | "partidos" | "torneos";
 
@@ -52,109 +45,29 @@ export default function NotificationsPage() {
   const { user } = useAuth();
   const { clearCount } = useNotifCount();
   const [, setLocation] = useLocation();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [friendRequests, setFriendRequests] = useState<FriendWithProfile[]>([]);
-  const [matchInvitations, setMatchInvitations] = useState<MatchInviteWithMatch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!user) return;
-    const [notifRes, friendReqRes, matchInvRes] = await Promise.all([
-      supabase.from("notifications").select("*").eq("user_id", user.id)
-        .order("created_at", { ascending: false }).limit(60),
-      getPendingReceived(supabase, user.id),
-      getPendingMatchInvitations(supabase, user.id),
-    ]);
-    setNotifications(notifRes.data || []);
-    setFriendRequests(friendReqRes.data ?? []);
-    const rawInvites = (matchInvRes.data ?? []) as MatchInviteWithMatch[];
-    if (rawInvites.length > 0) {
-      const { data: profiles } = await supabase.from("profiles")
-        .select("id, full_name, avatar_url, username").in("id", rawInvites.map((i) => i.inviter_id));
-      const map = new Map(
-        ((profiles ?? []) as { id: string; full_name: string | null; avatar_url: string | null; username: string | null }[])
-          .map((p) => [p.id, p])
-      );
-      setMatchInvitations(rawInvites.map((inv) => ({ ...inv, inviterProfile: map.get(inv.inviter_id) })));
-    } else setMatchInvitations([]);
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => { if (user) load(); }, [user, load]);
-
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase.channel(`notif-page-${user.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        (payload: { new: Notification }) => setNotifications((prev) => [payload.new, ...prev]))
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        (payload: { new: Notification }) => setNotifications((prev) => prev.map((n) => n.id === payload.new.id ? payload.new : n)))
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
-
-  const markAllRead = async () => {
-    if (!user) return;
-    await supabase.from("notifications").update({ read_at: new Date().toISOString() })
-      .eq("user_id", user.id).is("read_at", null);
-    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
-    clearCount();
-  };
-
-  const markOneRead = async (id: string) => {
-    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
-  };
-
-  const deleteOne = async (id: string) => {
-    setDeletingId(id);
-    const { error } = await supabase.from("notifications").delete().eq("id", id);
-    if (error) { toast.error("No se pudo eliminar."); setDeletingId(null); return; }
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    setDeletingId(null);
-    toast.success("Notificación eliminada.");
-  };
-
-  const deleteAllRead = async () => {
-    if (!user) return;
-    const { error } = await supabase.from("notifications").delete()
-      .eq("user_id", user.id).not("read_at", "is", null);
-    if (error) { toast.error("Error al eliminar."); return; }
-    setNotifications((prev) => prev.filter((n) => !n.read_at));
-    toast.success("Notificaciones leídas eliminadas.");
-  };
+  const {
+    notifications,
+    friendRequests,
+    matchInvitations,
+    loading,
+    deletingId,
+    markAllRead,
+    markOneRead,
+    deleteOne,
+    deleteAllRead,
+    handleAcceptFriend,
+    handleRejectFriend,
+    handleAcceptMatchInvite,
+    handleRejectMatchInvite,
+  } = useNotifications(user?.id);
 
   const navigateTo = (n: Notification) => {
     if (!n.read_at) markOneRead(n.id);
     const href = getNotifLink(n);
     if (href !== "#") setLocation(href);
   };
-
-  async function handleAcceptFriend(id: string) {
-    const { error } = await acceptFriendRequest(supabase, id);
-    if (error) { toast.error(error); return; }
-    setFriendRequests((prev) => prev.filter((f) => f.id !== id));
-    toast.success("¡Ahora son amigos!");
-  }
-  async function handleRejectFriend(id: string) {
-    const { error } = await rejectFriendRequest(supabase, id);
-    if (error) { toast.error(error); return; }
-    setFriendRequests((prev) => prev.filter((f) => f.id !== id));
-  }
-  async function handleAcceptMatchInvite(invId: string, matchId: string) {
-    const { error } = await respondToMatchInvitation(supabase, invId, "accepted");
-    if (error) { toast.error(error); return; }
-    await supabase.from("match_participants").insert({ match_id: matchId, user_id: user?.id, status: "joined" });
-    setMatchInvitations((prev) => prev.filter((i) => i.id !== invId));
-    toast.success("¡Te uniste al partido!");
-  }
-  async function handleRejectMatchInvite(id: string) {
-    const { error } = await respondToMatchInvitation(supabase, id, "rejected");
-    if (error) { toast.error(error); return; }
-    setMatchInvitations((prev) => prev.filter((i) => i.id !== id));
-  }
 
   const getIcon = (type: string) => {
     if (type === "match_request")            return <UserPlus className="size-4 text-blue-500" />;
@@ -224,9 +137,19 @@ export default function NotificationsPage() {
     const d = n.data as Record<string, unknown>;
     if (d.tournament_id) return `/tournaments/${d.tournament_id as string}`;
     if (d.match_id)      return `/matches/${d.match_id as string}`;
-    if (d.cancha_id)     return n.type === "booking_new_request"
-      ? `/canchas/${d.cancha_id as string}/agenda`
-      : `/canchas/${d.cancha_id as string}`;
+    
+    if (d.cancha_id) {
+      // Notificaciones para el DUEÑO (ir a Agenda)
+      if (n.type === "booking_new_request" || n.type === "booking_created") {
+        return `/canchas/${d.cancha_id as string}/agenda`;
+      }
+      // Notificaciones para el JUGADOR (ir a Mis Reservas)
+      if (n.type === "booking_confirmed" || n.type === "booking_cancelled" || n.type === "booking_cancelled_owner") {
+        return `/mis-reservas`;
+      }
+      // Default para canchas
+      return `/canchas/${d.cancha_id as string}`;
+    }
     return "#";
   };
 

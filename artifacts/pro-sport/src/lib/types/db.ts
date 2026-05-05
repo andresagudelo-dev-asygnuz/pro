@@ -131,10 +131,43 @@ export interface MatchParticipant {
 
 export interface Message {
   id: string;
-  match_id: string;
+  conversation_id: string;
   sender_id: string;
   content: string;
   created_at: string;
+}
+
+export type ConversationType = "booking" | "match" | "tournament" | "friend" | "direct";
+
+export interface Conversation {
+  id: string;
+  type: ConversationType;
+  reference_id: string | null;
+  title: string;
+  subtitle: string | null;
+  metadata: any;
+  last_message_text: string | null;
+  last_message_at: string | null;
+  last_sender_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationParticipant {
+  conversation_id: string;
+  user_id: string;
+  last_read_at: string;
+}
+
+export type NotificationData = { [key: string]: unknown };
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  data: NotificationData;
+  created_at: string;
+  read_at: string | null;
 }
 
 export const SKILL_LEVELS: { value: SkillLevel; label: string }[] = [

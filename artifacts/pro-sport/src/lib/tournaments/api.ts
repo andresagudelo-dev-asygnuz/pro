@@ -109,7 +109,7 @@ export async function getRegisteredTournaments(
     .order("created_at", { ascending: false });
 
   if (error) return { error: mapDbError(error), data: null };
-  const rows = (data ?? []) as RegistrationWithTournament[];
+  const rows = (data as unknown as RegistrationWithTournament[]) ?? [];
   const tournaments = rows.map((r) => r.tournaments).filter(Boolean) as TournamentRow[];
   return { error: null, data: tournaments };
 }

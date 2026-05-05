@@ -120,7 +120,7 @@ export default function FriendsPage() {
                 { key: "amigos" as Tab, label: "Amigos", count: friends.length },
                 { key: "solicitudes" as Tab, label: "Solicitudes", count: pendingCount },
                 { key: "buscar" as Tab, label: "Buscar" },
-              ] as const
+              ] satisfies readonly { key: Tab; label: string; count?: number }[]
             ).map(({ key, label, count }) => (
               <button
                 key={key}

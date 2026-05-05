@@ -17,12 +17,11 @@ import type { Match, MatchParticipant, Profile, Sport, CanchaBooking, MatchInvit
 import { getMyMatchInvitation, respondToMatchInvitation, getMatchInvitations, getFriends, sendMatchInvitations } from "@/lib/friends/api";
 import { checkMatchConflict } from "@/lib/matches/conflicts";
 import type { FriendWithProfile } from "@/lib/friends/api";
+import { useMatchDetail, type ChatMessage, type FullBooking } from "@/hooks/useMatchDetail";
 
 const supabase = createClient();
 
-type ChatMessage = { id: string; sender_id: string; content: string; created_at: string };
-type FullCancha = { name: string; address: string; phone?: string | null; price_per_hour?: number | null };
-type FullBooking = CanchaBooking & { canchas?: FullCancha | null };
+// Move logic to hook
 
 // ─── Sport color theme ──────────────────────────────────────────────────────
 function getSportGradient(sportName: string | undefined) {
@@ -52,17 +51,15 @@ export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
 
-  // Core state
-  const [match, setMatch]               = useState<Match | null>(null);
-  const [sport, setSport]               = useState<Sport | null>(null);
-  const [organizer, setOrganizer]       = useState<Profile | null>(null);
-  const [participants, setParticipants] = useState<MatchParticipant[]>([]);
-  const [profilesById, setProfilesById] = useState<Map<string, Profile>>(new Map());
-  const [canchaBooking, setCanchaBooking] = useState<FullBooking | null>(null);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState<string | null>(null);
+  const {
+    match, sport, organizer, participants, profilesById, canchaBooking,
+    loading, error, messages, sendingMsg, myInvitation, pendingInvitations, waitlist,
+    sendMessage, joinMatch, leaveMatch, requestJoin, confirmAttendance, cancelMatch,
+    joinWaitlist, acceptJoinRequest, rejectJoinRequest, respondInvitation, refresh
+  } = useMatchDetail(id!, user?.id);
 
-  // Action state
+  // UI state
+  const [chatMessage, setChatMessage]   = useState("");
   const [joining, setJoining]           = useState(false);
   const [requesting, setRequesting]     = useState(false);
   const [acceptingRequest, setAcceptingRequest] = useState<string | null>(null);
@@ -70,16 +67,10 @@ export default function MatchDetailPage() {
   const [cancellingMatch, setCancellingMatch] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  // Chat
-  const [messages, setMessages]         = useState<ChatMessage[]>([]);
-  const [chatMessage, setChatMessage]   = useState("");
-  const [sendingMsg, setSendingMsg]     = useState(false);
   const chatBottomRef                   = useRef<HTMLDivElement>(null);
   const chatInputRef                    = useRef<HTMLInputElement>(null);
 
   // Invitation (my invite)
-  const [myInvitation, setMyInvitation] = useState<MatchInvitation | null>(null);
-  const [pendingInvitations, setPendingInvitations] = useState<(MatchInvitation & { profile?: Profile })[]>([]);
   const [respondingInvite, setRespondingInvite] = useState(false);
 
   // Invite friends panel
@@ -90,7 +81,6 @@ export default function MatchDetailPage() {
   const [friendsLoaded, setFriendsLoaded] = useState(false);
 
   // Waitlist
-  const [waitlist, setWaitlist]         = useState<(MatchWaitlist & { profile?: Profile })[]>([]);
   const [joiningWaitlist, setJoiningWaitlist] = useState(false);
 
   // Rating
@@ -98,309 +88,98 @@ export default function MatchDetailPage() {
   const [submittingRatings, setSubmittingRatings] = useState(false);
   const [ratingsSubmitted, setRatingsSubmitted] = useState(false);
 
-  // ── Load everything ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data: matchRaw } = await supabase.from("matches").select("*").eq("id", id).maybeSingle();
-      if (!matchRaw) { setError("Partido no encontrado"); setLoading(false); return; }
-      const m = matchRaw as Match;
-      setMatch(m);
-
-      const [
-        { data: sportData },
-        { data: orgData },
-        { data: partsData },
-        { data: messagesData },
-        bookingRes,
-        invRes,
-        allInvRes,
-        waitlistRes,
-      ] = await Promise.all([
-        supabase.from("sports").select("*").eq("id", m.sport_id).maybeSingle(),
-        supabase.from("profiles").select("*").eq("id", m.organizer_id).maybeSingle(),
-        supabase.from("match_participants").select("*").eq("match_id", m.id).order("joined_at"),
-        supabase.from("messages").select("*").eq("match_id", m.id).order("created_at", { ascending: true }).limit(200),
-        m.cancha_booking_id
-          ? supabase.from("cancha_bookings").select("*, canchas(name, address, phone, price_per_hour)").eq("id", m.cancha_booking_id).maybeSingle()
-          : Promise.resolve({ data: null }),
-        getMyMatchInvitation(supabase, m.id, user.id),
-        getMatchInvitations(supabase, m.id),
-        supabase.from("match_waitlist").select("*").eq("match_id", m.id).order("joined_at"),
-      ]);
-
-      if (bookingRes.data) setCanchaBooking(bookingRes.data as FullBooking);
-      if (invRes.data) setMyInvitation(invRes.data);
-
-      setSport(sportData as Sport | null);
-      setOrganizer(orgData as Profile | null);
-
-      const parts = (partsData ?? []) as MatchParticipant[];
-      setParticipants(parts);
-      setMessages((messagesData ?? []) as ChatMessage[]);
-
-      // Load profiles for participants + organizer
-      const pIds = Array.from(new Set(parts.map((p) => p.user_id).concat(m.organizer_id)));
-      const { data: ppData } = await supabase.from("profiles").select("*").in("id", pIds);
-      const map = new Map<string, Profile>();
-      ((ppData ?? []) as Profile[]).forEach((p) => map.set(p.id, p));
-      setProfilesById(map);
-
-      // Pending invitations (organizer view)
-      if (allInvRes.data && allInvRes.data.length > 0) {
-        const inviteeIds = allInvRes.data.map((inv) => inv.invitee_id);
-        const { data: invProfiles } = await supabase.from("profiles").select("*").in("id", inviteeIds);
-        const invMap = new Map(((invProfiles ?? []) as Profile[]).map((p) => [p.id, p]));
-        setPendingInvitations(allInvRes.data.map((inv) => ({ ...inv, profile: invMap.get(inv.invitee_id) })));
-      }
-
-      // Waitlist with profiles
-      const wl = (waitlistRes.data ?? []) as MatchWaitlist[];
-      if (wl.length > 0) {
-        const wIds = wl.map((w) => w.user_id);
-        const { data: wProfiles } = await supabase.from("profiles").select("*").in("id", wIds);
-        const wMap = new Map(((wProfiles ?? []) as Profile[]).map((p) => [p.id, p]));
-        setWaitlist(wl.map((w) => ({ ...w, profile: wMap.get(w.user_id) })));
-        // Merge into main profilesById too
-        setProfilesById((prev) => {
-          const next = new Map(prev);
-          ((wProfiles ?? []) as Profile[]).forEach((p) => next.set(p.id, p));
-          return next;
-        });
-      }
-
-      // Ratings check
-      if (m.status === "completed") {
-        const { data: existingRatings } = await supabase.from("match_ratings").select("id").eq("match_id", m.id).eq("rater_id", user.id);
-        if (existingRatings && existingRatings.length > 0) setRatingsSubmitted(true);
-      }
-
-      setLoading(false);
-    })();
-  }, [id, user]);
-
-  // ── Realtime ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!id) return;
-    const channel = supabase.channel(`match-rt-${id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `match_id=eq.${id}` },
-        (payload: { new: Record<string, unknown> }) => {
-          const msg = payload.new as unknown as ChatMessage;
-          setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
-        })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "match_participants", filter: `match_id=eq.${id}` },
-        async (payload: { new: Record<string, unknown> }) => {
-          const newPart = payload.new as unknown as MatchParticipant;
-          setParticipants((prev) => prev.some((p) => p.user_id === newPart.user_id) ? prev : [...prev, newPart]);
-          const { data } = await supabase.from("profiles").select("*").eq("id", newPart.user_id).maybeSingle();
-          if (data) setProfilesById((prev) => new Map([...prev, [data.id, data as Profile]]));
-        })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "match_participants", filter: `match_id=eq.${id}` },
-        (payload: { new: Record<string, unknown> }) => {
-          const updated = payload.new as unknown as MatchParticipant;
-          setParticipants((prev) => prev.map((p) => p.user_id === updated.user_id ? updated : p));
-        })
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "match_participants", filter: `match_id=eq.${id}` },
-        (payload: { old: Record<string, unknown> }) => {
-          setParticipants((prev) => prev.filter((p) => p.user_id !== (payload.old as unknown as MatchParticipant).user_id));
-        })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "match_waitlist", filter: `match_id=eq.${id}` },
-        async (payload: { new: Record<string, unknown> }) => {
-          const entry = payload.new as unknown as MatchWaitlist;
-          const { data } = await supabase.from("profiles").select("*").eq("id", entry.user_id).maybeSingle();
-          const profile = data as Profile | null;
-          setWaitlist((prev) => prev.some((w) => w.id === entry.id) ? prev : [...prev, { ...entry, profile: profile ?? undefined }]);
-          if (profile) setProfilesById((prev) => new Map([...prev, [profile.id, profile]]));
-        })
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "match_waitlist", filter: `match_id=eq.${id}` },
-        (payload: { old: Record<string, unknown> }) => {
-          setWaitlist((prev) => prev.filter((w) => w.id !== (payload.old as unknown as MatchWaitlist).id));
-        })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [id]);
-
   useEffect(() => { chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleJoin = useCallback(async () => {
-    if (!match || !user) return;
+  const handleJoin = async () => {
     setJoining(true);
-    const myPart = participants.find((p) => p.user_id === user.id);
-    if (myPart) {
-      // Leave
-      await supabase.from("match_participants").delete().eq("match_id", match.id).eq("user_id", user.id);
-      setParticipants((prev) => prev.filter((p) => p.user_id !== user.id));
-      toast.success("Saliste del partido.");
-      // Auto-promote first waitlist entry
-      const firstInLine = waitlist[0];
-      if (firstInLine) {
-        const { error: promoteErr } = await supabase.from("match_participants").insert({ match_id: match.id, user_id: firstInLine.user_id, status: "joined" });
-        if (!promoteErr) {
-          await supabase.from("match_waitlist").delete().eq("id", firstInLine.id);
-          toast.info(`${firstInLine.profile?.full_name ?? "Un jugador de la lista de espera"} ingresó automáticamente.`);
-        }
-      }
-    } else {
-      // Join
-      const { data: newPart } = await supabase.from("match_participants").insert({ match_id: match.id, user_id: user.id, status: "joined" }).select().single();
-      if (newPart) {
-        setParticipants((prev) => [...prev, newPart as MatchParticipant]);
-        // Remove from waitlist if was there
-        const myWaitEntry = waitlist.find((w) => w.user_id === user.id);
-        if (myWaitEntry) {
-          await supabase.from("match_waitlist").delete().eq("id", myWaitEntry.id);
-        }
-        toast.success("¡Te uniste al partido! 🎉");
-      }
-    }
+    const isParticipating = participants.some((p) => p.user_id === user?.id && p.status === "joined");
+    if (isParticipating) await leaveMatch();
+    else await joinMatch();
     setJoining(false);
-  }, [match, user, participants, waitlist]);
+  };
+
+  async function handleConfirm() {
+    setConfirming(true);
+    await confirmAttendance();
+    setConfirming(false);
+  }
+
+  async function handleCancelMatch() {
+    setCancellingMatch(true);
+    await cancelMatch();
+    setCancellingMatch(false);
+    setShowCancelConfirm(false);
+  }
+
+  async function handleSendMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!chatMessage.trim()) return;
+    await sendMessage(chatMessage);
+    setChatMessage("");
+    setTimeout(() => chatInputRef.current?.focus(), 50);
+  }
 
   async function handleJoinWaitlist() {
-    if (!match || !user) return;
     setJoiningWaitlist(true);
-    const alreadyIn = waitlist.some((w) => w.user_id === user.id);
-    if (alreadyIn) {
-      const entry = waitlist.find((w) => w.user_id === user.id)!;
-      await supabase.from("match_waitlist").delete().eq("id", entry.id);
-      setWaitlist((prev) => prev.filter((w) => w.id !== entry.id));
-      toast.success("Saliste de la lista de espera.");
-    } else {
-      const { data, error } = await supabase.from("match_waitlist").insert({ match_id: match.id, user_id: user.id }).select().single();
-      if (error) { toast.error("No se pudo unir a la lista."); }
-      else {
-        const entry = data as MatchWaitlist;
-        setWaitlist((prev) => [...prev, { ...entry, profile: profilesById.get(user.id) }]);
-        toast.success("¡Estás en la lista de espera!");
-      }
-    }
+    await joinWaitlist();
     setJoiningWaitlist(false);
   }
 
-  async function handleConfirm() {
-    if (!match || !user) return;
-    setConfirming(true);
-    await supabase.from("match_participants").update({ confirmed_at: new Date().toISOString() }).eq("match_id", match.id).eq("user_id", user.id);
-    setParticipants((prev) => prev.map((p) => p.user_id === user.id ? { ...p, confirmed_at: new Date().toISOString() } : p));
-    toast.success("¡Asistencia confirmada!");
-    setConfirming(false);
+  async function handleAcceptRequest(uid: string) {
+    setAcceptingRequest(uid);
+    await acceptJoinRequest(uid);
+    setAcceptingRequest(null);
+  }
+
+  async function handleRejectRequest(uid: string) {
+    setAcceptingRequest(uid);
+    await rejectJoinRequest(uid);
+    setAcceptingRequest(null);
   }
 
   async function handleRespondInvitation(status: "accepted" | "rejected") {
     if (!myInvitation) return;
     setRespondingInvite(true);
-    const { error } = await respondToMatchInvitation(supabase, myInvitation.id, status);
-    if (error) { toast.error(error); }
-    else {
-      setMyInvitation((prev) => prev ? { ...prev, status } : null);
-      if (status === "accepted" && match && user) {
-        const { data: newPart } = await supabase.from("match_participants").insert({ match_id: match.id, user_id: user.id, status: "joined" }).select().single();
-        if (newPart) setParticipants((prev) => [...prev, newPart as MatchParticipant]);
-        toast.success("¡Te uniste al partido!");
-      } else { toast.success("Rechazaste la invitación."); }
-    }
+    await respondInvitation(myInvitation.id, status);
     setRespondingInvite(false);
   }
 
-  async function handleCancelMatch() {
-    if (!match || !user) return;
-    setCancellingMatch(true);
-    const { error } = await supabase.from("matches").update({ status: "cancelled" }).eq("id", match.id);
-    if (error) { toast.error("No se pudo cancelar el partido."); }
-    else {
-      toast.success("El partido fue cancelado.");
-      setMatch((m) => (m ? { ...m, status: "cancelled" } : m));
-      setShowCancelConfirm(false);
+  async function handleRequestJoin() {
+    setRequesting(true);
+    const conflict = await checkMatchConflict(supabase, user!.id, match!);
+    if (conflict.conflict) {
+      toast.error(conflict.reason, { duration: 6000 });
+    } else {
+      await requestJoin();
     }
-    setCancellingMatch(false);
-  }
-
-  async function handleSendMessage(e: React.FormEvent) {
-    e.preventDefault();
-    if (!chatMessage.trim() || !match || !user) return;
-    setSendingMsg(true);
-    const { data: msg } = await supabase.from("messages").insert({ match_id: match.id, sender_id: user.id, content: chatMessage.trim() }).select().single();
-    if (msg) setMessages((prev) => prev.some((m) => m.id === (msg as ChatMessage).id) ? prev : [...prev, msg as ChatMessage]);
-    setChatMessage("");
-    setSendingMsg(false);
-    setTimeout(() => chatInputRef.current?.focus(), 50);
+    setRequesting(false);
   }
 
   async function handleSubmitRatings() {
     if (!user || !match) return;
     setSubmittingRatings(true);
-    const rows = Object.entries(myRatings).filter(([, r]) => r > 0).map(([rated_id, rating]) => ({ match_id: match.id, rater_id: user.id, rated_id, rating }));
-    if (rows.length === 0) { toast.error("Seleccioná al menos una calificación."); setSubmittingRatings(false); return; }
-    const { error } = await supabase.from("match_ratings").upsert(rows, { onConflict: "match_id,rater_id,rated_id" });
-    if (error) { toast.error("Error: " + error.message); }
-    else { toast.success("¡Calificaciones enviadas!"); setRatingsSubmitted(true); }
-    setSubmittingRatings(false);
-  }
-
-  // ── Join as REQUEST ────────────────────────────────────────────────────────
-  async function handleRequestJoin() {
-    if (!match || !user) return;
-    setRequesting(true);
-
-    // Conflict check before inserting
-    const conflict = await checkMatchConflict(supabase, user.id, match);
-    if (conflict.conflict) {
-      toast.error(conflict.reason, { duration: 6000 });
-      setRequesting(false);
+    const rows = Object.entries(myRatings)
+      .filter(([, r]) => r > 0)
+      .map(([rated_id, rating]) => ({
+        match_id: match.id,
+        rater_id: user.id,
+        rated_id,
+        rating,
+      }));
+    if (rows.length === 0) {
+      toast.error("Seleccioná al menos una calificación.");
+      setSubmittingRatings(false);
       return;
     }
-
-    const { error } = await supabase
-      .from("match_participants")
-      .insert({ match_id: match.id, user_id: user.id, status: "requested" });
+    const { error } = await supabase.from("match_ratings").upsert(rows, { onConflict: "match_id,rater_id,rated_id" });
     if (error) {
-      toast.error("No se pudo enviar la solicitud.");
+      toast.error("Error: " + error.message);
     } else {
-      setParticipants((prev) => [
-        ...prev,
-        { match_id: match.id, user_id: user.id, status: "requested", joined_at: new Date().toISOString() } as MatchParticipant,
-      ]);
-      toast.success("¡Solicitud enviada! El organizador la revisará pronto.");
+      toast.success("¡Calificaciones enviadas!");
+      setRatingsSubmitted(true);
     }
-    setRequesting(false);
-  }
-
-  // ── Accept / Reject join request (organizer) ───────────────────────────────
-  async function handleAcceptRequest(userId: string) {
-    if (!match) return;
-    setAcceptingRequest(userId);
-    const { error } = await supabase
-      .from("match_participants")
-      .update({ status: "joined" })
-      .eq("match_id", match.id)
-      .eq("user_id", userId);
-    if (error) {
-      toast.error("No se pudo aceptar la solicitud.");
-    } else {
-      setParticipants((prev) =>
-        prev.map((p) => p.user_id === userId ? { ...p, status: "joined" } : p),
-      );
-      toast.success("Solicitud aceptada. El jugador ya puede ver el partido.");
-    }
-    setAcceptingRequest(null);
-  }
-
-  async function handleRejectRequest(userId: string) {
-    if (!match) return;
-    setAcceptingRequest(userId);
-    const { error } = await supabase
-      .from("match_participants")
-      .delete()
-      .eq("match_id", match.id)
-      .eq("user_id", userId);
-    if (error) {
-      toast.error("No se pudo rechazar la solicitud.");
-    } else {
-      setParticipants((prev) => prev.filter((p) => p.user_id !== userId));
-      toast.success("Solicitud rechazada.");
-    }
-    setAcceptingRequest(null);
+    setSubmittingRatings(false);
   }
 
   async function handleOpenInvitePanel() {
