@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { Loader2, User, Mail, Lock, CheckCircle2, ChevronRight, MailOpen, PartyPopper } from "lucide-react";
+import confetti from "canvas-confetti";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function SignupForm() {
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +48,7 @@ export function SignupForm() {
       email,
       password,
       options: {
+        emailRedirectTo: "https://pro-sport.app/login",
         data: {
           full_name,
           is_player: is_player || (!is_promoter && !is_cancha),
@@ -55,129 +60,205 @@ export function SignupForm() {
 
     if (error) {
       setError(error.message);
+      toast.error("Error al registrarse: " + error.message);
       setPending(false);
     } else if (data.session) {
+      toast.success("¡Bienvenido a PRO!");
+      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ["#7c3aed", "#06b6d4", "#ffffff"] });
       setLocation("/onboarding");
     } else {
-      setMessage("¡Cuenta creada! Revisá tu email para confirmar tu cuenta y luego iniciá sesión.");
+      const msg = "¡Felicitaciones! Tu cuenta ha sido creada. Por favor, revisá tu correo electrónico para activarla.";
+      setMessage(msg);
+      toast.success("¡Felicitaciones!");
+      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ["#7c3aed", "#06b6d4", "#ffffff"] });
       setPending(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="full_name">Nombre completo</Label>
-        <Input
-          id="full_name"
-          name="full_name"
-          type="text"
-          autoComplete="name"
-          required
-          placeholder="Tu nombre"
-        />
-        {fieldErrors.full_name && (
-          <p className="text-xs text-destructive">{fieldErrors.full_name}</p>
-        )}
-      </div>
+    <AnimatePresence mode="wait">
+      {message ? (
+        <motion.div
+          key="success"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center text-center py-8"
+        >
+          <div className="w-20 h-20 bg-brand-primary/10 rounded-full flex items-center justify-center mb-6 relative">
+            <MailOpen className="size-10 text-brand-primary animate-bounce" />
+            <div className="absolute inset-0 bg-brand-primary/20 rounded-full animate-ping" />
+          </div>
+          
+          <h2 className="text-2xl font-black italic text-white uppercase tracking-tighter mb-4 flex items-center gap-2">
+            <PartyPopper className="size-6 text-brand-primary" />
+            ¡Felicitaciones!
+          </h2>
+          
+          <p className="text-white/70 leading-relaxed mb-8">
+            Tu cuenta ha sido creada con éxito. <br />
+            Enviamos un enlace de activación a tu correo.
+          </p>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          placeholder="tu@email.com"
-        />
-      </div>
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-6 w-full mb-8">
+            <p className="text-xs text-white/50 uppercase font-black tracking-widest mb-2">Próximo paso</p>
+            <p className="text-sm text-white font-medium">Revisá tu bandeja de entrada y hacé clic en el botón para activar tu cuenta PRO.</p>
+          </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Contraseña</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          maxLength={128}
-        />
-        <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
-        {fieldErrors.password && (
-          <p className="text-xs text-destructive">{fieldErrors.password}</p>
-        )}
-      </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation("/login")}
+            className="w-full h-12 rounded-xl border-white/10 hover:bg-white/5 text-white/70 hover:text-white transition-all uppercase text-[10px] font-black tracking-widest"
+          >
+            Ir al inicio de sesión
+          </Button>
+        </motion.div>
+      ) : (
+        <motion.form
+          key="form"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-6"
+        >
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="full_name" className="text-white/70 uppercase text-[10px] font-black tracking-widest ml-1">Nombre completo</Label>
+            <div className="relative group">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-white/30 group-focus-within:text-brand-primary transition-colors" />
+              <Input
+                id="full_name"
+                name="full_name"
+                type="text"
+                autoComplete="name"
+                required
+                placeholder="Tu nombre"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/20 pl-10 h-12 rounded-xl focus:ring-brand-primary/20 transition-all"
+              />
+            </div>
+            {fieldErrors.full_name && (
+              <p className="text-[10px] text-red-400 font-bold ml-1">{fieldErrors.full_name}</p>
+            )}
+          </div>
 
-      <fieldset className="flex flex-col gap-3">
-        <legend className="text-sm font-medium">Quiero usar PRO como</legend>
-        <p className="text-xs text-muted-foreground">
-          Podés elegir los dos. Si no marcás ninguno, te damos el rol de jugador por defecto.
-        </p>
-        <label className="flex items-start gap-3 rounded-md border border-input p-3 text-sm hover:bg-accent/50 cursor-pointer">
-          <input
-            type="checkbox"
-            name="is_player"
-            defaultChecked
-            className="mt-0.5 size-4 rounded border-input text-primary"
-          />
-          <span className="flex flex-col gap-0.5">
-            <span className="font-medium">Jugador</span>
-            <span className="text-xs text-muted-foreground">
-              Inscribirte a torneos y construir tu ficha deportiva.
-            </span>
-          </span>
-        </label>
-        <label className="flex items-start gap-3 rounded-md border border-input p-3 text-sm hover:bg-accent/50 cursor-pointer">
-          <input
-            type="checkbox"
-            name="is_promoter"
-            className="mt-0.5 size-4 rounded border-input text-primary"
-          />
-          <span className="flex flex-col gap-0.5">
-            <span className="font-medium">Promotor</span>
-            <span className="text-xs text-muted-foreground">
-              Crear y gestionar torneos. Podés combinarlo con otros roles.
-            </span>
-          </span>
-        </label>
-        <label className="flex items-start gap-3 rounded-md border border-input p-3 text-sm hover:bg-accent/50 cursor-pointer">
-          <input
-            type="checkbox"
-            name="is_cancha"
-            className="mt-0.5 size-4 rounded border-input text-primary"
-          />
-          <span className="flex flex-col gap-0.5">
-            <span className="font-medium">Administrador de Cancha</span>
-            <span className="text-xs text-muted-foreground">
-              Registrá tus canchas, configurá horarios y aceptá reservas.
-            </span>
-          </span>
-        </label>
-      </fieldset>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email" className="text-white/70 uppercase text-[10px] font-black tracking-widest ml-1">Email</Label>
+            <div className="relative group">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-white/30 group-focus-within:text-brand-primary transition-colors" />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="tu@email.com"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/20 pl-10 h-12 rounded-xl focus:ring-brand-primary/20 transition-all"
+              />
+            </div>
+          </div>
 
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="password" title="Contraseña" className="text-white/70 uppercase text-[10px] font-black tracking-widest ml-1">Contraseña</Label>
+            <div className="relative group">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-white/30 group-focus-within:text-brand-primary transition-colors" />
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={128}
+                className="bg-white/5 border-white/10 text-white pl-10 h-12 rounded-xl focus:ring-brand-primary/20 transition-all"
+              />
+            </div>
+            <p className="text-[9px] text-white/40 ml-1 uppercase tracking-wider">Mínimo 8 caracteres.</p>
+            {fieldErrors.password && (
+              <p className="text-[10px] text-red-400 font-bold ml-1">{fieldErrors.password}</p>
+            )}
+          </div>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="text-[10px] font-black uppercase tracking-widest text-white/70 ml-1 mb-2">Quiero usar PRO como</legend>
+            
+            <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:bg-white/10 cursor-pointer transition-colors group">
+              <div className="relative flex items-center justify-center mt-0.5">
+                <input
+                  type="checkbox"
+                  name="is_player"
+                  defaultChecked
+                  className="peer appearance-none size-5 rounded-lg border-2 border-white/20 checked:border-brand-primary checked:bg-brand-primary transition-all cursor-pointer"
+                />
+                <CheckCircle2 className="absolute size-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+              <span className="flex flex-col gap-0.5">
+                <span className="font-bold text-white group-hover:text-brand-primary transition-colors">Jugador</span>
+                <span className="text-[11px] text-white/40 leading-tight">Inscribite a torneos y construí tu ficha deportiva.</span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:bg-white/10 cursor-pointer transition-colors group">
+              <div className="relative flex items-center justify-center mt-0.5">
+                <input
+                  type="checkbox"
+                  name="is_promoter"
+                  className="peer appearance-none size-5 rounded-lg border-2 border-white/20 checked:border-brand-primary checked:bg-brand-primary transition-all cursor-pointer"
+                />
+                <CheckCircle2 className="absolute size-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+              <span className="flex flex-col gap-0.5">
+                <span className="font-bold text-white group-hover:text-brand-primary transition-colors">Promotor</span>
+                <span className="text-[11px] text-white/40 leading-tight">Creá y gestioná torneos. Podés combinarlo con otros roles.</span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm hover:bg-white/10 cursor-pointer transition-colors group">
+              <div className="relative flex items-center justify-center mt-0.5">
+                <input
+                  type="checkbox"
+                  name="is_cancha"
+                  className="peer appearance-none size-5 rounded-lg border-2 border-white/20 checked:border-brand-primary checked:bg-brand-primary transition-all cursor-pointer"
+                />
+                <CheckCircle2 className="absolute size-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+              <span className="flex flex-col gap-0.5">
+                <span className="font-bold text-white group-hover:text-brand-primary transition-colors">Dueño de Cancha</span>
+                <span className="text-[11px] text-white/40 leading-tight">Registrá tus canchas, configurá horarios y aceptá reservas.</span>
+              </span>
+            </label>
+          </fieldset>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+              <p role="alert" className="text-xs text-red-400 text-center font-medium">{error}</p>
+            </div>
+          )}
+
+          <Button 
+            type="submit" 
+            disabled={pending}
+            className="h-12 rounded-xl bg-brand-primary hover:bg-brand-primary/90 text-white font-black uppercase tracking-widest text-xs gap-2 shadow-lg shadow-brand-primary/20 transition-all active:scale-[0.98]"
+          >
+            {pending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Creando cuenta…
+              </>
+            ) : (
+              <>
+                Crear cuenta
+                <ChevronRight className="size-4" />
+              </>
+            )}
+          </Button>
+
+          <p className="text-center text-xs text-white/50 pt-2">
+            ¿Ya tenés cuenta?{" "}
+            <Link href="/login" className="text-white font-bold hover:text-brand-primary transition-colors">
+              Iniciá sesión
+            </Link>
+          </p>
+        </motion.form>
       )}
-      {message && (
-        <p role="status" className="text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md p-3">
-          {message}
-        </p>
-      )}
-
-      <Button type="submit" disabled={pending}>
-        {pending ? "Creando cuenta…" : "Crear cuenta"}
-      </Button>
-
-      <p className="text-center text-sm text-muted-foreground">
-        ¿Ya tenés cuenta?{" "}
-        <Link href="/login" className="font-medium text-foreground underline">
-          Entrá
-        </Link>
-      </p>
-    </form>
+    </AnimatePresence>
   );
 }
