@@ -1,0 +1,185 @@
+import { createClient } from "@/lib/supabase/client";
+import type { Team, TeamMember, Profile } from "@/lib/types/db";
+
+const supabase = createClient();
+
+export type TeamWithCount = Team & { member_count: number };
+export type TeamMemberWithProfile = TeamMember & { profile: Pick<Profile, "id" | "full_name" | "username" | "avatar_url" | "city" | "primary_skill_level" | "position" | "skill_pace" | "skill_shooting" | "skill_passing" | "skill_dribbling" | "skill_defending" | "skill_physical"> | null };
+export type TeamWithMembers = Team & { team_members: TeamMemberWithProfile[] };
+
+function isMissingTable(error: any): boolean {
+  const msg: string = error?.message ?? error?.details ?? "";
+  return (
+    msg.includes("schema cache") ||
+    msg.includes("relation") ||
+    msg.includes("does not exist") ||
+    msg.includes("Could not find the table") ||
+    error?.code === "PGRST200" ||
+    error?.code === "42P01"
+  );
+}
+
+function friendlyError(error: any): string {
+  if (!error) return "Error desconocido";
+  if (error.code === "23505") return "Ya existe un equipo con ese nombre o slug.";
+  if (error.code === "23503") return "Error de referencia en la base de datos.";
+  if (error.code === "42501" || error.code === "PGRST301") return "Sin permisos para crear equipos. Contactá al administrador.";
+  if (error.code === "42P17") return "Error de configuración en la base de datos.";
+  return error.message ?? "No se pudo completar la operación.";
+}
+
+export async function getMyTeams(userId: string): Promise<TeamWithCount[]> {
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("team_id, teams(*, team_members(count))")
+    .eq("user_id", userId);
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw error;
+  }
+  return (data ?? []).map((row: any) => {
+    const t = row.teams;
+    return { ...t, member_count: t.team_members?.[0]?.count ?? 0 };
+  });
+}
+
+export async function getPublicTeams(city?: string): Promise<TeamWithCount[]> {
+  let q = supabase
+    .from("teams")
+    .select("*, team_members(count)")
+    .eq("is_public", true)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (city) q = q.eq("city", city);
+  const { data, error } = await q;
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw error;
+  }
+  return (data ?? []).map((t: any) => ({ ...t, member_count: t.team_members?.[0]?.count ?? 0 }));
+}
+
+export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
+  // 1. Fetch the team row only (no joins)
+  const { data: teamData, error: teamErr } = await supabase
+    .from("teams")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (teamErr) {
+    console.error("[getTeamById] team query error:", teamErr);
+    if (isMissingTable(teamErr)) return null;
+    throw teamErr;
+  }
+  if (!teamData) return null;
+
+  // 2. Fetch team_members for this team
+  const { data: members, error: membersErr } = await supabase
+    .from("team_members")
+    .select("role, joined_at, user_id")
+    .eq("team_id", id);
+  if (membersErr) {
+    console.error("[getTeamById] members query error:", membersErr);
+  }
+  const memberRows: any[] = members ?? [];
+
+  // 3. Fetch profiles for each member
+  const userIds: string[] = memberRows.map((m: any) => m.user_id);
+  let profileMap: Record<string, any> = {};
+  if (userIds.length > 0) {
+    const { data: profiles, error: profErr } = await supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url, city, primary_skill_level, position, skill_pace, skill_shooting, skill_passing, skill_dribbling, skill_defending, skill_physical")
+      .in("id", userIds);
+    if (profErr) console.error("[getTeamById] profiles query error:", profErr);
+    for (const p of profiles ?? []) profileMap[p.id] = p;
+  }
+
+  return {
+    ...(teamData as any),
+    team_members: memberRows.map((m: any) => ({
+      ...m,
+      profile: profileMap[m.user_id] ?? null,
+    })),
+  } as TeamWithMembers;
+}
+
+export async function createTeam(payload: {
+  name: string;
+  slug: string;
+  description: string | null;
+  sport_type: string;
+  city: string;
+  owner_id: string;
+  max_members: number;
+  is_public: boolean;
+}): Promise<Team> {
+  const { data, error } = await supabase
+    .from("teams")
+    .insert({ ...payload, updated_at: new Date().toISOString() })
+    .select()
+    .single();
+  if (error) throw new Error(friendlyError(error));
+
+  const { error: memberErr } = await supabase
+    .from("team_members")
+    .insert({ team_id: data.id, user_id: payload.owner_id, role: "owner" });
+  if (memberErr) throw new Error(friendlyError(memberErr));
+
+  return data as Team;
+}
+
+export async function joinTeam(teamId: string, userId: string): Promise<void> {
+  const { error } = await supabase.from("team_members").insert({ team_id: teamId, user_id: userId, role: "player" });
+  if (error) throw new Error(friendlyError(error));
+}
+
+export async function leaveTeam(teamId: string, userId: string): Promise<void> {
+  const { error } = await supabase.from("team_members").delete().eq("team_id", teamId).eq("user_id", userId);
+  if (error) throw new Error(friendlyError(error));
+}
+
+export async function deleteTeam(teamId: string): Promise<void> {
+  const { error } = await supabase.from("teams").delete().eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
+export async function updateTeamLogo(teamId: string, logoUrl: string): Promise<void> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ logo_url: logoUrl, updated_at: new Date().toISOString() })
+    .eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
+export async function updateTeamColors(teamId: string, headerColor: string, jerseyColor: string): Promise<void> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ header_color: headerColor, jersey_color: jerseyColor, updated_at: new Date().toISOString() })
+    .eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
+/* ── localStorage helpers (used as fallback before DB migration) ── */
+const PREFS_KEY = (id: string) => `team_prefs_${id}`;
+
+export function getLocalTeamPrefs(teamId: string): { header_color: string; jersey_color: string } | null {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY(teamId));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+export function setLocalTeamPrefs(teamId: string, prefs: { header_color: string; jersey_color: string }): void {
+  try { localStorage.setItem(PREFS_KEY(teamId), JSON.stringify(prefs)); } catch { }
+}
+
+export function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+}

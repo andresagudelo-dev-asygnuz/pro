@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restablecé tu contraseña · PRO.</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F1F0F7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#F1F0F7;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:580px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#1C1535;border-radius:14px 14px 0 0;padding:36px 48px;text-align:center;">
+              <div style="font-size:32px;font-weight:900;color:#FFFFFF;letter-spacing:-1px;font-style:italic;line-height:1;">
+                PRO<span style="color:#6B46C1;">.</span>
+              </div>
+              <div style="margin-top:6px;font-size:10px;font-weight:700;color:#7C6FA0;letter-spacing:4px;text-transform:uppercase;">Plataforma Deportiva</div>
+            </td>
+          </tr>
+
+          <!-- Accent stripe -->
+          <tr>
+            <td style="background:linear-gradient(90deg,#6B46C1 0%,#8B5CF6 50%,#6B46C1 100%);height:4px;"></td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#FFFFFF;padding:48px 48px 40px;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;">
+
+              <!-- Icon -->
+              <div style="text-align:center;margin-bottom:28px;">
+                <div style="display:inline-block;background-color:#FFF5F5;border-radius:50%;width:64px;height:64px;line-height:64px;font-size:28px;text-align:center;">🔐</div>
+              </div>
+
+              <!-- Heading -->
+              <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#1C1535;text-align:center;letter-spacing:-0.5px;">Restablecé tu contraseña</h1>
+              <p style="margin:0 0 32px;font-size:15px;color:#6B7280;text-align:center;line-height:1.6;">
+                Recibimos una solicitud para restablecer la contraseña de tu cuenta en PRO. Hacé clic en el botón para crear una nueva.
+              </p>
+
+              <!-- Security notice -->
+              <div style="background-color:#FFF9EC;border:1px solid #FCD34D;border-radius:8px;padding:14px 18px;margin-bottom:28px;">
+                <p style="margin:0;font-size:13px;color:#92400E;line-height:1.5;">
+                  ⚠️ <strong>Este enlace expira en 1 hora.</strong> Si no solicitaste el cambio, ignorá este correo — tu contraseña seguirá siendo la misma.
+                </p>
+              </div>
+
+              <!-- CTA Button -->
+              <div style="text-align:center;margin-bottom:32px;">
+                <a href="{{ .ConfirmationURL }}"
+                   style="display:inline-block;background-color:#6B46C1;color:#FFFFFF;font-size:16px;font-weight:700;text-decoration:none;padding:16px 40px;border-radius:10px;letter-spacing:0.2px;box-shadow:0 4px 14px rgba(107,70,193,0.35);">
+                  Crear nueva contraseña &rarr;
+                </a>
+              </div>
+
+              <!-- Divider -->
+              <hr style="border:none;border-top:1px solid #F3F4F6;margin:0 0 28px;">
+
+              <!-- Alt link -->
+              <p style="margin:0;font-size:13px;color:#9CA3AF;text-align:center;line-height:1.6;">
+                Si el botón no funciona, copiá este enlace en tu navegador:<br>
+                <a href="{{ .ConfirmationURL }}" style="color:#6B46C1;word-break:break-all;font-size:12px;">{{ .ConfirmationURL }}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#F9FAFB;border:1px solid #E5E7EB;border-top:0;border-radius:0 0 14px 14px;padding:24px 48px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#6B46C1;letter-spacing:1px;">PRO. — Plataforma Deportiva</p>
+              <p style="margin:0;font-size:11px;color:#D1D5DB;line-height:1.6;">Si no solicitaste este cambio, tu cuenta está segura. Podés ignorar este correo.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
