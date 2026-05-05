@@ -63,9 +63,9 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
 
   useEffect(() => {
     if (!user) return;
-    getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => {});
+    getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => { });
     const interval = setInterval(() => {
-      getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => {});
+      getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => { });
     }, 30000);
     return () => clearInterval(interval);
   }, [user?.id]);
@@ -74,7 +74,7 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
   useEffect(() => {
     if (location.startsWith("/chat")) {
       setTimeout(() => {
-        if (user) getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => {});
+        if (user) getTotalUnreadMessages(supabase, user.id).then(setUnreadMessages).catch(() => { });
       }, 1000);
     }
   }, [location, user]);
@@ -106,8 +106,8 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
           {navItems.map((item) => {
             const { href, label, Icon, isAction } = item;
             const active = isActive(item);
-            const isPerfil  = href === "/perfil";
-            const isChat    = href === "/chat";
+            const isPerfil = href === "/perfil";
+            const isChat = href === "/chat";
             const isCanchas = item.matchPaths?.includes("/mis-canchas");
 
             if (isAction) {
@@ -126,18 +126,15 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
             return (
               <Link key={href} href={href}>
                 <div
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 ${
-                    active ? "text-violet-600 dark:text-violet-400" : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 ${active ? "text-violet-600 dark:text-violet-400" : "text-muted-foreground hover:text-foreground"
+                    }`}
                 >
                   <div className="relative flex items-center justify-center w-8 h-8 transition-colors duration-200">
                     <Icon
                       className={`transition-all duration-200 ${active ? "size-[19px]" : "size-[18px]"}`}
                       strokeWidth={active ? 2.5 : 2}
                     />
-                    {active && (
-                      <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-600 dark:bg-violet-400" />
-                    )}
+
                     {isPerfil && unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
                         {unreadCount > 99 ? "99+" : unreadCount}

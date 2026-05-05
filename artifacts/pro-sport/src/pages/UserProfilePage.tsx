@@ -8,7 +8,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PlayerCard } from "@/components/PlayerCard";
 import {
   UserPlus, UserCheck, Clock, X, Check, ArrowLeft,
-  Star, Zap, Target, Flame, MapPin, Users, ChevronRight, Activity,
+  Star, Zap, Target, Flame, MapPin, Users, ChevronRight, Activity, Footprints,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Match, Profile, Sport, Team } from "@/lib/types/db";
@@ -123,6 +123,9 @@ export default function UserProfilePage() {
   );
   const positionInfo = profile.position
     ? (PLAYER_POSITIONS.find(p => p.value === profile.position) ?? null)
+    : null;
+  const footLabel = profile.preferred_foot
+    ? profile.preferred_foot.charAt(0).toUpperCase() + profile.preferred_foot.slice(1)
     : null;
 
   async function handleSendRequest() {
@@ -246,6 +249,12 @@ export default function UserProfilePage() {
             <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-white text-xs font-bold uppercase tracking-widest">
               <span className="text-white/50 text-[10px] font-black">{positionInfo.abbr}</span>
               {positionInfo.label}
+            </span>
+          )}
+          {footLabel && (
+            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-white text-xs font-bold uppercase tracking-widest">
+              <Footprints className="size-3.5 text-white/50" />
+              {footLabel}
             </span>
           )}
         </div>

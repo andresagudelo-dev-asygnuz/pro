@@ -11,8 +11,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { SKILL_LEVELS, PLAYER_POSITIONS } from "@/lib/types/db";
-import type { Profile, SkillLevel, PlayerPosition } from "@/lib/types/db";
+import { SKILL_LEVELS, PLAYER_POSITIONS, PREFERRED_FOOT_OPTIONS } from "@/lib/types/db";
+import type { Profile, SkillLevel, PlayerPosition, DominantFoot } from "@/lib/types/db";
 import { initialsFromName } from "@/lib/format";
 import { toast } from "sonner";
 import { Camera, Loader2 } from "lucide-react";
@@ -54,6 +54,7 @@ export default function ProfileEditPage() {
   const [skillLevel, setSkillLevel] = useState<string>("");
   const [position, setPosition] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [preferredFoot, setPreferredFoot] = useState<string>("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [skills, setSkills] = useState({
     skill_pace: 50,
@@ -71,6 +72,7 @@ export default function ProfileEditPage() {
     if (profile?.primary_skill_level) setSkillLevel(profile.primary_skill_level);
     if (profile?.position) setPosition(profile.position);
     if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
+    if (profile?.preferred_foot) setPreferredFoot(profile.preferred_foot);
     if (profile) {
       setSkills({
         skill_pace:      profile.skill_pace      ?? 50,
@@ -139,6 +141,7 @@ export default function ProfileEditPage() {
         bio: bio || null,
         primary_skill_level: skillLevel || null,
         position: position || null,
+        preferred_foot: preferredFoot || null,
         ...skills,
         updated_at: new Date().toISOString(),
       })
@@ -158,6 +161,7 @@ export default function ProfileEditPage() {
         bio: bio || null,
         primary_skill_level: (skillLevel as SkillLevel) || null,
         position: (position as PlayerPosition) || null,
+        preferred_foot: (preferredFoot as DominantFoot) || null,
         ...skills,
       });
       toast.success("Perfil actualizado.");
@@ -254,6 +258,17 @@ export default function ProfileEditPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Pie de habilidad</Label>
+                <Select value={preferredFoot} onValueChange={setPreferredFoot}>
+                  <SelectTrigger><SelectValue placeholder="Tu pie hábil" /></SelectTrigger>
+                  <SelectContent>
+                    {PREFERRED_FOOT_OPTIONS.map((foot) => (
+                      <SelectItem key={foot.value} value={foot.value}>{foot.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-2">

@@ -56,6 +56,7 @@ export interface Profile {
   tournament_goals: number;
   tournament_matches: number;
   position: PlayerPosition | null;
+  preferred_foot: DominantFoot | null;
   skill_pace: number;
   skill_shooting: number;
   skill_passing: number;
@@ -182,6 +183,12 @@ export type Laterality = "diestro" | "zurdo" | "ambos";
 export type Somatotype = "ectomorfo" | "mesomorfo" | "endomorfo" | "mixto";
 export type FootballPosition = "arquero" | "defensa" | "mediocampista" | "delantero";
 export type DominantFoot = "derecho" | "izquierdo" | "ambos";
+
+export const PREFERRED_FOOT_OPTIONS: { value: DominantFoot; label: string }[] = [
+  { value: "derecho", label: "Derecho" },
+  { value: "izquierdo", label: "Izquierdo" },
+  { value: "ambos", label: "Ambos" },
+];
 
 export interface SkillTag {
   id: string;
