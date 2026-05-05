@@ -53,3 +53,9 @@ Thumbs.db
 .env.local
 .env.*.local
 *.env
+
+# Temporary artifacts
+typecheck_output.txt
+artifacts/pro-sport/typecheck_output.txt
+scratch/
+artifacts/pro-sport/scratch/
