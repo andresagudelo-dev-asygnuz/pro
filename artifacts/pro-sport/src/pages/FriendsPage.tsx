@@ -18,10 +18,12 @@ import {
   type FriendWithProfile,
 } from "@/lib/friends/api";
 import type { Profile } from "@/lib/types/db";
-import { Users, UserPlus, Search, UserCheck, Clock, X, Check } from "lucide-react";
+import { Users, UserPlus, Search, UserCheck, Clock, X, Check, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
+import { useLocation } from "wouter";
+import { getOrCreateConversation } from "@/lib/chat/api";
 
 const supabase = createClient();
 
@@ -30,6 +32,7 @@ type Tab = "amigos" | "solicitudes" | "buscar";
 export default function FriendsPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("amigos");
+  const [, setLocation] = useLocation();
 
   const [friends, setFriends] = useState<FriendWithProfile[]>([]);
   const [received, setReceived] = useState<FriendWithProfile[]>([]);
@@ -99,6 +102,25 @@ export default function FriendsPage() {
     if (error) { toast.error(error); return; }
     setFriends((prev) => prev.filter((f) => f.id !== friendshipId));
     toast.success("Amigo eliminado.");
+  }
+
+  async function handleStartChat(friend: Profile) {
+    if (!user) return;
+    const { data, error } = await getOrCreateConversation(
+      supabase,
+      "friend",
+      [user.id, friend.id].sort().join(":"), // reference_id for friend chats
+      [user.id, friend.id],
+      friend.full_name ?? friend.username ?? "Chat",
+      undefined,
+      { friend_id: friend.id }
+    );
+
+    if (error) {
+      toast.error("No se pudo iniciar el chat.");
+    } else if (data) {
+      setLocation(`/chat/${data.id}`);
+    }
   }
 
   const friendIds = new Set(
@@ -203,14 +225,24 @@ export default function FriendsPage() {
                                 .join(" · ")}
                             </p>
                           </Link>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveFriend(f.id)}
-                            className="text-xs shrink-0 text-destructive border-destructive/30 hover:bg-destructive/10"
-                          >
-                            Eliminar
-                          </Button>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStartChat(f.profile)}
+                              className="size-9 p-0 border-brand-primary/20 text-brand-primary hover:bg-brand-primary/5"
+                            >
+                              <MessageSquare className="size-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRemoveFriend(f.id)}
+                              className="text-[10px] uppercase font-black tracking-widest h-9 px-3 text-destructive border-destructive/20 hover:bg-destructive/5"
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
                         </div>
                       );
                     })}

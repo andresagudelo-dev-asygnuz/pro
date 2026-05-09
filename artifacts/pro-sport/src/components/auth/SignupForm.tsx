@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Mail, Lock, CheckCircle2, ChevronRight, MailOpen, PartyPopper } from "lucide-react";
+import { Loader2, User, Mail, Lock, CheckCircle2, ChevronRight, MailOpen, PartyPopper, Eye, EyeOff } from "lucide-react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -14,6 +14,7 @@ export function SignupForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -163,13 +164,20 @@ export function SignupForm() {
               <Input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
                 minLength={8}
                 maxLength={128}
-                className="bg-white/5 border-white/10 text-white pl-10 h-12 rounded-xl focus:ring-brand-primary/20 transition-all"
+                className="bg-white/5 border-white/10 text-white pl-10 pr-10 h-12 rounded-xl focus:ring-brand-primary/20 transition-all"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-white/30 hover:text-white/60 transition-colors"
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </div>
             <p className="text-[9px] text-white/40 ml-1 uppercase tracking-wider">Mínimo 8 caracteres.</p>
             {fieldErrors.password && (

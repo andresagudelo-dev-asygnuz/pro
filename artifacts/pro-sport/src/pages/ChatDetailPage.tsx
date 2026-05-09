@@ -8,8 +8,10 @@ import {
 } from "@/lib/chat/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
-import { ArrowLeft, Send, Building2, Trophy, Users, User, MessageCircle, Check } from "lucide-react";
+import { ArrowLeft, Send, Building2, Trophy, Users, User, MessageCircle, Check, ShieldCheck, ChevronRight, Info, Loader2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 const supabase = createClient();
 
@@ -237,197 +239,230 @@ export default function ChatDetailPage() {
   const conv = conversation;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-zinc-50 dark:bg-zinc-950">
-
+    <div className="flex flex-col h-[100dvh] bg-zinc-100 dark:bg-zinc-950 overflow-hidden">
       {/* ── Header ── */}
-      <div className="shrink-0 bg-white dark:bg-zinc-950 border-b border-border/50 shadow-sm z-10">
-        <div className="flex items-center gap-3 px-3 py-3 max-w-2xl mx-auto">
+      <div className="shrink-0 bg-white dark:bg-zinc-900 border-b border-border/50 shadow-xl z-30">
+        <div className="flex items-center gap-4 px-4 py-3 max-w-2xl mx-auto">
           <button
             onClick={() => setLocation("/chat")}
-            className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0"
           >
             <ArrowLeft className="size-5" />
           </button>
 
-          {/* Avatar */}
+          {/* Avatar Container */}
           <div className="relative shrink-0">
-            {otherProfile ? (
-              <Avatar className="size-10 ring-2 ring-violet-200 dark:ring-violet-800">
-                {otherProfile.avatar_url && <AvatarImage src={otherProfile.avatar_url} />}
-                <AvatarFallback className="text-sm font-semibold bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300">
+            <div className="relative">
+              <Avatar className="size-11 border-2 border-brand-primary/20 p-0.5 bg-white dark:bg-zinc-800">
+                {otherProfile?.avatar_url && <AvatarImage src={otherProfile.avatar_url} />}
+                <AvatarFallback className="text-sm font-black italic bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
                   {initialsFromName(displayName)}
                 </AvatarFallback>
               </Avatar>
-            ) : (
-              <div className="size-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                {conv ? (TYPE_ICONS[conv.type] ?? <MessageCircle className="size-5" />) : <MessageCircle className="size-5" />}
-              </div>
-            )}
-            {/* Type badge */}
-            {conv && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-zinc-950 bg-white dark:bg-zinc-900 flex items-center justify-center shadow-sm">
-                {TYPE_ICONS[conv.type]}
-              </div>
-            )}
+              {/* Type badge */}
+              {conv && (
+                <div className={cn(
+                  "absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-zinc-900 flex items-center justify-center shadow-lg",
+                  conv.type === "booking" ? "bg-amber-100 dark:bg-amber-900/30" :
+                  conv.type === "match" ? "bg-blue-100 dark:bg-blue-900/30" :
+                  conv.type === "tournament" ? "bg-violet-100 dark:bg-violet-900/30" :
+                  "bg-zinc-100 dark:bg-zinc-800"
+                )}>
+                  <span className="scale-[0.5]">{TYPE_ICONS[conv.type]}</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Info */}
+          {/* User Info */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate leading-tight">{displayName}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-black italic tracking-tighter uppercase truncate leading-tight">{displayName}</p>
+              {otherProfile && <ShieldCheck className="size-3.5 text-brand-primary" />}
+            </div>
             {conv && (
-              <p className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 truncate leading-tight mt-1">
                 {conv.subtitle ?? conv.title}
               </p>
             )}
           </div>
+
+          {/* Action button (e.g. details) */}
+          <button className="w-10 h-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0">
+            <Info className="size-5" />
+          </button>
         </div>
       </div>
 
-      {/* ── Messages ── */}
       <div className="flex-1 overflow-y-auto overscroll-contain">
-        <div className="px-3 py-4 max-w-2xl w-full mx-auto space-y-0.5">
+        <div className="px-4 py-6 max-w-2xl w-full mx-auto space-y-1">
           {loading ? (
-            <div className="flex justify-center py-20">
-              <div className="w-7 h-7 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="size-8 text-brand-primary animate-spin" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Cargando conversación...</p>
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-100 to-violet-50 dark:from-violet-900/40 dark:to-violet-900/20 flex items-center justify-center shadow-sm">
-                <MessageCircle className="size-7 text-violet-400" />
+            <div className="flex flex-col items-center justify-center py-20 gap-6 text-center">
+              <div className="w-20 h-20 rounded-[32px] bg-brand-primary/10 flex items-center justify-center shadow-xl shadow-brand-primary/10 border border-brand-primary/20">
+                <MessageSquare className="size-10 text-brand-primary" />
               </div>
-              <div>
-                <p className="font-semibold text-sm">Iniciá la conversación</p>
-                <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
-                  Coordiná los detalles con {displayName}.
+              <div className="space-y-1">
+                <p className="font-black italic tracking-tighter uppercase text-xl">Coordiná el juego</p>
+                <p className="text-xs text-muted-foreground/80 max-w-[200px] leading-relaxed">
+                  Iniciá la conversación con {displayName} para ultimar detalles.
                 </p>
               </div>
             </div>
           ) : (
             grouped.map(({ label, messages: msgs }) => (
-              <div key={label}>
+              <div key={label} className="space-y-1">
                 {/* Date separator */}
-                <div className="flex items-center gap-3 py-4">
-                  <div className="flex-1 h-px bg-border/40" />
-                  <span className="text-[11px] text-muted-foreground font-medium px-3 py-1 bg-muted/40 rounded-full">
+                <div className="flex items-center gap-4 py-6">
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 px-4 py-1.5 bg-zinc-50 dark:bg-zinc-900 border border-border/50 rounded-full shadow-sm">
                     {label}
                   </span>
-                  <div className="flex-1 h-px bg-border/40" />
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
                 </div>
 
                 {/* Messages */}
-                <div className="space-y-0.5">
-                  {msgs.map((m, i) => {
-                    const isMe        = m.sender_id === user?.id;
-                    const isOpt       = isOptimistic(m.id);
-                    const prevMsg     = i > 0 ? msgs[i - 1] : null;
-                    const nextMsg     = i < msgs.length - 1 ? msgs[i + 1] : null;
-                    const isSamePrev  = prevMsg?.sender_id === m.sender_id;
-                    const isSameNext  = nextMsg?.sender_id === m.sender_id;
-                    const showAvatar  = !isSameNext; // show avatar at the bottom of each sequence
-                    const showTime    = !isSameNext; // show time at the bottom of each sequence
+                <div className="space-y-1">
+                  <AnimatePresence initial={false}>
+                    {msgs.map((m, i) => {
+                      const isMe        = m.sender_id === user?.id;
+                      const isOpt       = isOptimistic(m.id);
+                      const prevMsg     = i > 0 ? msgs[i - 1] : null;
+                      const nextMsg     = i < msgs.length - 1 ? msgs[i + 1] : null;
+                      const isSamePrev  = prevMsg?.sender_id === m.sender_id;
+                      const isSameNext  = nextMsg?.sender_id === m.sender_id;
+                      const showAvatar  = !isSameNext; 
+                      const showTime    = !isSameNext; 
 
-                    // Bubble shape: rounded on all sides, flatten the corner near consecutive same-sender
-                    const myBubbleClass   = `${isSamePrev ? "rounded-tr-md" : ""} ${isSameNext ? "rounded-br-md" : ""}`;
-                    const herBubbleClass  = `${isSamePrev ? "rounded-tl-md" : ""} ${isSameNext ? "rounded-bl-md" : ""}`;
+                      const myBubbleClass   = cn(
+                        "rounded-[20px]",
+                        isSamePrev && "rounded-tr-[4px]",
+                        isSameNext && "rounded-br-[4px]"
+                      );
+                      const herBubbleClass  = cn(
+                        "rounded-[20px]",
+                        isSamePrev && "rounded-tl-[4px]",
+                        isSameNext && "rounded-bl-[4px]"
+                      );
 
-                    return (
-                      <div
-                        key={m.id}
-                        className={`flex items-end gap-1.5 ${isMe ? "justify-end" : "justify-start"} ${isSamePrev ? "mt-0.5" : "mt-3"}`}
-                      >
-                        {/* Other person's avatar (left side) */}
-                        {!isMe && (
-                          <div className="w-7 shrink-0 self-end">
-                            {showAvatar && otherProfile ? (
-                              <Avatar className="size-7">
-                                {otherProfile.avatar_url && <AvatarImage src={otherProfile.avatar_url} />}
-                                <AvatarFallback className="text-[10px] font-semibold bg-zinc-200 dark:bg-zinc-700">
-                                  {initialsFromName(displayName)}
-                                </AvatarFallback>
-                              </Avatar>
-                            ) : (
-                              <div className="size-7" /> // spacer
-                            )}
-                          </div>
-                        )}
-
-                        {/* Bubble + timestamp */}
-                        <div className={`flex flex-col gap-0.5 max-w-[72%] ${isMe ? "items-end" : "items-start"}`}>
-                          <div
-                            className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap transition-opacity ${
-                              isMe
-                                ? `bg-violet-600 text-white shadow-md shadow-violet-500/20 ${myBubbleClass} ${isOpt ? "opacity-60" : "opacity-100"}`
-                                : `bg-white dark:bg-zinc-800 text-foreground border border-border/50 shadow-sm ${herBubbleClass}`
-                            }`}
-                          >
-                            {m.content}
-                          </div>
-                          {showTime && (
-                            <div className={`flex items-center gap-1 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
-                              <span className="text-[10px] text-muted-foreground/70">
-                                {formatTime(m.created_at)}
-                              </span>
-                              {isMe && !isOpt && (
-                                <Check className="size-3 text-violet-400" />
-                              )}
-                              {isMe && isOpt && (
-                                <div className="size-3 border border-muted-foreground/40 border-t-transparent rounded-full animate-spin" />
+                      return (
+                        <motion.div
+                          key={m.id}
+                          initial={isOpt ? { scale: 0.95, opacity: 0 } : false}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className={cn(
+                            "flex items-end gap-2",
+                            isMe ? "justify-end" : "justify-start",
+                            !isSamePrev && "mt-4"
+                          )}
+                        >
+                          {/* Other person's avatar (left side) */}
+                          {!isMe && (
+                            <div className="w-8 shrink-0 mb-0.5">
+                              {showAvatar && (
+                                <Avatar className="size-8 border border-border/50 shadow-sm">
+                                  {otherProfile?.avatar_url && <AvatarImage src={otherProfile.avatar_url} />}
+                                  <AvatarFallback className="text-[10px] font-black italic bg-zinc-200 dark:bg-zinc-800">
+                                    {initialsFromName(displayName)}
+                                  </AvatarFallback>
+                                </Avatar>
                               )}
                             </div>
                           )}
-                        </div>
 
-                        {/* My avatar (right side) */}
-                        {isMe && (
-                          <div className="w-7 shrink-0 self-end">
-                            {showAvatar && myProfile ? (
-                              <Avatar className="size-7">
-                                {myProfile.avatar_url && <AvatarImage src={myProfile.avatar_url} />}
-                                <AvatarFallback className="text-[10px] font-semibold bg-violet-200 dark:bg-violet-800 text-violet-700 dark:text-violet-300">
-                                  {initialsFromName(myProfile.full_name ?? myProfile.username ?? null)}
-                                </AvatarFallback>
-                              </Avatar>
-                            ) : (
-                              <div className="size-7" /> // spacer
+                          {/* Bubble + timestamp */}
+                          <div className={cn(
+                            "flex flex-col gap-1 max-w-[80%] md:max-w-[70%]",
+                            isMe ? "items-end" : "items-start"
+                          )}>
+                            <div
+                              className={cn(
+                                "px-4 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap transition-all shadow-sm",
+                                isMe
+                                  ? `bg-brand-primary text-white shadow-brand-primary/20 ${myBubbleClass} ${isOpt && "opacity-60"}`
+                                  : `bg-white dark:bg-zinc-900 text-foreground border border-border/40 ${herBubbleClass}`
+                              )}
+                            >
+                              {m.content}
+                            </div>
+                            {showTime && (
+                              <div className={cn(
+                                "flex items-center gap-1 px-2",
+                                isMe ? "justify-end" : "justify-start"
+                              )}>
+                                <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-tighter tabular-nums">
+                                  {formatTime(m.created_at)}
+                                </span>
+                                {isMe && (
+                                  <div className="flex items-center">
+                                    {isOpt ? (
+                                      <Loader2 className="size-2.5 text-brand-primary animate-spin" />
+                                    ) : (
+                                      <Check className="size-2.5 text-brand-primary" />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+
+                          {/* My avatar (right side) */}
+                          {isMe && (
+                            <div className="w-8 shrink-0 mb-0.5">
+                              {showAvatar && (
+                                <Avatar className="size-8 border-2 border-brand-primary/20 p-0.5 bg-white dark:bg-zinc-800 shadow-sm">
+                                  {myProfile?.avatar_url && <AvatarImage src={myProfile.avatar_url} />}
+                                  <AvatarFallback className="text-[10px] font-black italic bg-brand-primary/10 text-brand-primary">
+                                    {initialsFromName(myProfile?.full_name ?? myProfile?.username ?? null)}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                            </div>
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
                 </div>
               </div>
             ))
           )}
-          <div ref={bottomRef} className="h-2" />
+          <div ref={bottomRef} className="h-4" />
         </div>
       </div>
 
       {/* ── Input bar / Closed banner ── */}
       {chatClosed ? (
-        <div className="shrink-0 bg-white dark:bg-zinc-950 border-t border-border/50">
-          <div className="flex items-center justify-center gap-2 px-4 py-4 max-w-2xl mx-auto">
-            <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 rounded-2xl px-4 py-3 w-full justify-center">
-              <span className="text-sm text-muted-foreground">{chatClosed}</span>
-              <span className="text-xs text-muted-foreground/60">· No se pueden enviar mensajes.</span>
+        <div className="shrink-0 bg-white dark:bg-zinc-900 border-t border-border/50 p-4">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center gap-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-[24px] px-6 py-4 border border-border/50 shadow-inner">
+              <Info className="size-5 text-muted-foreground/60 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 leading-tight">{chatClosed}</p>
+                <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-tighter leading-tight mt-0.5">No se pueden enviar mensajes en este hilo.</p>
+              </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="shrink-0 bg-white dark:bg-zinc-950 border-t border-border/50">
-          <div className="flex items-end gap-2 px-3 py-3 max-w-2xl mx-auto">
+        <div className="shrink-0 bg-white dark:bg-zinc-900 border-t border-border/50 pb-safe shadow-2xl z-20">
+          <div className="flex items-end gap-3 px-4 py-4 max-w-2xl mx-auto">
             {/* My avatar in input bar */}
-            {myProfile && (
-              <Avatar className="size-8 shrink-0 self-end mb-1">
-                {myProfile.avatar_url && <AvatarImage src={myProfile.avatar_url} />}
-                <AvatarFallback className="text-[10px] font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
-                  {initialsFromName(myProfile.full_name ?? myProfile.username ?? null)}
+            <div className="hidden sm:block mb-1">
+              <Avatar className="size-9 border-2 border-brand-primary/20 p-0.5 bg-white dark:bg-zinc-800">
+                {myProfile?.avatar_url && <AvatarImage src={myProfile.avatar_url} />}
+                <AvatarFallback className="text-[10px] font-black italic bg-brand-primary/10 text-brand-primary">
+                  {initialsFromName(myProfile?.full_name ?? myProfile?.username ?? null)}
                 </AvatarFallback>
               </Avatar>
-            )}
+            </div>
 
-            {/* Textarea */}
-            <div className="flex-1 flex items-end bg-zinc-100 dark:bg-zinc-800 rounded-2xl border border-border/40 focus-within:border-violet-400 focus-within:ring-1 focus-within:ring-violet-400/30 transition-all overflow-hidden">
+            {/* Textarea Container */}
+            <div className="flex-1 flex items-end bg-zinc-100 dark:bg-zinc-800/80 rounded-[28px] border border-border/40 focus-within:border-brand-primary/40 focus-within:ring-4 focus-within:ring-brand-primary/10 transition-all duration-300 overflow-hidden shadow-inner group">
               <textarea
                 ref={(el) => {
                   (inputRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
@@ -441,7 +476,7 @@ export default function ChatDetailPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Escribí un mensaje..."
                 rows={1}
-                className="flex-1 resize-none bg-transparent px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none max-h-[120px] overflow-y-auto leading-relaxed"
+                className="flex-1 resize-none bg-transparent px-5 py-3.5 text-sm placeholder:text-muted-foreground/50 focus:outline-none max-h-[120px] overflow-y-auto leading-relaxed font-medium"
               />
             </div>
 
@@ -449,15 +484,15 @@ export default function ChatDetailPage() {
             <button
               onClick={handleSend}
               disabled={!text.trim() || sending}
-              className="shrink-0 w-10 h-10 rounded-2xl bg-violet-600 hover:bg-violet-700 active:bg-violet-800 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-95 shadow-md shadow-violet-500/25 self-end"
+              className="shrink-0 w-12 h-12 rounded-[22px] bg-brand-primary hover:bg-brand-primary/90 active:bg-brand-primary/80 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-90 shadow-xl shadow-brand-primary/20 self-end mb-0.5"
             >
               {sending
-                ? <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : <Send className="size-4 text-white" />}
+                ? <Loader2 className="size-5 text-white animate-spin" />
+                : <Send className="size-5 text-white" />}
             </button>
           </div>
-          <p className="text-center text-[10px] text-muted-foreground/40 pb-2 -mt-1">
-            Enter para enviar · Shift+Enter nueva línea
+          <p className="text-center text-[9px] font-bold text-muted-foreground/30 uppercase tracking-[0.2em] pb-3 -mt-1">
+            Pulsa enter para enviar
           </p>
         </div>
       )}

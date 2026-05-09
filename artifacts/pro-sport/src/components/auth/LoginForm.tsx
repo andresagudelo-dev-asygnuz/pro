@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, ArrowRight } from "lucide-react";
+import { Loader2, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -58,11 +59,18 @@ export function LoginForm() {
           <Input
             id="password"
             name="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             required
-            className="bg-white/5 border-white/10 text-white pl-10 h-12 rounded-xl focus:ring-brand-primary/20 transition-all"
+            className="bg-white/5 border-white/10 text-white pl-10 pr-10 h-12 rounded-xl focus:ring-brand-primary/20 transition-all"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-white/30 hover:text-white/60 transition-colors"
+          >
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
         </div>
       </div>
 
