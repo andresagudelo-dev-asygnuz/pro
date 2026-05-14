@@ -2,11 +2,10 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { createTournament } from "@/lib/tournaments/api";
 import { useAuth } from "@/context/AuthContext";
 
-const supabase = createClient();
 
 export default function NewTournamentPage() {
   const { user, roles } = useAuth();

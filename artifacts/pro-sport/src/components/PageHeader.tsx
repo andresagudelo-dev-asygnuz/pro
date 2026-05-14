@@ -3,6 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import { ArrowLeft } from "lucide-react";
+import { NavDrawer } from "@/components/NavDrawer";
 import type { ReactNode } from "react";
 
 interface PageHeaderProps {
@@ -16,17 +17,15 @@ export function PageHeader({ title, backHref, actions }: PageHeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-border/50">
-      <div className="container mx-auto px-4 h-14 flex items-center gap-3">
+      <div className="container mx-auto px-4 h-14 flex items-center gap-2">
 
-        {backHref ? (
+        <NavDrawer />
+
+        {backHref && (
           <Link href={backHref}>
             <button className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0">
               <ArrowLeft className="size-4" />
             </button>
-          </Link>
-        ) : (
-          <Link href="/feed" className="shrink-0 text-base font-black italic tracking-tighter uppercase text-zinc-900 dark:text-white">
-            PRO<span className="text-violet-600">.</span>
           </Link>
         )}
 

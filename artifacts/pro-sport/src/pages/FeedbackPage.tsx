@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-const supabase = createClient();
 
 type Question = { id: string; text: string; type: "choice" | "open"; options?: string[] };
 

@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,7 +25,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { GlassContainer } from "./GlassContainer";
 import { CheckCircle2, Copy, Share2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 
 const formSchema = z.object({
@@ -52,7 +52,6 @@ export function RegistrationForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const supabase = createClient();
 
     try {
       const { data: existing } = await supabase

@@ -1,9 +1,9 @@
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 
@@ -21,7 +21,6 @@ export function LoginForm() {
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
-    const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import type { Profile, SkillLevel, PlayerPosition, DominantFoot } from "@/lib/ty
 import { initialsFromName } from "@/lib/format";
 import { toast } from "sonner";
 import { Camera, Loader2 } from "lucide-react";
+import { ProfileBlocksTabs } from "@/components/profile/ProfileBlocksTabs";
+import { useProfileBlocks } from "@/hooks/useProfileBlocks";
 
 function resizeToDataUrl(file: File, maxPx = 512, quality = 0.88): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -65,7 +67,7 @@ export default function ProfileEditPage() {
     skill_physical: 50,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
+  const { blocks, isLoading: blocksLoading, updateMorpho, updateConditional, updateTechnicalFootball, isSaving } = useProfileBlocks(user?.id ?? "");
 
   useEffect(() => {
     if (!user) { setLocation("/login"); return; }
@@ -319,6 +321,29 @@ export default function ProfileEditPage() {
               })}
             </div>
           </div>
+
+          {/* Profile blocks (morpho, conditional, technical) */}
+          {user && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border p-6 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Perfil deportivo</p>
+              {blocksLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="w-5 h-5 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <ProfileBlocksTabs
+                  userId={user.id}
+                  morpho={blocks?.morpho ?? null}
+                  conditional={blocks?.conditional ?? null}
+                  technical={blocks?.technical ?? null}
+                  onUpdateMorpho={updateMorpho}
+                  onUpdateConditional={updateConditional}
+                  onUpdateTechnical={updateTechnicalFootball}
+                  isLoading={isSaving}
+                />
+              )}
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-3 pb-4">

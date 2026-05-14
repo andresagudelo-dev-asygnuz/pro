@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { createCancha, upsertCanchaSchedules } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import { CANCHAS_SPORT_OPTIONS, type CanchaSportType } from "@/lib/types/db";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 
-const supabase = createClient();
 
 const DEFAULT_SCHEDULE = Array.from({ length: 7 }, (_, i) => ({
   day_of_week: i,

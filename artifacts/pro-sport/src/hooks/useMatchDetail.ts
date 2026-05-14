@@ -189,6 +189,23 @@ export function useMatchDetail(matchId: string, userId: string | undefined) {
         status: "joined",
       });
       if (error) throw error;
+
+      if (match && match.organizer_id !== userId) {
+        const { data: profile } = await supabase.from("profiles").select("full_name, username").eq("id", userId).maybeSingle();
+        const joinerName = profile?.full_name || profile?.username || "Alguien";
+
+        await supabase.from("notifications").insert({
+          user_id: match.organizer_id,
+          type: "match_joined",
+          data: {
+            match_id: match.id,
+            match_title: match.title,
+            joiner_id: userId,
+            joiner_name: joinerName,
+          }
+        });
+      }
+
       toast.success("¡Te uniste al partido!");
       load();
     } catch (err: any) {
@@ -221,6 +238,23 @@ export function useMatchDetail(matchId: string, userId: string | undefined) {
         status: "requested",
       });
       if (error) throw error;
+
+      if (match && match.organizer_id !== userId) {
+        const { data: profile } = await supabase.from("profiles").select("full_name, username").eq("id", userId).maybeSingle();
+        const requesterName = profile?.full_name || profile?.username || "Alguien";
+
+        await supabase.from("notifications").insert({
+          user_id: match.organizer_id,
+          type: "match_request",
+          data: {
+            match_id: match.id,
+            match_title: match.title,
+            requester_id: userId,
+            requester_name: requesterName,
+          }
+        });
+      }
+
       toast.success("Solicitud enviada");
       load();
     } catch (err: any) {

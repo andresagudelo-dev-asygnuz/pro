@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppLayout } from "@/components/AppLayout";
 
-const supabase = createClient();
 
 type Court = { id: string; name: string; capacity_players: number };
 type Venue = { id: string; name: string; address: string; city: string; venue_courts?: Court[] };

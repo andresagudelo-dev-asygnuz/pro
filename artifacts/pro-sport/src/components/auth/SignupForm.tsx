@@ -1,9 +1,9 @@
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Loader2, User, Mail, Lock, CheckCircle2, ChevronRight, MailOpen, PartyPopper, Eye, EyeOff } from "lucide-react";
 import confetti from "canvas-confetti";
@@ -44,7 +44,6 @@ export function SignupForm() {
     const is_promoter = (form.elements.namedItem("is_promoter") as HTMLInputElement).checked;
     const is_cancha = (form.elements.namedItem("is_cancha") as HTMLInputElement).checked;
 
-    const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

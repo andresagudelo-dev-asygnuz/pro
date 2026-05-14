@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getMyCanchas } from "@/lib/canchas/api";
 import { getCanchaStats, type CanchaStats, type StatsPeriod } from "@/lib/canchas/stats-api";
@@ -14,7 +14,6 @@ import {
 import { SPORT_TYPE_ICONS } from "@/lib/types/db";
 import type { Cancha } from "@/lib/types/db";
 
-const supabase = createClient();
 
 const PERIOD_LABELS: Record<StatsPeriod, string> = {
   week:  "Esta semana",

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getCanchaById } from "@/lib/canchas/api";
 import { getCanchaClients, upsertClientTag, removeClientTag, CLIENT_TAG_CONFIG, type CanchaClient, type ClientTag } from "@/lib/canchas/clients-api";
@@ -13,7 +13,6 @@ import { MessageCircle, ExternalLink, Star, Tag, X, Search, TrendingUp, AlertTri
 import { toast } from "sonner";
 import type { Cancha } from "@/lib/types/db";
 
-const supabase = createClient();
 
 type FilterType = "all" | "vip" | "frecuente" | "bloqueado";
 

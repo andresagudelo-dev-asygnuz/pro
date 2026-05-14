@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getCanchaById, updateCancha } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
-const supabase = createClient();
 
 export default function EditCanchaPage() {
   const { id } = useParams<{ id: string }>();

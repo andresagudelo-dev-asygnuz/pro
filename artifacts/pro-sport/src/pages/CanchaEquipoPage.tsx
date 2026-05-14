@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getCanchaById } from "@/lib/canchas/api";
 import {
@@ -22,7 +22,6 @@ import { Search, Plus, Trash2, Shield, User2, ShieldCheck, AlertCircle } from "l
 import { toast } from "sonner";
 import type { Cancha } from "@/lib/types/db";
 
-const supabase = createClient();
 
 const ROLE_CONFIG: Record<AdminRole, { label: string; desc: string; color: string; bg: string }> = {
   admin: {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Building2, MapPin, Phone, Globe, MessageSquare, User, FileText, ArrowLeft } from "lucide-react";
 
-const supabase = createClient();
 
 export default function OwnerProfileEditPage() {
   const { user, profile, roles, updateProfile } = useAuth();

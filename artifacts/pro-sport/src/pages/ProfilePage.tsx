@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
@@ -11,10 +11,12 @@ import { PLAYER_POSITIONS } from "@/lib/types/db";
 import {
   LogOut, Pencil, Shield, Trophy, Zap, Building2, Bell, Users,
   Calendar, Bookmark, ChevronRight, Star, MapPin, Target, Flame,
+  Ruler, Weight, Activity,
 } from "lucide-react";
 import { toast } from "sonner";
-
-const supabase = createClient();
+import { useProfileBlocks } from "@/hooks/useProfileBlocks";
+import { canViewBlock, type ViewerContext } from "@/lib/profiles/visibility";
+import { ProfileSkeleton } from "@/components/ui/skeletons";
 
 /* ─── Resize image to data URL via Canvas ─────────────────────────────── */
 function resizeToDataUrl(file: File, maxPx = 512, quality = 0.88): Promise<string> {
@@ -64,6 +66,15 @@ export default function ProfilePage() {
   const [myTeams,     setMyTeams]     = useState<TeamWithCount[]>([]);
   const [teamsLoaded, setTeamsLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { blocks } = useProfileBlocks(user?.id ?? "");
+
+  // Owner always sees all their own blocks
+  const viewerContext: ViewerContext = {
+    viewerId: user?.id ?? null,
+    isPromoter: roles?.is_promoter ?? false,
+    isOwner: true,
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -119,8 +130,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
+        <ProfileSkeleton />
       </div>
     );
   }
@@ -262,6 +273,83 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+
+        {/* ── PERFIL DEPORTIVO (blocks) ── */}
+        {blocks && (
+          <>
+            {canViewBlock(blocks.morpho?.visibility ?? "privado", viewerContext) && blocks.morpho && (
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-border/40 shadow-sm overflow-hidden">
+                <p className="px-5 pt-5 pb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Morfología</p>
+                <div className="px-5 pb-5 grid grid-cols-3 gap-4">
+                  {blocks.morpho.height_m != null && (
+                    <div className="flex flex-col items-center gap-1">
+                      <Ruler className="size-4 text-violet-500" />
+                      <span className="text-base font-black text-zinc-900 dark:text-white">
+                        {blocks.morpho.height_m}m
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Altura</span>
+                    </div>
+                  )}
+                  {blocks.morpho.weight_kg != null && (
+                    <div className="flex flex-col items-center gap-1">
+                      <Weight className="size-4 text-violet-500" />
+                      <span className="text-base font-black text-zinc-900 dark:text-white">
+                        {blocks.morpho.weight_kg}kg
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Peso</span>
+                    </div>
+                  )}
+                  {blocks.morpho.wingspan_m != null && (
+                    <div className="flex flex-col items-center gap-1">
+                      <Activity className="size-4 text-violet-500" />
+                      <span className="text-base font-black text-zinc-900 dark:text-white">
+                        {blocks.morpho.wingspan_m}m
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Envergadura</span>
+                    </div>
+                  )}
+                </div>
+                {(blocks.morpho.laterality || blocks.morpho.somatotype) && (
+                  <div className="border-t border-border/40 px-5 py-3 flex gap-3">
+                    {blocks.morpho.laterality && (
+                      <span className="text-xs bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 px-2.5 py-1 rounded-full capitalize">
+                        {blocks.morpho.laterality}
+                      </span>
+                    )}
+                    {blocks.morpho.somatotype && (
+                      <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2.5 py-1 rounded-full capitalize">
+                        {blocks.morpho.somatotype}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {canViewBlock(blocks.technical?.visibility ?? "privado", viewerContext) && blocks.technical && (
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-border/40 shadow-sm overflow-hidden">
+                <p className="px-5 pt-5 pb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Técnica</p>
+                <div className="px-5 pb-5 flex flex-col gap-2">
+                  {blocks.technical.position && (
+                    <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                      <span className="text-muted-foreground mr-1">Posición:</span>
+                      <span className="capitalize font-medium">{blocks.technical.position}</span>
+                    </p>
+                  )}
+                  {blocks.technical.dominant_foot && (
+                    <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                      <span className="text-muted-foreground mr-1">Pie dominante:</span>
+                      <span className="capitalize font-medium">{blocks.technical.dominant_foot}</span>
+                    </p>
+                  )}
+                  {blocks.technical.performance_notes && (
+                    <p className="text-xs text-muted-foreground mt-1 italic">"{blocks.technical.performance_notes}"</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* ── MIS EQUIPOS ── */}
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-border/40 shadow-sm overflow-hidden">

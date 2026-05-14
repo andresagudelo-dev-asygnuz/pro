@@ -1,0 +1,68 @@
+schema: spec-driven
+project: pro-sport
+
+context: |
+  Tech stack: React 19 + Vite + TypeScript + Tailwind CSS + Wouter (routing)
+  Backend: Supabase (PostgreSQL + Auth + Realtime subscriptions)
+  State: React Context (auth/notifs) + TanStack Query (server state)
+  UI: shadcn/ui + Radix UI + Framer Motion + react-hook-form + Zod
+  Deploy: Vercel — SPA, client-side routing
+  Roles: is_player | is_promoter | is_cancha (multi-role user)
+  Modules: auth, matches, tournaments, canchas, teams, social, chat, admin
+  50 pages in /src/pages/, API layer in /src/lib/, 0 tests
+
+strict_tdd: false  # No test runner detected — vitest/jest not installed
+
+testing:
+  strict_tdd: false
+  reason: "No test framework in package.json scripts or devDependencies"
+  type_checker:
+    available: true
+    command: "npm run typecheck"
+    tool: "tsc --noEmit"
+  linter:
+    available: false
+    note: "ESLint not configured"
+  formatter:
+    available: false
+    note: "Prettier not configured"
+  unit:
+    available: false
+  integration:
+    available: false
+  e2e:
+    available: false
+  coverage:
+    available: false
+
+rules:
+  proposal:
+    - Identify which of the 3 user roles (jugador, cancha, promotor) is affected
+    - Note if change requires Supabase migration (new tables, columns, RLS policies)
+    - Include rollback plan for DB schema changes
+  specs:
+    - Use Given/When/Then format for user-facing scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Reference the affected role in each scenario header
+  design:
+    - Prefer adding to existing /src/lib/ API modules over creating new files
+    - Keep page components thin — logic in hooks, data in /src/lib/
+    - Document Supabase table dependencies and RLS considerations
+    - Use TanStack Query for server state, Context only for global auth/notif
+  tasks:
+    - Group tasks: DB migration → API layer → hooks → UI components → integration
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Mark tasks that require Supabase migration as [DB] prefix
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing naming conventions per module (check existing pages for patterns)
+    - Use shadcn/ui primitives — don't add new UI libraries
+    - Call typecheck after implementation: npm run typecheck
+    - Direct Supabase calls go in /src/lib/ not in page components
+  verify:
+    - Run: npm run typecheck (no test suite available)
+    - Manually verify each role flow (jugador, cancha, promotor)
+    - Compare implementation against every spec scenario
+  archive:
+    - Update /openspec/specs/ with final state
+    - Note any Supabase migrations applied

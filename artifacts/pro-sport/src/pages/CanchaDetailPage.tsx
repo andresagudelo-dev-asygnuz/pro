@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getCanchaById, getAvailableSlots, createBooking } from "@/lib/canchas/api";
 import { sendNotification } from "@/lib/notifications/api";
 import { Button } from "@/components/ui/button";
-import { MapPin, Users, Phone, MessageCircle, CheckCircle2, ArrowLeft, Star, Zap, Clock, ShieldCheck, Share2, Heart, Calendar, Info, Loader2, ChevronRight, Lock } from "lucide-react";
+import { MapPin, Phone, MessageCircle, CheckCircle2, Clock, ShieldCheck, Calendar, Info, Loader2, ChevronRight, Lock } from "lucide-react";
+import { CanchaHero } from "@/components/canchas/CanchaHero";
 import { BottomNav } from "@/components/BottomNav";
-import { SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, type Cancha, type TimeSlot } from "@/lib/types/db";
+import { type Cancha, type TimeSlot } from "@/lib/types/db";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import { Label } from "@/components/ui/label";
 
-const supabase = createClient();
 
 function todayStr() {
   return new Date().toISOString().split("T")[0];
@@ -139,56 +139,7 @@ export default function CanchaDetailPage() {
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
-      {/* ══ HERO SECTION ═══════════════════════════════════════════════════ */}
-      <div className="relative h-72 md:h-96 overflow-hidden">
-        {/* Background Image/Gradient */}
-        <div className="absolute inset-0 bg-zinc-900">
-          <img 
-            src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2000" 
-            alt={cancha.name}
-            className="w-full h-full object-cover opacity-50 blur-[1px]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-100 dark:from-zinc-950 via-transparent to-black/60" />
-        </div>
-
-        {/* Top Controls */}
-        <div className="relative z-10 flex items-center justify-between px-4 pt-4">
-          <button
-            onClick={() => window.history.back()}
-            className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-white/80 hover:text-white transition-all bg-black/20 backdrop-blur-md rounded-full px-4 py-2 border border-white/10"
-          >
-            <ArrowLeft className="size-4" /> Volver
-          </button>
-          <div className="flex gap-2">
-            <button className="p-2.5 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/80 hover:text-white">
-              <Share2 className="size-4" />
-            </button>
-            <button className="p-2.5 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/80 hover:text-brand-primary transition-colors">
-              <Heart className="size-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Stats Overlay */}
-        <div className="absolute bottom-12 left-4 right-4 z-10">
-          <div className="grid grid-cols-3 divide-x divide-white/10 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-            <div className="flex flex-col items-center py-3 px-1 gap-0.5">
-              <p className="text-sm font-black text-brand-primary">${finalPrice.toLocaleString("es-CO")}</p>
-              <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Precio / h</p>
-            </div>
-            <div className="flex flex-col items-center py-3 px-1 gap-0.5">
-              <p className="text-sm font-black text-white">{cancha.capacity}</p>
-              <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Jugadores</p>
-            </div>
-            <div className="flex flex-col items-center py-3 px-1 gap-0.5">
-              <div className="flex items-center gap-1">
-                <span className="text-sm">{SPORT_TYPE_ICONS[cancha.sport_type]}</span>
-              </div>
-              <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">{SPORT_TYPE_LABELS[cancha.sport_type]}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CanchaHero cancha={cancha} finalPrice={finalPrice} onBack={() => window.history.back()} />
 
       {/* ══ CONTENT ═══════════════════════════════════════════════════════ */}
       <main className="container mx-auto px-4 -mt-6 relative z-20 max-w-lg space-y-6">

@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { initialsFromName } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, UserCheck, Clock, X, Check } from "lucide-react";
+import { UserPlus, UserCheck, Clock, X, Check, Ruler, Weight, Activity } from "lucide-react";
 import { toast } from "sonner";
 import type { Friendship } from "@/lib/types/db";
 import {
@@ -17,8 +17,10 @@ import {
   rejectFriendRequest,
   removeFriend,
 } from "@/lib/friends/api";
-
-const supabase = createClient();
+import { useQuery } from "@tanstack/react-query";
+import { getProfileBlocks } from "@/lib/profiles/api";
+import { canViewBlock, type ViewerContext } from "@/lib/profiles/visibility";
+import { ProfileSkeleton } from "@/components/ui/skeletons";
 
 type ProfileCore = {
   user_id: string;
@@ -43,6 +45,32 @@ export default function PublicProfilePage() {
 
   const [friendship, setFriendship] = useState<Friendship | null | undefined>(undefined);
   const [friendPending, setFriendPending] = useState(false);
+
+  // Fetch viewer's roles to check if they are a promoter
+  const { data: viewerRoles } = useQuery({
+    queryKey: ["user-roles", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("is_promoter")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      return data as { is_promoter: boolean } | null;
+    },
+    enabled: Boolean(user?.id),
+  });
+
+  // Fetch profile blocks for the profile owner
+  const { data: profileBlocksData } = useQuery({
+    queryKey: ["profile-blocks", profile?.user_id],
+    queryFn: async () => {
+      if (!profile?.user_id) return null;
+      const result = await getProfileBlocks(supabase, profile.user_id);
+      return result.data;
+    },
+    enabled: Boolean(profile?.user_id),
+  });
 
   useEffect(() => {
     (async () => {
@@ -81,9 +109,9 @@ export default function PublicProfilePage() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center p-12 text-muted-foreground">
-        Cargando…
-      </div>
+      <AppLayout>
+        <ProfileSkeleton />
+      </AppLayout>
     );
   if (error || !profile)
     return (
@@ -95,6 +123,12 @@ export default function PublicProfilePage() {
   const isMe = user?.id === profile.user_id;
   const amIRequester = friendship?.requester_id === user?.id;
   const amIAddressee = friendship?.addressee_id === user?.id;
+
+  const viewerContext: ViewerContext = {
+    viewerId: user?.id ?? null,
+    isPromoter: viewerRoles?.is_promoter ?? false,
+    isOwner: isMe,
+  };
 
   async function handleSendRequest() {
     if (!user || !profile) return;
@@ -210,6 +244,111 @@ export default function PublicProfilePage() {
           <p className="text-sm text-muted-foreground">Sin información adicional.</p>
         )}
       </section>
+
+      {/* Profile blocks — shown based on visibility rules */}
+      {profileBlocksData && (
+        <div className="flex flex-col gap-4">
+          {canViewBlock(profileBlocksData.morpho?.visibility ?? "privado", viewerContext) && profileBlocksData.morpho && (
+            <div className="rounded-xl border bg-background p-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Morfología</p>
+              <div className="grid grid-cols-3 gap-4 mb-3">
+                {profileBlocksData.morpho.height_m != null && (
+                  <div className="flex flex-col items-center gap-1">
+                    <Ruler className="size-4 text-muted-foreground" />
+                    <span className="text-base font-bold">{profileBlocksData.morpho.height_m}m</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">Altura</span>
+                  </div>
+                )}
+                {profileBlocksData.morpho.weight_kg != null && (
+                  <div className="flex flex-col items-center gap-1">
+                    <Weight className="size-4 text-muted-foreground" />
+                    <span className="text-base font-bold">{profileBlocksData.morpho.weight_kg}kg</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">Peso</span>
+                  </div>
+                )}
+                {profileBlocksData.morpho.wingspan_m != null && (
+                  <div className="flex flex-col items-center gap-1">
+                    <Activity className="size-4 text-muted-foreground" />
+                    <span className="text-base font-bold">{profileBlocksData.morpho.wingspan_m}m</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">Envergadura</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {profileBlocksData.morpho.laterality && (
+                  <Badge variant="secondary" className="capitalize">{profileBlocksData.morpho.laterality}</Badge>
+                )}
+                {profileBlocksData.morpho.somatotype && (
+                  <Badge variant="outline" className="capitalize">{profileBlocksData.morpho.somatotype}</Badge>
+                )}
+              </div>
+            </div>
+          )}
+
+          {canViewBlock(profileBlocksData.conditional?.visibility ?? "privado", viewerContext) && profileBlocksData.conditional && (
+            <div className="rounded-xl border bg-background p-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Condición física</p>
+              <div className="flex flex-col gap-2 text-sm">
+                {profileBlocksData.conditional.strength_tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground mr-1 text-xs">Fuerza:</span>
+                    {profileBlocksData.conditional.strength_tags.map((t) => (
+                      <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                    ))}
+                  </div>
+                )}
+                {profileBlocksData.conditional.speed_tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground mr-1 text-xs">Velocidad:</span>
+                    {profileBlocksData.conditional.speed_tags.map((t) => (
+                      <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                    ))}
+                  </div>
+                )}
+                {profileBlocksData.conditional.endurance_tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground mr-1 text-xs">Resistencia:</span>
+                    {profileBlocksData.conditional.endurance_tags.map((t) => (
+                      <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                    ))}
+                  </div>
+                )}
+                {profileBlocksData.conditional.flexibility_tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-muted-foreground mr-1 text-xs">Flexibilidad:</span>
+                    {profileBlocksData.conditional.flexibility_tags.map((t) => (
+                      <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {canViewBlock(profileBlocksData.technical?.visibility ?? "privado", viewerContext) && profileBlocksData.technical && (
+            <div className="rounded-xl border bg-background p-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Técnica</p>
+              <div className="flex flex-col gap-2 text-sm">
+                {profileBlocksData.technical.position && (
+                  <p>
+                    <span className="text-muted-foreground mr-1">Posición:</span>
+                    <span className="font-medium capitalize">{profileBlocksData.technical.position}</span>
+                  </p>
+                )}
+                {profileBlocksData.technical.dominant_foot && (
+                  <p>
+                    <span className="text-muted-foreground mr-1">Pie dominante:</span>
+                    <span className="font-medium capitalize">{profileBlocksData.technical.dominant_foot}</span>
+                  </p>
+                )}
+                {profileBlocksData.technical.performance_notes && (
+                  <p className="text-xs text-muted-foreground italic mt-1">"{profileBlocksData.technical.performance_notes}"</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
     </AppLayout>
   );

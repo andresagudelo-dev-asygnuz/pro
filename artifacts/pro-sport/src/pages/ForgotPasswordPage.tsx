@@ -1,10 +1,10 @@
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [pending, setPending] = useState(false);
@@ -16,7 +16,6 @@ export default function ForgotPasswordPage() {
     const form = e.currentTarget;
     const email = (form.elements.namedItem("email") as HTMLInputElement).value;
 
-    const supabase = createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/nueva-contrasena`,
     });

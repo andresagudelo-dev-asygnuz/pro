@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getMyBookings, type BookingWithCancha } from "@/lib/canchas/api";
 import { BottomNav } from "@/components/BottomNav";
@@ -18,7 +18,6 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-const supabase = createClient();
 
 const STATUS_CONFIG: Record<
   string,

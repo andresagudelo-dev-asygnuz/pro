@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import {
@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AppLayout } from "@/components/AppLayout";
 
-const supabase = createClient();
 
 const eventLabels: Record<MatchEventType, string> = {
   gol: "Gol", auto_gol: "Auto-gol", amarilla: "Amarilla", roja: "Roja", sustitucion: "Sustitución",

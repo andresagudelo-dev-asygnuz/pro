@@ -196,6 +196,42 @@ export async function getMyRegistrations(
   return { error: null, data: (data ?? []) as RegistrationRow[] };
 }
 
+export type RegistrationWithNames = RegistrationRow & {
+  team_name: string | null;
+  player_name: string | null;
+};
+
+export async function listRegistrationsWithNames(
+  supabase: SupabaseClient,
+  tournamentId: string,
+): Promise<ApiResult<RegistrationWithNames[]>> {
+  const { data, error } = await supabase
+    .from("tournament_registrations")
+    .select(`
+      id, tournament_id, team_id, user_id, status, registered_by, created_at, updated_at,
+      team:teams(id, name),
+      profile:profiles(id, full_name, username)
+    `)
+    .eq("tournament_id", tournamentId)
+    .order("created_at");
+
+  if (error) return { data: null, error: mapDbError(error, "regs_with_names") };
+
+  const rows: RegistrationWithNames[] = ((data ?? []) as any[]).map((r) => ({
+    id: r.id,
+    tournament_id: r.tournament_id,
+    team_id: r.team_id,
+    user_id: r.user_id,
+    status: r.status,
+    registered_by: r.registered_by,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    team_name: r.team?.name ?? null,
+    player_name: r.profile?.full_name ?? r.profile?.username ?? null,
+  }));
+  return { data: rows, error: null };
+}
+
 type PgError = { code?: string | null; message?: string | null };
 
 function mapRegistrationError(err: unknown): string {

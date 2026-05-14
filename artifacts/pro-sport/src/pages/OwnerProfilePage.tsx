@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const supabase = createClient();
 
 function resizeToDataUrl(file: File, maxW: number, maxH: number, quality = 0.88): Promise<string> {
   return new Promise((resolve, reject) => {

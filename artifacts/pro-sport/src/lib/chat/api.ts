@@ -1,4 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
+import { mapDbError } from "@/lib/errors/map-db-error";
 
 export type ConversationType = "booking" | "match" | "tournament" | "friend" | "direct";
 
@@ -57,14 +58,14 @@ export async function getOrCreateConversation(
     .select("id")
     .single();
 
-  if (convErr || !conv) return { data: null, error: convErr?.message ?? "Error creando conversación" };
+  if (convErr || !conv) return { data: null, error: convErr ? mapDbError(convErr, "conversation_create") : "Error creando conversación" };
 
   const unique = [...new Set(participantIds)];
   const { error: partErr } = await supabase
     .from("conversation_participants")
     .insert(unique.map((uid) => ({ conversation_id: conv.id, user_id: uid })));
 
-  if (partErr) return { data: null, error: partErr.message };
+  if (partErr) return { data: null, error: mapDbError(partErr, "conversation_participants_insert") };
   return { data: conv, error: null };
 }
 
@@ -78,7 +79,7 @@ export async function getMyConversations(
     .select("conversation_id, last_read_at")
     .eq("user_id", userId);
 
-  if (e1) return { data: [], error: e1.message };
+  if (e1) return { data: [], error: mapDbError(e1, "conversations_participants") };
   if (!myParts || myParts.length === 0) return { data: [], error: null };
 
   const convIds = myParts.map((p) => p.conversation_id as string);
@@ -90,7 +91,7 @@ export async function getMyConversations(
     .in("id", convIds)
     .order("updated_at", { ascending: false });
 
-  if (e2) return { data: [], error: e2.message };
+  if (e2) return { data: [], error: mapDbError(e2, "conversations_list") };
   const conversations = (convs ?? []) as Conversation[];
 
   const { data: allParts } = await supabase
@@ -150,7 +151,7 @@ export async function getConversationMessages(
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) return { data: [], error: error.message };
+  if (error) return { data: [], error: mapDbError(error, "messages_list") };
   return { data: ((data ?? []) as ChatMessage[]).reverse(), error: null };
 }
 
@@ -168,7 +169,7 @@ export async function sendMessage(
     .from("messages")
     .insert({ conversation_id: conversationId, sender_id: senderId, content: content.trim() });
 
-  if (error) return { error: error.message };
+  if (error) return { error: mapDbError(error, "message_send") };
   return { error: null };
 }
 
@@ -208,4 +209,189 @@ export async function getTotalUnreadMessages(
     total += count ?? 0;
   }
   return total;
+}
+
+// ── Paginated conversation list ───────────────────────────────────────────────
+
+export interface ConversationWithLastMessage {
+  id: string;
+  type: string;
+  title: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+  last_message_content: string | null;
+}
+
+export async function listConversations(
+  supabase: SupabaseClient,
+  userId: string,
+  options: { cursor?: string; limit?: number }
+): Promise<{ data: ConversationWithLastMessage[] | null; error: string | null; nextCursor: string | null }> {
+  const limit = options.limit ?? 20;
+
+  // Get all conversation IDs for this user, along with last_read_at
+  const { data: parts, error: partsErr } = await supabase
+    .from("conversation_participants")
+    .select("conversation_id, last_read_at")
+    .eq("user_id", userId);
+
+  if (partsErr) return { data: null, error: mapDbError(partsErr, "list_conversations_parts"), nextCursor: null };
+  if (!parts || parts.length === 0) return { data: [], error: null, nextCursor: null };
+
+  const convIds = (parts as Array<{ conversation_id: string; last_read_at: string | null }>).map(
+    (p) => p.conversation_id
+  );
+  const lastReadMap = new Map(
+    (parts as Array<{ conversation_id: string; last_read_at: string | null }>).map((p) => [
+      p.conversation_id,
+      p.last_read_at,
+    ])
+  );
+
+  let query = supabase
+    .from("conversations")
+    .select("id, type, title, last_message_at, last_message_text")
+    .in("id", convIds)
+    .order("last_message_at", { ascending: false })
+    .limit(limit);
+
+  if (options.cursor) {
+    query = query.lt("last_message_at", options.cursor);
+  }
+
+  const { data: convs, error: convsErr } = await query;
+  if (convsErr) return { data: null, error: mapDbError(convsErr, "list_conversations"), nextCursor: null };
+
+  const rows = (convs ?? []) as Array<{
+    id: string;
+    type: string;
+    title: string | null;
+    last_message_at: string | null;
+    last_message_text: string | null;
+  }>;
+
+  // Compute unread count per conversation
+  const result: ConversationWithLastMessage[] = await Promise.all(
+    rows.map(async (conv) => {
+      const lastRead = lastReadMap.get(conv.id) ?? null;
+      let unread = 0;
+      if (conv.last_message_at && (!lastRead || conv.last_message_at > lastRead)) {
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", conv.id)
+          .gt("created_at", lastRead ?? new Date(0).toISOString())
+          .neq("sender_id", userId);
+        unread = count ?? 0;
+      }
+      return {
+        id: conv.id,
+        type: conv.type,
+        title: conv.title,
+        last_message_at: conv.last_message_at,
+        unread_count: unread,
+        last_message_content: conv.last_message_text,
+      };
+    })
+  );
+
+  const nextCursor =
+    result.length === limit ? result[result.length - 1].last_message_at : null;
+
+  return { data: result, error: null, nextCursor };
+}
+
+// ── Paginated message list (cursor-based, oldest-first output) ────────────────
+
+export interface MessageWithSender {
+  id: string;
+  content: string;
+  created_at: string;
+  sender_id: string;
+  sender: { full_name: string | null; avatar_url: string | null } | null;
+}
+
+export async function listMessages(
+  supabase: SupabaseClient,
+  conversationId: string,
+  options: { cursor?: string; limit?: number }
+): Promise<{ data: MessageWithSender[] | null; error: string | null; nextCursor: string | null }> {
+  const limit = options.limit ?? 40;
+
+  let query = supabase
+    .from("messages")
+    .select("id, content, created_at, sender_id, profiles(full_name, avatar_url)")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (options.cursor) {
+    query = query.lt("created_at", options.cursor);
+  }
+
+  const { data, error } = await query;
+  if (error) return { data: null, error: mapDbError(error, "list_messages"), nextCursor: null };
+
+  const rows = (data ?? []) as unknown as Array<{
+    id: string;
+    content: string;
+    created_at: string;
+    sender_id: string;
+    profiles: { full_name: string | null; avatar_url: string | null } | null;
+  }>;
+
+  // Reverse to return chronological order (oldest first)
+  const messages: MessageWithSender[] = rows.reverse().map((r) => ({
+    id: r.id,
+    content: r.content,
+    created_at: r.created_at,
+    sender_id: r.sender_id,
+    sender: r.profiles ?? null,
+  }));
+
+  // nextCursor points to the oldest message's created_at for loading more history
+  const nextCursor =
+    messages.length === limit ? messages[0].created_at : null;
+
+  return { data: messages, error: null, nextCursor };
+}
+
+// ── Real-time subscription to new messages in a conversation ──────────────────
+export function subscribeToConversation(
+  supabase: SupabaseClient,
+  conversationId: string,
+  onMessage: (message: MessageWithSender) => void
+): () => void {
+  const channel: RealtimeChannel = supabase
+    .channel(`conversation:${conversationId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        const row = payload.new as {
+          id: string;
+          content: string;
+          created_at: string;
+          sender_id: string;
+        };
+        // Deliver message without sender profile (caller can enrich if needed)
+        onMessage({
+          id: row.id,
+          content: row.content,
+          created_at: row.created_at,
+          sender_id: row.sender_id,
+          sender: null,
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

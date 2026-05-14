@@ -205,6 +205,65 @@ export async function listMatchEvents(
   return { error: null, data: (data ?? []) as MatchEventRow[] };
 }
 
+export type MatchWithNames = MatchRow & {
+  home_team_name: string | null;
+  away_team_name: string | null;
+  home_player_name: string | null;
+  away_player_name: string | null;
+};
+
+type ApiResult<T> = { error: string | null; data: T | null };
+
+export async function listMatchesWithNames(
+  supabase: SupabaseClient,
+  tournamentId: string,
+): Promise<ApiResult<MatchWithNames[]>> {
+  const { data, error } = await supabase
+    .from("tournament_matches")
+    .select(`
+      id, tournament_id, round, group_code, fixture_order,
+      home_registration_id, away_registration_id, scheduled_at, venue,
+      home_score, away_score, status, correction_window_ends_at,
+      created_at, updated_at,
+      home:tournament_registrations!tournament_matches_home_registration_id_fkey(
+        team:teams(name),
+        profile:profiles(full_name, username)
+      ),
+      away:tournament_registrations!tournament_matches_away_registration_id_fkey(
+        team:teams(name),
+        profile:profiles(full_name, username)
+      )
+    `)
+    .eq("tournament_id", tournamentId)
+    .order("round")
+    .order("fixture_order", { nullsFirst: false });
+
+  if (error) return { data: null, error: mapDbError(error, "matches_with_names") };
+
+  const rows: MatchWithNames[] = ((data ?? []) as any[]).map((m) => ({
+    id: m.id,
+    tournament_id: m.tournament_id,
+    round: m.round,
+    group_code: m.group_code,
+    fixture_order: m.fixture_order,
+    home_registration_id: m.home_registration_id,
+    away_registration_id: m.away_registration_id,
+    scheduled_at: m.scheduled_at,
+    venue: m.venue,
+    home_score: m.home_score,
+    away_score: m.away_score,
+    status: m.status,
+    correction_window_ends_at: m.correction_window_ends_at,
+    created_at: m.created_at,
+    updated_at: m.updated_at,
+    home_team_name: m.home?.team?.name ?? null,
+    away_team_name: m.away?.team?.name ?? null,
+    home_player_name: m.home?.profile?.full_name ?? m.home?.profile?.username ?? null,
+    away_player_name: m.away?.profile?.full_name ?? m.away?.profile?.username ?? null,
+  }));
+  return { data: rows, error: null };
+}
+
 export async function listStandings(
   supabase: SupabaseClient,
   tournamentId: string,

@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifCount } from "@/context/NotifContext";
 import {
   Bell, CheckCircle2, MessageSquare, UserPlus, Mail,
   Check, X, Trash2, Eye, CalendarCheck, Building2, Trophy,
 } from "lucide-react";
+import { NotificationItem } from "@/components/ui/NotificationItem";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNav } from "@/components/BottomNav";
@@ -20,7 +21,6 @@ import {
 import type { MatchInvitation, Notification, NotificationData } from "@/lib/types/db";
 import { useNotifications, type MatchInviteWithMatch } from "@/hooks/useNotifications";
 
-const supabase = createClient();
 
 // Move logic to hook
 
@@ -186,45 +186,49 @@ export default function NotificationsPage() {
             )}
           </>
         }
+        backHref="/feed"
         actions={
-          <div className="flex items-center gap-1">
-            {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllRead}
-                className="text-xs text-muted-foreground rounded-xl gap-1">
-                <Eye className="size-3" /> Todas leídas
-              </Button>
-            )}
-            {hasRead && (
-              <Button variant="ghost" size="sm" onClick={deleteAllRead}
-                className="text-xs text-destructive/70 hover:text-destructive rounded-xl gap-1">
-                <Trash2 className="size-3" /> Borrar leídas
-              </Button>
-            )}
-          </div>
+          unreadCount > 0 ? (
+            <Button variant="ghost" size="sm" onClick={markAllRead}
+              className="text-xs text-muted-foreground rounded-xl gap-1">
+              <Eye className="size-3" /> Todas leídas
+            </Button>
+          ) : undefined
         }
       />
 
       <main className="container mx-auto px-4 py-4 max-w-2xl space-y-4">
         {/* Filtros */}
         {notifications.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => {
-              const count = countFor(f);
-              if (f !== "all" && f !== "unread" && count === 0) return null;
-              return (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    filter === f
-                      ? "bg-violet-600 text-white border-violet-600"
-                      : "border-border/60 hover:border-violet-400 hover:text-violet-600 bg-white dark:bg-zinc-900"
-                  }`}
-                >
-                  {FILTER_LABELS[f]}{count > 0 ? ` (${count})` : ""}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
+              {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => {
+                const count = countFor(f);
+                if (f !== "all" && f !== "unread" && count === 0) return null;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      filter === f
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "border-border/60 hover:border-violet-400 hover:text-violet-600 bg-white dark:bg-zinc-900"
+                    }`}
+                  >
+                    {FILTER_LABELS[f]}{count > 0 ? ` (${count})` : ""}
+                  </button>
+                );
+              })}
+            </div>
+            {hasRead && (
+              <button
+                onClick={deleteAllRead}
+                title="Borrar leídas"
+                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            )}
           </div>
         )}
 
@@ -333,68 +337,17 @@ export default function NotificationsPage() {
                     const link = getNotifLink(n);
                     const isClickable = link !== "#";
                     return (
-                      <div
+                      <NotificationItem
                         key={n.id}
-                        className={`flex items-center gap-3 px-4 py-3 transition-colors ${
-                          !n.read_at ? "bg-violet-50/60 dark:bg-violet-900/10" : "bg-background"
-                        } ${isClickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
-                        onClick={() => isClickable && navigateTo(n)}
-                      >
-                        {/* Indicador no-leído */}
-                        <div className="shrink-0 flex items-center justify-center">
-                          {!n.read_at
-                            ? <div className="size-2 rounded-full bg-violet-600" />
-                            : <div className="size-2" />
-                          }
-                        </div>
-
-                        {/* Icono */}
-                        <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                          {getIcon(n.type)}
-                        </div>
-
-                        {/* Contenido */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm leading-snug">{getMessage(n)}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(n.created_at).toLocaleString("es-CO", {
-                                weekday: "short", day: "numeric", month: "short",
-                                hour: "2-digit", minute: "2-digit",
-                              })}
-                            </span>
-                            {isClickable && (
-                              <span className="text-xs text-violet-600 dark:text-violet-400 font-medium">
-                                Ver detalle →
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Acciones en fila */}
-                        <div
-                          className="flex items-center gap-1 shrink-0"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {!n.read_at && (
-                            <button
-                              onClick={() => markOneRead(n.id)}
-                              title="Marcar como leída"
-                              className="w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
-                            >
-                              <Check className="size-3.5" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => deleteOne(n.id)}
-                            disabled={deletingId === n.id}
-                            title="Eliminar"
-                            className="w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                        notification={n}
+                        deletingId={deletingId}
+                        isClickable={isClickable}
+                        getIcon={getIcon}
+                        getMessage={getMessage}
+                        onNavigate={navigateTo}
+                        onMarkRead={markOneRead}
+                        onDelete={deleteOne}
+                      />
                     );
                   })}
                 </div>

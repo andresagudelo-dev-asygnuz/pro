@@ -222,6 +222,7 @@ export interface ProfileMorpho {
   wingspan_m: number | null;
   laterality: Laterality | null;
   somatotype: Somatotype | null;
+  visibility: VisibilityLevel;
   created_at: string;
   updated_at: string;
 }
@@ -236,16 +237,18 @@ export interface ProfileConditional {
   endurance_notes: string | null;
   flexibility_tags: string[];
   flexibility_notes: string | null;
+  visibility: VisibilityLevel;
   created_at: string;
   updated_at: string;
 }
 
 export interface ProfileTechnicalFootball {
   user_id: string;
-  position: FootballPosition;
-  dominant_foot: DominantFoot;
+  position: FootballPosition | null;
+  dominant_foot: DominantFoot | null;
   performance_notes: string | null;
   tactical_role_notes: string | null;
+  visibility: VisibilityLevel;
   created_at: string;
   updated_at: string;
 }
@@ -377,6 +380,8 @@ export const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 export type RecurringBookingStatus = "pendiente" | "confirmada" | "cancelada" | "pausada";
 
+export type RecurringBookingFrequency = "weekly" | "biweekly" | "monthly";
+
 export interface RecurringBooking {
   id: string;
   cancha_id: string;
@@ -385,13 +390,28 @@ export interface RecurringBooking {
   start_time: string;
   end_time: string;
   start_date: string;
-  end_date: string;
+  end_date: string | null; // null = indefinite (no end date)
+  frequency: RecurringBookingFrequency;
   status: RecurringBookingStatus;
   price_per_session: number;
   notes: string | null;
   confirmed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type RecurringExceptionAction = "cancelled" | "modified";
+
+export interface RecurringException {
+  id: string;
+  recurring_id: string;
+  original_date: string; // "YYYY-MM-DD"
+  action: RecurringExceptionAction;
+  new_start: string | null;
+  new_end: string | null;
+  new_price: number | null;
+  notes: string | null;
+  created_at: string;
 }
 
 export type ClientTagType = "vip" | "frecuente" | "bloqueado";

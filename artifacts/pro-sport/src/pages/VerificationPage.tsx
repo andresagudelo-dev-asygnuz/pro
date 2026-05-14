@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
 import type { AgeVerification, AgeVerificationStatus } from "@/lib/types/db";
 
-const supabase = createClient();
 
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import {
@@ -14,7 +14,6 @@ import { initialsFromName } from "@/lib/format";
 import type { Profile } from "@/lib/types/db";
 import { Users, Clock } from "lucide-react";
 
-const supabase = createClient();
 
 const STATUS_CONFIG: Record<
   string,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { formatMatchDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ import {
   removeFriend,
 } from "@/lib/friends/api";
 
-const supabase = createClient();
 
 const LEVEL_CONFIG: Record<string, { label: string; glow: string; badge: string }> = {
   principiante: { label: "Principiante", glow: "bg-amber-500",  badge: "bg-amber-500/15 text-amber-300 border-amber-500/30" },

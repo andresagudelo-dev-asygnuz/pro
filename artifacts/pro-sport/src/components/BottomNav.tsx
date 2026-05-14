@@ -3,10 +3,9 @@ import { Home, Trophy, Plus, Building2, User, MessageCircle } from "lucide-react
 import { useNotifCount } from "@/context/NotifContext";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { getTotalUnreadMessages } from "@/lib/chat/api";
 
-const supabase = createClient();
 
 type NavItem = {
   href: string;

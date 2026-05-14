@@ -1,15 +1,16 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, Link } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { getCanchaById } from "@/lib/canchas/api";
-import { getCanchaStats, type CanchaStats, type StatsPeriod } from "@/lib/canchas/stats-api";
+import { getCanchaStats, getRevenueSeries, type CanchaStats, type StatsPeriod } from "@/lib/canchas/stats-api";
 import { CanchaOwnerTabs } from "@/components/CanchaOwnerTabs";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
+import { RevenueChart } from "@/components/canchas/RevenueChart";
 import type { Cancha } from "@/lib/types/db";
 
-const supabase = createClient();
 
 const PERIOD_LABELS: Record<StatsPeriod, string> = {
   week:  "Esta semana",
@@ -17,14 +18,20 @@ const PERIOD_LABELS: Record<StatsPeriod, string> = {
   year:  "Este año",
 };
 
+function getMonthStr(d: Date): string {
+  return d.toISOString().substring(0, 7);
+}
+
+function addMonths(d: Date, n: number): Date {
+  const result = new Date(d);
+  result.setUTCMonth(result.getUTCMonth() + n);
+  return result;
+}
+
 function formatMoney(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
   return "$" + n.toLocaleString("es-CO");
-}
-
-function formatDateShort(d: string) {
-  return new Date(d + "T12:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" });
 }
 
 export default function CanchaStatsPage() {
@@ -33,6 +40,25 @@ export default function CanchaStatsPage() {
   const [stats, setStats]     = useState<CanchaStats | null>(null);
   const [period, setPeriod]   = useState<StatsPeriod>("month");
   const [loading, setLoading] = useState(true);
+
+  const { fromMonth, toMonth } = useMemo(() => {
+    const now = new Date();
+    return {
+      fromMonth: getMonthStr(addMonths(now, -5)),
+      toMonth: getMonthStr(now),
+    };
+  }, []);
+
+  const { data: revenueData, isLoading: revenueLoading } = useQuery({
+    queryKey: ["revenue-series", id, fromMonth, toMonth],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data, error } = await getRevenueSeries(supabase, id, fromMonth, toMonth);
+      if (error) throw new Error(error);
+      return data ?? [];
+    },
+    enabled: !!id,
+  });
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -49,7 +75,6 @@ export default function CanchaStatsPage() {
   useEffect(() => { load(); }, [load]);
 
   const maxSlotCount = Math.max(1, ...(stats?.popular_slots.map(s => s.count) ?? []));
-  const maxDayRevenue = Math.max(1, ...(stats?.daily_summary.map(d => d.revenue) ?? []));
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -182,29 +207,18 @@ export default function CanchaStatsPage() {
               </div>
             )}
 
-            {/* Actividad diaria */}
-            {stats.daily_summary.length > 0 && (
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm p-4">
-                <h3 className="text-sm font-semibold mb-3">Actividad por día</h3>
-                <div className="space-y-2">
-                  {stats.daily_summary.map(day => (
-                    <div key={day.date} className="flex items-center gap-3">
-                      <span className="text-[11px] text-muted-foreground w-16 shrink-0">{formatDateShort(day.date)}</span>
-                      <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
-                          style={{ width: day.revenue > 0 ? `${(day.revenue / maxDayRevenue) * 100}%` : "4%" }}
-                        />
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-semibold text-emerald-600">{formatMoney(day.revenue)}</span>
-                        <span className="text-[10px] text-muted-foreground ml-1">({day.total})</span>
-                      </div>
-                    </div>
-                  ))}
+            {/* Revenue chart — últimos 6 meses */}
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm p-4">
+              <h3 className="text-sm font-semibold mb-1">Ingresos últimos 6 meses</h3>
+              <p className="text-[11px] text-muted-foreground mb-3">Cobrado (ad-hoc) vs Programado (recurrente)</p>
+              {revenueLoading ? (
+                <div className="flex items-center justify-center h-[256px]">
+                  <div className="w-6 h-6 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
                 </div>
-              </div>
-            )}
+              ) : (
+                <RevenueChart data={revenueData ?? []} />
+              )}
+            </div>
           </>
         )}
       </div>

@@ -1,10 +1,10 @@
+import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function ResetPasswordPage() {
@@ -24,7 +24,6 @@ export default function ResetPasswordPage() {
       const type = params.get("type");
 
       if (type === "recovery" && accessToken && refreshToken) {
-        const supabase = createClient();
         const { error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
@@ -35,7 +34,6 @@ export default function ResetPasswordPage() {
           setSessionReady(true);
         }
       } else {
-        const supabase = createClient();
         const { data } = await supabase.auth.getSession();
         if (data.session) {
           setSessionReady(true);
@@ -60,7 +58,6 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {

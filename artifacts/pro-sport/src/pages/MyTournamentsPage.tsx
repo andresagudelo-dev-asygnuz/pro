@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getMyTournaments, getRegisteredTournaments, type TournamentRow } from "@/lib/tournaments/api";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
 import { Trophy, Plus } from "lucide-react";
 
-const supabase = createClient();
 
 const STATUS_LABELS: Record<string, string> = {
   borrador: "Borrador",

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getAllCanchas } from "@/lib/canchas/api";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,6 @@ import {
 } from "@/lib/types/db";
 import { Search, Plus, MapPin, Users } from "lucide-react";
 
-const supabase = createClient();
 
 function CanchaCard({ cancha }: { cancha: Cancha }) {
   const finalPrice =
