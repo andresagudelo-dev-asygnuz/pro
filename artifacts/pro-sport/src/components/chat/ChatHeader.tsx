@@ -1,6 +1,13 @@
 import { useLocation } from "wouter";
-import { ArrowLeft, Info, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck, MoreVertical, Info, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { initialsFromName } from "@/lib/format";
 import { Building2, Trophy, Users, User, MessageCircle } from "lucide-react";
@@ -20,6 +27,8 @@ interface ChatHeaderProps {
   avatarUrl?: string | null;
   hasVerifiedUser?: boolean;
   backPath?: string;
+  onInfo?: () => void;
+  onDelete?: () => void;
 }
 
 export function ChatHeader({
@@ -29,6 +38,8 @@ export function ChatHeader({
   avatarUrl,
   hasVerifiedUser,
   backPath = "/chat",
+  onInfo,
+  onDelete,
 }: ChatHeaderProps) {
   const [, setLocation] = useLocation();
 
@@ -44,11 +55,8 @@ export function ChatHeader({
 
         {/* Avatar with type badge */}
         <div className="relative shrink-0">
-          <Avatar className="size-11 border-2 border-brand-primary/20 p-0.5 bg-white dark:bg-zinc-800">
-            {avatarUrl && <AvatarFallback className="hidden" />}
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={title} className="rounded-full object-cover" />
-            ) : null}
+          <Avatar className="size-11 ring-2 ring-brand-primary/20">
+            <AvatarImage src={avatarUrl ?? undefined} />
             <AvatarFallback className="text-sm font-black italic bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
               {initialsFromName(title)}
             </AvatarFallback>
@@ -86,9 +94,33 @@ export function ChatHeader({
           )}
         </div>
 
-        <button className="w-10 h-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0">
-          <Info className="size-5" />
-        </button>
+        {(onInfo || onDelete) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-10 h-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0">
+                <MoreVertical className="size-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {onInfo && (
+                <DropdownMenuItem onClick={onInfo}>
+                  <Info className="size-4 mr-2" />
+                  Ver detalles
+                </DropdownMenuItem>
+              )}
+              {onInfo && onDelete && <DropdownMenuSeparator />}
+              {onDelete && (
+                <DropdownMenuItem
+                  onClick={onDelete}
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                  <Trash2 className="size-4 mr-2" />
+                  Eliminar conversación
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );

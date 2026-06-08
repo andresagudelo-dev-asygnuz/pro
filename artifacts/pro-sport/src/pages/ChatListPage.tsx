@@ -3,7 +3,7 @@ import { useLocation, Link } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { listConversations, getOrCreateConversation, type ConversationWithLastMessage } from "@/lib/chat/api";
+import { listConversations, type ConversationWithLastMessage } from "@/lib/chat/api";
 import { PageHeader } from "@/components/PageHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -100,21 +100,15 @@ export default function ChatListPage() {
 
   async function handleStartChat(friend: FriendWithProfile["profile"]) {
     if (!user) return;
-    const { data: convData, error } = await getOrCreateConversation(
-      supabase,
-      "friend",
-      [user.id, friend.id].sort().join(":"),
-      [user.id, friend.id],
-      friend.full_name ?? friend.username ?? "Chat",
-      undefined,
-      { friend_id: friend.id }
-    );
+    const { data: convId, error } = await supabase.rpc("get_or_create_friend_conversation", {
+      other_user_id: friend.id,
+    });
 
-    if (error) {
+    if (error || !convId) {
       toast.error("No se pudo iniciar el chat.");
-    } else if (convData) {
+    } else {
       setIsNewChatOpen(false);
-      setLocation(`/chat/${convData.id}`);
+      setLocation(`/chat/${convId as string}`);
     }
   }
 

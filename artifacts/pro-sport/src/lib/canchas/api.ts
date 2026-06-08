@@ -20,7 +20,7 @@ function generateSlots(opensAt: string, closesAt: string, durationMinutes = 60):
 
 export async function getAllCanchas(
   supabase: SupabaseClient,
-  filters?: { city?: string; sportType?: CanchaSportType | ""; sportTypes?: CanchaSportType[] },
+  filters?: { city?: string; sportType?: CanchaSportType | ""; sportTypes?: CanchaSportType[]; venueId?: string },
 ): Promise<ApiResult<Cancha[]>> {
   let query = supabase.from("canchas").select("*").eq("is_active", true).order("name");
   if (filters?.city) query = query.ilike("city", `%${filters.city}%`);
@@ -29,6 +29,7 @@ export async function getAllCanchas(
   } else if (filters?.sportType) {
     query = query.eq("sport_type", filters.sportType);
   }
+  if (filters?.venueId) query = query.eq("venue_id", filters.venueId);
   const { data, error } = await query;
   if (error) return { error: mapDbError(error), data: null };
   return { error: null, data: (data ?? []) as Cancha[] };
@@ -68,6 +69,9 @@ export type CanchaInput = {
   is_active: boolean;
   phone?: string;
   whatsapp?: string;
+  venue_id?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export async function createCancha(

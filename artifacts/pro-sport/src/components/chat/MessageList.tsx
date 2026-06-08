@@ -145,10 +145,8 @@ export function MessageList({
                     {!isMe && (
                       <div className="w-8 shrink-0 mb-0.5">
                         {showAvatar && (
-                          <Avatar className="size-8 border border-border/50 shadow-sm">
-                            {otherProfile?.avatar_url && (
-                              <AvatarImage src={otherProfile.avatar_url} />
-                            )}
+                          <Avatar className="size-8 ring-1 ring-border/60">
+                            <AvatarImage src={otherProfile?.avatar_url ?? undefined} />
                             <AvatarFallback className="text-[10px] font-black italic bg-zinc-200 dark:bg-zinc-800">
                               {initialsFromName(displayName)}
                             </AvatarFallback>
@@ -199,10 +197,8 @@ export function MessageList({
                     {isMe && (
                       <div className="w-8 shrink-0 mb-0.5">
                         {showAvatar && (
-                          <Avatar className="size-8 border-2 border-brand-primary/20 p-0.5 bg-white dark:bg-zinc-800 shadow-sm">
-                            {myProfile?.avatar_url && (
-                              <AvatarImage src={myProfile.avatar_url} />
-                            )}
+                          <Avatar className="size-8 ring-2 ring-brand-primary/25">
+                            <AvatarImage src={myProfile?.avatar_url ?? undefined} />
                             <AvatarFallback className="text-[10px] font-black italic bg-brand-primary/10 text-brand-primary">
                               {initialsFromName(
                                 myProfile?.full_name ?? myProfile?.username ?? null

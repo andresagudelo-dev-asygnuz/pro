@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifCount } from "@/context/NotifContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -16,6 +17,8 @@ import {
   Shield,
   LogOut,
   ChevronRight,
+  UserSearch,
+  Bell,
 } from "lucide-react";
 
 
@@ -27,12 +30,15 @@ const NAV_ITEMS = [
 ];
 
 const QUICK_ITEMS = [
-  { href: "/amigos",  label: "Mis amigos",  icon: Users,  description: "Tus conexiones y solicitudes" },
-  { href: "/equipos", label: "Mis equipos", icon: Shield, description: "Equipos en los que participás" },
+  { href: "/notificaciones", label: "Notificaciones", icon: Bell,       description: "Solicitudes, invitaciones y alertas" },
+  { href: "/jugadores",      label: "Jugadores",       icon: UserSearch, description: "Descubrí jugadores por nivel y posición" },
+  { href: "/amigos",         label: "Mis amigos",      icon: Users,      description: "Tus conexiones y solicitudes" },
+  { href: "/equipos",        label: "Mis equipos",     icon: Shield,     description: "Equipos en los que participás" },
 ];
 
 export function NavDrawer() {
   const { profile } = useAuth();
+  const { unreadCount } = useNotifCount();
   const [, navigate] = useLocation();
   const [open, setOpen] = useState(false);
 
@@ -51,10 +57,13 @@ export function NavDrawer() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex h-9 w-9 items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
+        className="relative flex h-9 w-9 items-center justify-center rounded-xl hover:bg-muted transition-colors shrink-0"
         aria-label="Abrir menú"
       >
         <Menu className="size-5" />
+        {unreadCount > 0 && (
+          <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white dark:border-zinc-900" />
+        )}
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>

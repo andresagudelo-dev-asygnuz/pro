@@ -306,6 +306,23 @@ export interface Cancha {
   is_active: boolean;
   phone: string | null;
   whatsapp: string | null;
+  venue_id: string | null;
+  lat: number | null;
+  lng: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Venue {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  lat: number | null;
+  lng: number | null;
+  description: string | null;
+  phone: string | null;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }

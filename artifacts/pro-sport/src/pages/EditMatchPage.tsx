@@ -1,17 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getAllCanchas, getAvailableSlots, createBooking, updateBookingStatus } from "@/lib/canchas/api";
+import { getVenuesByCity } from "@/lib/venues/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SKILL_LEVELS, ENABLED_CITIES, SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, SPORT_ID_TO_CANCHA_TYPES, type Cancha, type TimeSlot, type Match, type CanchaBooking, type Sport } from "@/lib/types/db";
-import { ArrowLeft, ArrowRight, Building2, MapPin, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { SKILL_LEVELS, ENABLED_CITIES, SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, SPORT_ID_TO_CANCHA_TYPES, type Cancha, type TimeSlot, type Match, type CanchaBooking, type Sport, type Venue } from "@/lib/types/db";
+import { ArrowLeft, ArrowRight, Building2, MapPin, Clock, AlertTriangle, CheckCircle2, Map, List } from "lucide-react";
 import { NavDrawer } from "@/components/NavDrawer";
 import { BottomNav } from "@/components/BottomNav";
+const VenueCanchaPickerMap = lazy(() =>
+  import("@/components/matches/VenueCanchaPickerMap").then((m) => ({ default: m.VenueCanchaPickerMap }))
+);
 import { toast } from "sonner";
 
 type FullBooking = CanchaBooking & { canchas?: { name: string; address: string; city: string } | null };
@@ -44,6 +48,10 @@ export default function EditMatchPage() {
   const [city, setCity] = useState("");
   const [manualAddress, setManualAddress] = useState("");
   const [canchas, setCanchas] = useState<Cancha[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [venueFilter, setVenueFilter] = useState<string>("__all__");
+  const [venueView, setVenueView] = useState<"map" | "list">("map");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [loadingCanchas, setLoadingCanchas] = useState(false);
   const [selectedCancha, setSelectedCancha] = useState<Cancha | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
@@ -75,9 +83,19 @@ export default function EditMatchPage() {
 
   useEffect(() => {
     if (!city || !match) return;
-    setLoadingCanchas(true); setSelectedCancha(null); setSelectedSlot(null);
+    setLoadingCanchas(true); setSelectedCancha(null); setSelectedSlot(null); setVenueFilter("__all__");
     getAllCanchas(supabase, { city, sportTypes: SPORT_ID_TO_CANCHA_TYPES[match.sport_id] ?? [] }).then(({ data }) => { setCanchas(data ?? []); setLoadingCanchas(false); });
+    getVenuesByCity(supabase, city).then(({ data }) => setVenues(data ?? []));
   }, [city, match]);
+
+  useEffect(() => {
+    if (step === 2 && !userLocation) {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {}
+      );
+    }
+  }, [step]);
 
   useEffect(() => {
     if (!selectedCancha || !dateStr) { setSlots([]); return; }
@@ -264,25 +282,131 @@ export default function EditMatchPage() {
               )}
 
               {city && (
-                <div className="space-y-3 border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-800/40">
-                  <div className="flex items-center gap-2"><Building2 className="size-4 text-muted-foreground" /><p className="text-sm font-semibold">Canchas en {city}{sport && <span className="ml-1 text-muted-foreground font-normal">· {sport.icon} {sport.name}</span>}</p></div>
-                  {loadingCanchas ? <div className="flex justify-center py-4"><div className="w-6 h-6 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" /></div>
-                    : canchas.length === 0 ? <p className="text-sm text-muted-foreground py-1">{sportTypes.length > 0 ? `No hay canchas de ${sport?.name ?? "este deporte"} registradas en ${city}.` : `No hay canchas registradas en ${city}.`}</p>
-                    : <div className="space-y-2">{canchas.map((c) => (
-                      <button type="button" key={c.id} onClick={() => setSelectedCancha(selectedCancha?.id === c.id ? null : c)} className={`w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-all text-left ${selectedCancha?.id === c.id ? "border-violet-500 bg-violet-500/5 shadow-sm" : "border-border hover:border-foreground/30 bg-white dark:bg-zinc-900"}`}>
-                        <div className="flex items-center gap-3 min-w-0"><span className="text-2xl shrink-0">{SPORT_TYPE_ICONS[c.sport_type]}</span><div className="min-w-0"><p className="font-semibold leading-tight truncate">{c.name}</p><p className="text-xs text-muted-foreground truncate">{SPORT_TYPE_LABELS[c.sport_type]} · {c.capacity} jug. · {c.address}</p></div></div>
-                        <p className="font-bold text-violet-600 text-sm shrink-0">${(c.discount_percent > 0 ? c.price_per_hour * (1 - c.discount_percent / 100) : c.price_per_hour).toLocaleString("es-CO")}/h</p>
+                <div className="space-y-3">
+                  {/* Header + toggle */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="size-4 text-muted-foreground" />
+                      <p className="text-sm font-semibold">
+                        Canchas en {city}
+                        {sport && <span className="ml-1 text-muted-foreground font-normal">· {sport.icon} {sport.name}</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setVenueView("map")}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${venueView === "map" ? "bg-white dark:bg-zinc-700 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <Map className="size-3" /> Mapa
                       </button>
-                    ))}</div>}
+                      <button
+                        type="button"
+                        onClick={() => setVenueView("list")}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${venueView === "list" ? "bg-white dark:bg-zinc-700 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <List className="size-3" /> Lista
+                      </button>
+                    </div>
+                  </div>
+
+                  {loadingCanchas ? (
+                    <div className="flex justify-center py-8"><div className="w-6 h-6 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" /></div>
+                  ) : canchas.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">{sportTypes.length > 0 ? `No hay canchas de ${sport?.name ?? "este deporte"} registradas en ${city}.` : `No hay canchas registradas en ${city}.`}</p>
+                  ) : (
+                    <>
+                      {/* Venue filter chips */}
+                      {venues.length > 0 && (
+                        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+                          <button
+                            type="button"
+                            onClick={() => setVenueFilter("__all__")}
+                            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${venueFilter === "__all__" ? "bg-violet-600 text-white border-violet-600" : "bg-white dark:bg-zinc-900 border-border text-muted-foreground hover:border-foreground/40"}`}
+                          >
+                            Todas
+                          </button>
+                          {venues.map((v) => (
+                            <button
+                              type="button"
+                              key={v.id}
+                              onClick={() => setVenueFilter(venueFilter === v.id ? "__all__" : v.id)}
+                              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${venueFilter === v.id ? "bg-violet-600 text-white border-violet-600" : "bg-white dark:bg-zinc-900 border-border text-muted-foreground hover:border-foreground/40"}`}
+                            >
+                              {v.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {venueView === "map" && (
+                        <div className="rounded-xl overflow-hidden border border-border/60 shadow-sm">
+                          <Suspense fallback={<div className="flex justify-center items-center h-[300px] bg-zinc-100 dark:bg-zinc-800"><div className="w-6 h-6 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" /></div>}>
+                            <VenueCanchaPickerMap
+                              canchas={venueFilter === "__all__" ? canchas : canchas.filter((c) => c.venue_id === venueFilter)}
+                              venues={venues}
+                              userLocation={userLocation}
+                              selectedCanchaId={selectedCancha?.id ?? null}
+                              onSelectCancha={(c) => setSelectedCancha(selectedCancha?.id === c.id ? null : c)}
+                              height="300px"
+                            />
+                          </Suspense>
+                        </div>
+                      )}
+                      {venueView === "list" && (
+                        <div className="space-y-2">
+                          {(venueFilter === "__all__" ? canchas : canchas.filter((c) => c.venue_id === venueFilter)).map((c) => (
+                            <button
+                              type="button"
+                              key={c.id}
+                              onClick={() => setSelectedCancha(selectedCancha?.id === c.id ? null : c)}
+                              className={`w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-all text-left ${selectedCancha?.id === c.id ? "border-violet-500 bg-violet-500/5 shadow-sm" : "border-border hover:border-foreground/30 bg-white dark:bg-zinc-900"}`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="text-2xl shrink-0">{SPORT_TYPE_ICONS[c.sport_type]}</span>
+                                <div className="min-w-0">
+                                  <p className="font-semibold leading-tight truncate">{c.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{SPORT_TYPE_LABELS[c.sport_type]} · {c.capacity} jug. · {c.address}</p>
+                                </div>
+                              </div>
+                              <p className="font-bold text-violet-600 text-sm shrink-0">${(c.discount_percent > 0 ? c.price_per_hour * (1 - c.discount_percent / 100) : c.price_per_hour).toLocaleString("es-CO")}/h</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Selected cancha: time slots */}
                   {selectedCancha && (
-                    <div className="mt-3 pt-3 border-t border-border/40">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5"><Clock className="size-3.5" /> Horarios disponibles</p>
-                      {loadingSlots ? <div className="flex justify-center py-3"><div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>
-                        : slots.filter((s) => s.isAvailable).length === 0 ? <p className="text-xs text-muted-foreground">No hay horarios disponibles para esta fecha.</p>
-                        : <div className="grid grid-cols-3 gap-1.5">{slots.filter((s) => s.isAvailable).map((slot) => (
-                          <button key={slot.start} type="button" onClick={() => setSelectedSlot(selectedSlot?.start === slot.start ? null : slot)} className={`rounded-lg py-2 text-xs font-semibold border transition-all ${selectedSlot?.start === slot.start ? "bg-violet-600 text-white border-violet-600" : "border-border hover:border-violet-400 hover:text-violet-600 bg-white dark:bg-zinc-900"}`}>{slot.start}</button>
-                        ))}</div>}
-                      {fieldErrors.slot && <p className="text-xs text-destructive mt-1">{fieldErrors.slot}</p>}
+                    <div className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-800/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">{selectedCancha.name}</p>
+                        <button type="button" onClick={() => { setSelectedCancha(null); setSelectedSlot(null); }} className="text-xs text-muted-foreground hover:text-destructive transition-colors">Quitar</button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{SPORT_TYPE_LABELS[selectedCancha.sport_type]} · {selectedCancha.capacity} jug. · {selectedCancha.address}</p>
+                      <div className="border-t pt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5"><Clock className="size-3.5" /> Horarios disponibles</p>
+                        {loadingSlots ? (
+                          <div className="flex justify-center py-3"><div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>
+                        ) : slots.filter((s) => s.isAvailable).length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No hay horarios disponibles para esta fecha.</p>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {slots.filter((s) => s.isAvailable).map((slot) => (
+                              <button
+                                key={slot.start}
+                                type="button"
+                                onClick={() => setSelectedSlot(selectedSlot?.start === slot.start ? null : slot)}
+                                className={`rounded-lg py-2 text-xs font-semibold border transition-all ${selectedSlot?.start === slot.start ? "bg-violet-600 text-white border-violet-600" : "border-border hover:border-violet-400 hover:text-violet-600 bg-white dark:bg-zinc-900"}`}
+                              >
+                                {slot.start}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {fieldErrors.slot && <p className="text-xs text-destructive mt-1">{fieldErrors.slot}</p>}
+                      </div>
                     </div>
                   )}
                 </div>

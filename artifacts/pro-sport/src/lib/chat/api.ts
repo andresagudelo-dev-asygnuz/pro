@@ -34,6 +34,11 @@ export interface ChatMessage {
 }
 
 // ── Get or create a conversation ─────────────────────────────────────────────
+// For peer chats (friend/direct): referenceId is ignored — we look up by participant
+// intersection to avoid inserting non-UUID strings into a UUID column.
+// For reference-based chats (booking/match/tournament): referenceId must be a UUID.
+// INSERT never chains .select() — RLS SELECT requires being a participant, which is
+// set up only after the insert, so we generate the ID client-side instead.
 export async function getOrCreateConversation(
   supabase: SupabaseClient,
   type: ConversationType,
@@ -43,30 +48,70 @@ export async function getOrCreateConversation(
   subtitle?: string,
   metadata?: Record<string, unknown>
 ): Promise<{ data: { id: string } | null; error: string | null }> {
-  const { data: existing } = await supabase
+  const isPeer = type === "friend" || type === "direct";
+
+  if (isPeer) {
+    // Find existing conversation between these exact two participants of this type
+    const sorted = [...new Set(participantIds)].sort();
+    const { data: parts1 } = await supabase
+      .from("conversation_participants")
+      .select("conversation_id")
+      .eq("user_id", sorted[0]);
+
+    if (parts1 && parts1.length > 0) {
+      const ids1 = (parts1 as Array<{ conversation_id: string }>).map((p) => p.conversation_id);
+      const { data: shared } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", sorted[1])
+        .in("conversation_id", ids1);
+
+      if (shared && shared.length > 0) {
+        const sharedIds = (shared as Array<{ conversation_id: string }>).map((p) => p.conversation_id);
+        const { data: existing } = await supabase
+          .from("conversations")
+          .select("id")
+          .eq("type", type)
+          .in("id", sharedIds)
+          .limit(1)
+          .maybeSingle();
+        if (existing) return { data: existing as { id: string }, error: null };
+      }
+    }
+  } else {
+    // Reference-based conversation: look up by reference_id (must be a valid UUID)
+    const { data: existing } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("type", type)
+      .eq("reference_id", referenceId)
+      .maybeSingle();
+    if (existing) return { data: existing as { id: string }, error: null };
+  }
+
+  // Generate ID client-side to avoid .select() after insert (RLS blocks reading
+  // the row before participants are added)
+  const newId = crypto.randomUUID();
+  const { error: convErr } = await supabase
     .from("conversations")
-    .select("id")
-    .eq("type", type)
-    .eq("reference_id", referenceId)
-    .maybeSingle();
+    .insert({
+      id: newId,
+      type,
+      reference_id: isPeer ? null : referenceId,
+      title,
+      subtitle: subtitle ?? null,
+      metadata: metadata ?? {},
+    });
 
-  if (existing) return { data: existing, error: null };
-
-  const { data: conv, error: convErr } = await supabase
-    .from("conversations")
-    .insert({ type, reference_id: referenceId, title, subtitle: subtitle ?? null, metadata: metadata ?? {} })
-    .select("id")
-    .single();
-
-  if (convErr || !conv) return { data: null, error: convErr ? mapDbError(convErr, "conversation_create") : "Error creando conversación" };
+  if (convErr) return { data: null, error: mapDbError(convErr, "conversation_create") };
 
   const unique = [...new Set(participantIds)];
   const { error: partErr } = await supabase
     .from("conversation_participants")
-    .insert(unique.map((uid) => ({ conversation_id: conv.id, user_id: uid })));
+    .insert(unique.map((uid) => ({ conversation_id: newId, user_id: uid })));
 
   if (partErr) return { data: null, error: mapDbError(partErr, "conversation_participants_insert") };
-  return { data: conv, error: null };
+  return { data: { id: newId }, error: null };
 }
 
 // ── Get all conversations for a user ─────────────────────────────────────────
@@ -354,6 +399,18 @@ export async function listMessages(
     messages.length === limit ? messages[0].created_at : null;
 
   return { data: messages, error: null, nextCursor };
+}
+
+// ── Leave / delete a conversation (removes current user from participants) ────
+// Uses a SECURITY DEFINER RPC to bypass RLS restrictions on conversation_participants.
+export async function leaveConversation(
+  supabase: SupabaseClient,
+  conversationId: string,
+  _userId: string
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc("leave_conversation", { conv_id: conversationId });
+  if (error) return { error: mapDbError(error, "leave_conversation") };
+  return { error: null };
 }
 
 // ── Real-time subscription to new messages in a conversation ──────────────────

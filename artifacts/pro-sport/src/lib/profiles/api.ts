@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapDbError } from "@/lib/errors/map-db-error";
 import type {
+  Profile,
   ProfileMorpho,
   ProfileConditional,
   ProfileTechnicalFootball,
@@ -8,6 +9,61 @@ import type {
 } from "@/lib/types/db";
 
 type ApiResult<T> = { data: T | null; error: string | null };
+type PaginatedResult<T> = { data: T | null; error: string | null; nextCursor: string | null };
+
+export interface PlayerSearchFilters {
+  city?: string;
+  skill_level?: string;
+  position?: string;
+}
+
+export async function searchPlayers(
+  supabase: SupabaseClient,
+  filters: PlayerSearchFilters,
+  options: { cursor?: string; limit?: number }
+): Promise<PaginatedResult<Profile[]>> {
+  const limit = options.limit ?? 20;
+
+  const { data: playerRoles, error: rolesErr } = await supabase
+    .from("user_roles")
+    .select("user_id")
+    .eq("is_player", true);
+
+  if (rolesErr) return { data: null, error: mapDbError(rolesErr, "search_players_roles"), nextCursor: null };
+
+  const playerIds = (playerRoles ?? []).map((r: { user_id: string }) => r.user_id);
+  if (playerIds.length === 0) return { data: [], error: null, nextCursor: null };
+
+  let query = supabase
+    .from("profiles")
+    .select(
+      "id, username, full_name, avatar_url, city, primary_sport_id, primary_skill_level, position, preferred_foot, rating_avg, rating_count, matches_played, skill_pace, skill_shooting, skill_passing, skill_dribbling, skill_defending, skill_physical, created_at, updated_at, banner_url, bio, tournament_goals, tournament_matches, business_name, business_phone, business_whatsapp, business_website"
+    )
+    .in("id", playerIds)
+    .order("matches_played", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (filters.city) {
+    query = query.ilike("city", `%${filters.city}%`);
+  }
+  if (filters.skill_level) {
+    query = query.eq("primary_skill_level", filters.skill_level);
+  }
+  if (filters.position) {
+    query = query.eq("position", filters.position);
+  }
+  if (options.cursor) {
+    query = query.lt("created_at", options.cursor);
+  }
+
+  const { data, error } = await query;
+  if (error) return { data: null, error: mapDbError(error, "search_players"), nextCursor: null };
+
+  const players = (data ?? []) as Profile[];
+  const nextCursor = players.length === limit ? players[players.length - 1].created_at : null;
+  return { data: players, error: null, nextCursor };
+}
 
 type ProfileBlocks = {
   morpho: ProfileMorpho | null;

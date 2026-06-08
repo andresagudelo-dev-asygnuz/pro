@@ -70,7 +70,7 @@ export default function CanchaDetailPage() {
         ? cancha.price_per_hour * (1 - cancha.discount_percent / 100)
         : cancha.price_per_hour;
 
-    const { error } = await createBooking(
+    const { data: createdBooking, error } = await createBooking(
       supabase,
       {
         cancha_id: cancha.id,
@@ -86,9 +86,6 @@ export default function CanchaDetailPage() {
     if (error) {
       setBookingError(error);
     } else {
-      setBooked(true);
-      setSelectedSlot(null);
-      toast.success("¡Reserva enviada! El dueño de la cancha confirmará en breve.");
       // Notify cancha owner about new booking request
       const { data: bookerProfile } = await supabase
         .from("profiles")
@@ -106,9 +103,15 @@ export default function CanchaDetailPage() {
           || "Un usuario",
         booker_id: user.id,
       });
-      getAvailableSlots(supabase, cancha.id, selectedDate).then(({ data }) => {
-        setSlots(data ?? []);
+      // Redirect to create match with pre-selected booking
+      const bookingParams = new URLSearchParams({
+        booking_id: createdBooking!.id,
+        cancha_id: cancha.id,
+        date: selectedDate,
+        start: selectedSlot!.start,
+        end: selectedSlot!.end,
       });
+      setLocation(`/matches/new?${bookingParams.toString()}`);
     }
     setBooking(false);
   }

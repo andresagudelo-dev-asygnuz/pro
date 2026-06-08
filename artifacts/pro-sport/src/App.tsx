@@ -43,6 +43,7 @@ const TournamentRegisterPage     = lazy(() => import("@/pages/TournamentRegister
 const TournamentRegistrationsPage = lazy(() => import("@/pages/TournamentRegistrationsPage"));
 
 const CanchasPage                = lazy(() => import("@/pages/CanchasPage"));
+const VenueDetailPage            = lazy(() => import("@/pages/VenueDetailPage"));
 const CanchaDetailPage           = lazy(() => import("@/pages/CanchaDetailPage"));
 const MisCanchasPage             = lazy(() => import("@/pages/MisCanchasPage"));
 const NuevaCanchaPage            = lazy(() => import("@/pages/NuevaCanchaPage"));
@@ -60,6 +61,7 @@ const ChatListPage               = lazy(() => import("@/pages/ChatListPage"));
 const ChatDetailPage             = lazy(() => import("@/pages/ChatDetailPage"));
 
 const FriendsPage                = lazy(() => import("@/pages/FriendsPage"));
+const JugadoresPage              = lazy(() => import("@/pages/JugadoresPage"));
 const TeamsPage                  = lazy(() => import("@/pages/TeamsPage"));
 const NewTeamPage                = lazy(() => import("@/pages/NewTeamPage"));
 const TeamDetailPage             = lazy(() => import("@/pages/TeamDetailPage"));
@@ -67,13 +69,7 @@ const TeamDetailPage             = lazy(() => import("@/pages/TeamDetailPage"));
 const AdminVenuesPage            = lazy(() => import("@/pages/AdminVenuesPage"));
 const AdminVerificationsPage     = lazy(() => import("@/pages/AdminVerificationsPage"));
 
-function PageLoader() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-      <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-}
+import { PageLoader } from "@/components/ui/PageLoader";
 
 const queryClient = new QueryClient();
 
@@ -212,6 +208,9 @@ function Router() {
         <Route path="/canchas/:id">
           <ErrorBoundary><CanchaDetailPage /></ErrorBoundary>
         </Route>
+        <Route path="/venues/:id">
+          <ErrorBoundary><Suspense fallback={null}><VenueDetailPage /></Suspense></ErrorBoundary>
+        </Route>
 
         {/* Chat */}
         <Route path="/chat/:id">
@@ -219,6 +218,10 @@ function Router() {
         </Route>
         <Route path="/chat">
           <ErrorBoundary><ProtectedRoute component={ChatListPage} /></ErrorBoundary>
+        </Route>
+
+        <Route path="/jugadores">
+          <ErrorBoundary><ProtectedRoute component={JugadoresPage} /></ErrorBoundary>
         </Route>
 
         <Route path="/amigos">

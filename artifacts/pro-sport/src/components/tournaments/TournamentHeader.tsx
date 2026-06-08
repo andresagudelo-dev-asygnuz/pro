@@ -4,6 +4,7 @@ const STATUS_LABELS: Record<TournamentRow["status"], string> = {
   borrador: "Borrador",
   abierto_inscripciones: "Abierto a inscripciones",
   cerrado_inscripciones: "Inscripciones cerradas",
+  in_progress: "En curso",
   cancelado: "Cancelado",
   finalizado: "Finalizado",
 };
@@ -12,6 +13,7 @@ const STATUS_STYLES: Record<TournamentRow["status"], string> = {
   borrador: "bg-muted text-muted-foreground",
   abierto_inscripciones: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
   cerrado_inscripciones: "bg-amber-500/15 text-amber-700",
+  in_progress: "bg-blue-500/15 text-blue-700",
   cancelado: "bg-destructive/15 text-destructive",
   finalizado: "bg-green-500/15 text-green-700",
 };

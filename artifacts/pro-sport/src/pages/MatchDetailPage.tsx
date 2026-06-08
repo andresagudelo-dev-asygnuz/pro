@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { ArrowLeft, Clock, Mail, Lock, X } from "lucide-react";
 import { toast } from "sonner";
 import { getFriends, sendMatchInvitations } from "@/lib/friends/api";
+import { sendNotification } from "@/lib/notifications/api";
 import { checkMatchConflict } from "@/lib/matches/conflicts";
 import type { FriendWithProfile } from "@/lib/friends/api";
 import { useMatchDetail, type FullBooking } from "@/hooks/useMatchDetail";
@@ -17,7 +18,7 @@ import { MatchPlayersSection } from "@/components/matches/MatchPlayersSection";
 import { MatchChatSection } from "@/components/matches/MatchChatSection";
 
 export default function MatchDetailPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
 
@@ -146,10 +147,22 @@ export default function MatchDetailPage() {
   async function handleSendInvites() {
     if (!match || !user || selectedFriendIds.size === 0) return;
     setSendingInvites(true);
-    const { error: invErr } = await sendMatchInvitations(supabase, match.id, user.id, Array.from(selectedFriendIds));
+    const inviteeIds = Array.from(selectedFriendIds);
+    const { error: invErr } = await sendMatchInvitations(supabase, match.id, user.id, inviteeIds);
     if (invErr) { toast.error("Error al enviar invitaciones."); }
     else {
-      toast.success(`Invitaciones enviadas a ${selectedFriendIds.size} jugador${selectedFriendIds.size !== 1 ? "es" : ""}.`);
+      const inviterName = profile?.full_name ?? organizer?.full_name ?? "Alguien";
+      await Promise.allSettled(
+        inviteeIds.map((inviteeId) =>
+          sendNotification(supabase, inviteeId, "match_invite", {
+            match_id: match.id,
+            match_title: match.title,
+            inviter_id: user.id,
+            inviter_name: inviterName,
+          })
+        )
+      );
+      toast.success(`Invitaciones enviadas a ${inviteeIds.length} jugador${inviteeIds.length !== 1 ? "es" : ""}.`);
       setShowInvitePanel(false);
       setSelectedFriendIds(new Set());
     }

@@ -55,6 +55,7 @@ export default function TournamentDetailPage() {
             onPublish={mutations.publish}
             onCloseRegistrations={mutations.closeRegs}
             onGenerateFixture={mutations.generateFixture}
+            onStart={mutations.start}
             onFinalize={mutations.finalize}
             isLoading={mutations.isLoading}
           />

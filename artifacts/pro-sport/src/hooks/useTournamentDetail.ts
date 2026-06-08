@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import { getTournamentById, publishTournament, closeRegistrations, finalizeTournament } from "@/lib/tournaments/api";
+import { getTournamentById, publishTournament, closeRegistrations, startTournament, finalizeTournament } from "@/lib/tournaments/api";
 import { listRegistrations } from "@/lib/tournaments/registrations";
 import { generateFixture } from "@/lib/tournaments/fixtures";
 
@@ -60,6 +60,14 @@ export function useTournamentDetail(id: string) {
     onSuccess: invalidateTournament,
   });
 
+  const startMutation = useMutation({
+    mutationFn: () => {
+      if (!user) throw new Error("No autenticado");
+      return startTournament(supabase, id, user.id);
+    },
+    onSuccess: invalidateTournament,
+  });
+
   const finalizeMutation = useMutation({
     mutationFn: () => {
       if (!user) throw new Error("No autenticado");
@@ -72,6 +80,7 @@ export function useTournamentDetail(id: string) {
     publishMutation.isPending ||
     closeRegsMutation.isPending ||
     generateFixtureMutation.isPending ||
+    startMutation.isPending ||
     finalizeMutation.isPending;
 
   return {
@@ -84,6 +93,7 @@ export function useTournamentDetail(id: string) {
       publish: publishMutation.mutate,
       closeRegs: closeRegsMutation.mutate,
       generateFixture: generateFixtureMutation.mutate,
+      start: startMutation.mutate,
       finalize: finalizeMutation.mutate,
       isLoading: mutationsLoading,
     },

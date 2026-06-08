@@ -52,14 +52,37 @@ export function buildRoundRobinPairings(registrationIds: string[]): FixturePairi
   return pairings;
 }
 
+export function buildKnockoutPairings(registrationIds: string[]): FixturePairing[] {
+  const n = registrationIds.length;
+  if (n < 2) return [];
+
+  // Find next power of 2
+  let bracket = 2;
+  while (bracket < n) bracket *= 2;
+
+  // Fill with nulls (byes)
+  const seeds: (string | null)[] = [...registrationIds];
+  while (seeds.length < bracket) seeds.push(null);
+
+  const pairings: FixturePairing[] = [];
+  let fixtureOrder = 1;
+  const half = bracket / 2;
+
+  for (let i = 0; i < half; i++) {
+    const home = seeds[i];
+    const away = seeds[bracket - 1 - i];
+    if (home === null || away === null) continue;
+    pairings.push({ round: 1, homeId: home, awayId: away, fixtureOrder: fixtureOrder++ });
+  }
+
+  return pairings;
+}
+
 export async function generateFixture(
   supabase: SupabaseClient,
   tournamentId: string,
   format: "liga" | "eliminatoria" | "fase_grupos_eliminatoria",
 ): Promise<ApiResult<MatchRow[]>> {
-  if (format !== "liga") {
-    return { data: null, error: "Formato no soportado en esta versión." };
-  }
 
   // Idempotencia: no regenerar si ya hay matches
   const { count, error: countErr } = await supabase
@@ -84,7 +107,14 @@ export async function generateFixture(
     return { data: null, error: "Se necesitan al menos 2 equipos para generar el fixture." };
   }
 
-  const pairings = buildRoundRobinPairings(ids);
+  let pairings: FixturePairing[];
+  if (format === "liga") {
+    pairings = buildRoundRobinPairings(ids);
+  } else if (format === "eliminatoria") {
+    pairings = buildKnockoutPairings(ids);
+  } else {
+    return { data: null, error: "El formato 'fase_grupos_eliminatoria' requiere configuración de grupos." };
+  }
   const rows = pairings.map((p) => ({
     tournament_id: tournamentId,
     round: p.round,

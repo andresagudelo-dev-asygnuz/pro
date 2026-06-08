@@ -119,6 +119,9 @@ export async function getFeedMatches(
   if (filters.sport_id) {
     query = query.eq("sport_id", filters.sport_id);
   }
+  if (filters.skill_level) {
+    query = query.eq("skill_level", filters.skill_level);
+  }
 
   const { data, error } = await query;
   if (error) return { data: null, error: mapDbError(error, "feed_matches"), nextCursor: null };

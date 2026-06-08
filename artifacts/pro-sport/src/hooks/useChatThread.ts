@@ -1,48 +1,75 @@
-import { useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { listMessages, sendMessage, subscribeToConversation, type MessageWithSender } from "@/lib/chat/api";
+
+type MessagesPage = {
+  messages: MessageWithSender[];
+  nextCursor: string | null;
+};
+
+type InfiniteData = {
+  pages: MessagesPage[];
+  pageParams: (string | undefined)[];
+};
 
 export function useChatThread(conversationId: string, currentUserId: string) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const queryKey = ["messages", conversationId];
 
-  const {
-    data,
-    isLoading,
-    error: queryError,
-  } = useQuery({
+  const infiniteQuery = useInfiniteQuery<MessagesPage, Error, InfiniteData, string[], string | undefined>({
     queryKey,
-    queryFn: async () => {
-      const res = await listMessages(supabase, conversationId, { limit: 50 });
-      return res.data ?? [];
+    queryFn: async ({ pageParam }) => {
+      const res = await listMessages(supabase, conversationId, {
+        limit: 50,
+        cursor: pageParam,
+      });
+      return {
+        messages: res.data ?? [],
+        nextCursor: res.nextCursor ?? null,
+      };
     },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined,
     enabled: !!conversationId,
   });
 
-  // Real-time subscription — appends new messages to cache
+  // Flatten pages: pages[0] = latest messages, pages[1] = older, etc.
+  // Reverse so oldest pages appear first (top of the chat)
+  const messages = useMemo(() => {
+    const allPages = infiniteQuery.data?.pages ?? [];
+    return [...allPages].reverse().flatMap((p) => p.messages);
+  }, [infiniteQuery.data?.pages]);
+
+  // Real-time subscription — appends new messages to the latest page (pages[0])
   useEffect(() => {
     if (!conversationId) return;
 
     const unsubscribe = subscribeToConversation(supabase, conversationId, (newMsg) => {
-      queryClient.setQueryData<MessageWithSender[]>(queryKey, (prev = []) => {
-        // Avoid duplicates
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
+      queryClient.setQueryData<InfiniteData>(queryKey, (old) => {
+        if (!old) return old;
+        const pages = [...old.pages];
+        const latestPage = pages[0];
 
-        // Replace optimistic placeholder if it exists (matched by content + sender)
+        // Avoid duplicates
+        if (latestPage.messages.some((m) => m.id === newMsg.id)) return old;
+
+        // Replace optimistic placeholder if it exists
         if (newMsg.sender_id === currentUserId) {
-          const optIdx = prev.findIndex(
+          const optIdx = latestPage.messages.findIndex(
             (m) => m.id.startsWith("opt-") && m.content === newMsg.content
           );
           if (optIdx !== -1) {
-            const next = [...prev];
-            next[optIdx] = newMsg;
-            return next;
+            const updatedMsgs = [...latestPage.messages];
+            updatedMsgs[optIdx] = newMsg;
+            pages[0] = { ...latestPage, messages: updatedMsgs };
+            return { ...old, pages };
           }
         }
 
-        return [...prev, newMsg];
+        pages[0] = { ...latestPage, messages: [...latestPage.messages, newMsg] };
+        return { ...old, pages };
       });
     });
 
@@ -54,7 +81,6 @@ export function useChatThread(conversationId: string, currentUserId: string) {
 
   const { mutateAsync: send, isPending: isSending } = useMutation({
     mutationFn: async (content: string) => {
-      // Optimistic update
       const tempId = `opt-${Date.now()}`;
       const optimistic: MessageWithSender = {
         id: tempId,
@@ -63,34 +89,39 @@ export function useChatThread(conversationId: string, currentUserId: string) {
         sender_id: currentUserId,
         sender: null,
       };
-      queryClient.setQueryData<MessageWithSender[]>(queryKey, (prev = []) => [
-        ...prev,
-        optimistic,
-      ]);
+
+      // Optimistic: add to the latest page (pages[0])
+      queryClient.setQueryData<InfiniteData>(queryKey, (old) => {
+        if (!old) return old;
+        const pages = [...old.pages];
+        pages[0] = { ...pages[0], messages: [...pages[0].messages, optimistic] };
+        return { ...old, pages };
+      });
 
       const { error } = await sendMessage(supabase, conversationId, currentUserId, content);
 
       if (error) {
         // Roll back optimistic message
-        queryClient.setQueryData<MessageWithSender[]>(queryKey, (prev = []) =>
-          prev.filter((m) => m.id !== tempId)
-        );
+        queryClient.setQueryData<InfiniteData>(queryKey, (old) => {
+          if (!old) return old;
+          const pages = [...old.pages];
+          pages[0] = { ...pages[0], messages: pages[0].messages.filter((m) => m.id !== tempId) };
+          return { ...old, pages };
+        });
         throw new Error(error);
       }
       // Realtime will replace the optimistic entry when the INSERT arrives
     },
   });
 
-  const messages = data ?? [];
-  const error = queryError
-    ? (queryError as Error).message
-    : null;
-
   return {
     messages,
-    isLoading,
+    isLoading: infiniteQuery.isLoading,
     sendMessage: send,
     isSending,
-    error,
+    error: infiniteQuery.error ? (infiniteQuery.error as Error).message : null,
+    hasOlderMessages: !!infiniteQuery.hasNextPage,
+    isFetchingOlder: infiniteQuery.isFetchingNextPage,
+    loadOlderMessages: infiniteQuery.fetchNextPage,
   };
 }

@@ -19,6 +19,7 @@ import { Save } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
+import { VenueSearchOrCreate } from "@/components/canchas/VenueSearchOrCreate";
 
 
 export default function EditCanchaPage() {
@@ -42,6 +43,7 @@ export default function EditCanchaPage() {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [phone, setPhone] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [venueId, setVenueId] = useState<string | null>(null);
 
   useEffect(() => {
     getCanchaById(supabase, id).then(({ data, error }) => {
@@ -66,6 +68,7 @@ export default function EditCanchaPage() {
       setDiscountPercent(data.discount_percent);
       setPhone(data.phone ?? "");
       setWhatsapp(data.whatsapp ?? "");
+      setVenueId(data.venue_id ?? null);
       setLoading(false);
     });
   }, [id, user]);
@@ -97,6 +100,7 @@ export default function EditCanchaPage() {
       discount_percent: discountPercent,
       phone: phone.trim() || undefined,
       whatsapp: whatsapp.trim() || undefined,
+      venue_id: venueId,
     });
 
     if (updateErr) {
@@ -262,6 +266,12 @@ export default function EditCanchaPage() {
                 <p className="text-xs text-destructive">{fieldErrors.city}</p>
               )}
             </div>
+
+            <VenueSearchOrCreate
+              city={city}
+              value={venueId}
+              onChange={setVenueId}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

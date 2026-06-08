@@ -17,6 +17,7 @@ interface Props {
   onPublish: () => void;
   onCloseRegistrations: () => void;
   onGenerateFixture: () => void;
+  onStart: () => void;
   onFinalize: () => void;
   isLoading: boolean;
 }
@@ -26,6 +27,7 @@ export function TournamentStateActions({
   onPublish,
   onCloseRegistrations,
   onGenerateFixture,
+  onStart,
   onFinalize,
   isLoading,
 }: Props) {
@@ -72,44 +74,68 @@ export function TournamentStateActions({
   if (status === "cerrado_inscripciones") {
     return (
       <div className="flex gap-2 flex-wrap">
-        <Button
-          variant="outline"
-          className="rounded-xl"
-          onClick={onGenerateFixture}
-          disabled={isLoading}
-        >
+        <Button variant="outline" className="rounded-xl" onClick={onGenerateFixture} disabled={isLoading}>
           Generar fixture
         </Button>
-
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="rounded-xl text-destructive border-destructive/40 hover:bg-destructive/10"
-              disabled={isLoading}
-            >
+            <Button variant="outline" className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white" disabled={isLoading}>
+              Iniciar torneo
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Iniciar el torneo?</AlertDialogTitle>
+              <AlertDialogDescription>
+                El torneo pasará al estado "en curso". Podés seguir cargando resultados y finalizarlo después.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={onStart}>Sí, iniciar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" className="rounded-xl text-destructive border-destructive/40 hover:bg-destructive/10" disabled={isLoading}>
               Finalizar torneo
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>¿Finalizar el torneo?</AlertDialogTitle>
-              <AlertDialogDescription>
-                El torneo quedará marcado como finalizado. Esta acción no se puede deshacer.
-              </AlertDialogDescription>
+              <AlertDialogDescription>El torneo quedará marcado como finalizado. Esta acción no se puede deshacer.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={onFinalize}
-              >
-                Sí, finalizar
-              </AlertDialogAction>
+              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={onFinalize}>Sí, finalizar</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
+    );
+  }
+
+  if (status === "in_progress") {
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button variant="outline" className="rounded-xl text-destructive border-destructive/40 hover:bg-destructive/10" disabled={isLoading}>
+            Finalizar torneo
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Finalizar el torneo?</AlertDialogTitle>
+            <AlertDialogDescription>El torneo quedará marcado como finalizado. Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={onFinalize}>Sí, finalizar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   }
 

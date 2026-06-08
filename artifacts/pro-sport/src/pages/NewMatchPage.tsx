@@ -1,20 +1,26 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import { getAllCanchas, getAvailableSlots, createBooking } from "@/lib/canchas/api";
+import { getAllCanchas, getAvailableSlots, createBooking, getCanchaById } from "@/lib/canchas/api";
+import { getVenuesByCity } from "@/lib/venues/api";
 import { getFriends, sendMatchInvitations, type FriendWithProfile } from "@/lib/friends/api";
+import { sendNotification } from "@/lib/notifications/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SKILL_LEVELS, ENABLED_CITIES, SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, SPORT_ID_TO_CANCHA_TYPES, type Cancha, type TimeSlot, type Sport } from "@/lib/types/db";
+import { SKILL_LEVELS, ENABLED_CITIES, SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, SPORT_ID_TO_CANCHA_TYPES, type Cancha, type TimeSlot, type Sport, type Venue } from "@/lib/types/db";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
-import { ArrowLeft, ArrowRight, Building2, MapPin, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, MapPin, Users, Map, List, CheckCircle2, Bell } from "lucide-react";
 import { NavDrawer } from "@/components/NavDrawer";
+import { useNotifCount } from "@/context/NotifContext";
 import { BottomNav } from "@/components/BottomNav";
+const VenueCanchaPickerMap = lazy(() =>
+  import("@/components/matches/VenueCanchaPickerMap").then((m) => ({ default: m.VenueCanchaPickerMap }))
+);
 import { toast } from "sonner";
 
 function todayDate() { return new Date().toISOString().slice(0, 10); }
@@ -23,11 +29,14 @@ type Step1 = { title: string; sport_id: string; skill_level: string; duration_mi
 
 export default function NewMatchPage() {
   const { user, profile } = useAuth();
+  const { unreadCount } = useNotifCount();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [, setLocation] = useLocation();
+  const [preselectedBookingId, setPreselectedBookingId] = useState<string | null>(null);
+  const preselectedBookingIdRef = useRef<string | null>(null);
   const [sports, setSports] = useState<Sport[]>([]);
   const [isPublic, setIsPublic] = useState(true);
   const [s1, setS1] = useState<Step1>({ title: "", sport_id: "", skill_level: "", duration_minutes: 60, max_players: 10, description: "" });
@@ -39,6 +48,10 @@ export default function NewMatchPage() {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [venueFilter, setVenueFilter] = useState<string>("__all__");
+  const [venueView, setVenueView] = useState<"map" | "list">("map");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [manualAddress, setManualAddress] = useState("");
   const [friends, setFriends] = useState<FriendWithProfile[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
@@ -49,14 +62,44 @@ export default function NewMatchPage() {
   }, []);
 
   useEffect(() => {
-    if (!city) { setCanchas([]); setSelectedCancha(null); setSelectedSlot(null); return; }
-    setLoadingCanchas(true); setSelectedCancha(null); setSelectedSlot(null);
+    const params = new URLSearchParams(window.location.search);
+    const bookingId = params.get("booking_id");
+    const canchaId = params.get("cancha_id");
+    const date = params.get("date");
+    const start = params.get("start");
+    const end = params.get("end");
+    if (!bookingId || !canchaId || !date || !start || !end) return;
+    setPreselectedBookingId(bookingId);
+    preselectedBookingIdRef.current = bookingId;
+    setDateStr(date);
+    getCanchaById(supabase, canchaId).then(({ data: cancha }) => {
+      if (!cancha) return;
+      setSelectedCancha(cancha);
+      setCity(cancha.city);
+      setSelectedSlot({ start, end, isAvailable: true });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!city) { setCanchas([]); setVenues([]); if (!preselectedBookingIdRef.current) { setSelectedCancha(null); setSelectedSlot(null); } setVenueFilter("__all__"); return; }
+    setLoadingCanchas(true); if (!preselectedBookingIdRef.current) { setSelectedCancha(null); setSelectedSlot(null); } setVenueFilter("__all__");
     getAllCanchas(supabase, { city, sportTypes: SPORT_ID_TO_CANCHA_TYPES[s1.sport_id] ?? [] }).then(({ data }) => { setCanchas(data ?? []); setLoadingCanchas(false); });
+    getVenuesByCity(supabase, city).then(({ data }) => setVenues(data ?? []));
   }, [city, s1.sport_id]);
 
   useEffect(() => {
+    if (step === 2 && !userLocation) {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {}
+      );
+    }
+  }, [step]);
+
+  useEffect(() => {
     if (!selectedCancha || !dateStr) { setSlots([]); return; }
-    setSelectedSlot(null); setLoadingSlots(true);
+    if (!preselectedBookingIdRef.current) setSelectedSlot(null);
+    setLoadingSlots(true);
     getAvailableSlots(supabase, selectedCancha.id, dateStr).then(({ data }) => { setSlots(data ?? []); setLoadingSlots(false); });
   }, [selectedCancha, dateStr]);
 
@@ -93,8 +136,8 @@ export default function NewMatchPage() {
 
   async function handleSubmit() {
     setError(null); if (!user) { setLocation("/login"); return; } setPending(true);
-    let cancha_booking_id: string | null = null;
-    if (selectedCancha && selectedSlot) {
+    let cancha_booking_id: string | null = preselectedBookingId;
+    if (!preselectedBookingId && selectedCancha && selectedSlot) {
       const price = selectedCancha.discount_percent > 0 ? selectedCancha.price_per_hour * (1 - selectedCancha.discount_percent / 100) : selectedCancha.price_per_hour;
       const { data: booking, error: bookingErr } = await createBooking(supabase, { cancha_id: selectedCancha.id, booking_date: dateStr, start_time: selectedSlot.start, end_time: selectedSlot.end, total_price: price }, user.id);
       if (bookingErr) { setError(bookingErr); setPending(false); return; }
@@ -105,9 +148,20 @@ export default function NewMatchPage() {
     const { data, error: matchErr } = await supabase.from("matches").insert({ organizer_id: user.id, sport_id: s1.sport_id, title: s1.title.trim(), description: s1.description.trim() || null, city, location: matchLocation, starts_at: startsAtISO, duration_minutes: s1.duration_minutes, max_players: s1.max_players, skill_level: s1.skill_level && s1.skill_level !== "any" ? s1.skill_level : null, status: "open", is_public: isPublic, ...(cancha_booking_id ? { cancha_booking_id } : {}) }).select().single();
     if (matchErr) { setError(matchErr.message); setPending(false); return; }
     if (data && selectedFriendIds.size > 0) {
-      const { error: invErr } = await sendMatchInvitations(supabase, data.id, user.id, Array.from(selectedFriendIds));
+      const inviteeIds = Array.from(selectedFriendIds);
+      const { error: invErr } = await sendMatchInvitations(supabase, data.id, user.id, inviteeIds);
       if (invErr) toast.error(`Partido creado, pero error al enviar invitaciones: ${invErr}`);
       else toast.success(`Partido creado. ${selectedFriendIds.size} invitación(es) enviada(s).`);
+      await Promise.allSettled(
+        inviteeIds.map((id) =>
+          sendNotification(supabase, id, "match_invite", {
+            match_id: data.id,
+            match_title: data.title,
+            inviter_id: user.id,
+            inviter_name: profile?.full_name || profile?.username || "Un jugador",
+          })
+        )
+      );
     }
     if (data) setLocation(`/matches/${data.id}`);
     setPending(false);
@@ -138,12 +192,24 @@ export default function NewMatchPage() {
               );
             })}
           </div>
-          <Link href="/perfil" className="shrink-0">
-            <Avatar className="size-8 ring-2 ring-violet-100 dark:ring-violet-900 cursor-pointer">
-              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Perfil" />}
-              <AvatarFallback className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-bold">{initialsFromName(profile?.full_name ?? profile?.username)}</AvatarFallback>
-            </Avatar>
-          </Link>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Link href="/notificaciones">
+              <button className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
+                <Bell className="size-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            </Link>
+            <Link href="/perfil">
+              <Avatar className="size-8 ring-2 ring-violet-100 dark:ring-violet-900 cursor-pointer">
+                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt="Perfil" />}
+                <AvatarFallback className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-bold">{initialsFromName(profile?.full_name ?? profile?.username)}</AvatarFallback>
+              </Avatar>
+            </Link>
+          </div>
         </div>
         <div className="h-1 bg-muted"><div className="h-full bg-brand-primary transition-all duration-500 ease-out" style={{ width: progressWidth }} /></div>
       </header>
@@ -153,6 +219,12 @@ export default function NewMatchPage() {
 
           {step === 1 && (
             <div className="flex flex-col gap-5">
+              {preselectedBookingId && (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm font-medium">
+                  <CheckCircle2 className="size-4 shrink-0" />
+                  <span>Cancha reservada — completá los datos del partido</span>
+                </div>
+              )}
               <div><h2 className="text-base font-semibold">Información del partido</h2><p className="text-sm text-muted-foreground mt-0.5">Nombre, deporte y configuración básica.</p></div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="title">Nombre del partido *</Label>
@@ -202,7 +274,41 @@ export default function NewMatchPage() {
 
           {step === 2 && (
             <div className="flex flex-col gap-5">
-              <div><h2 className="text-base font-semibold">Fecha y lugar</h2><p className="text-sm text-muted-foreground mt-0.5">Elegí cuándo y dónde se juega. Podés reservar una cancha registrada o ingresar la dirección manualmente.</p></div>
+              <div><h2 className="text-base font-semibold">Fecha y lugar</h2><p className="text-sm text-muted-foreground mt-0.5">{preselectedBookingId ? "Tu cancha ya está reservada. Confirmá y continuá." : "Elegí cuándo y dónde se juega. Podés reservar una cancha registrada o ingresar la dirección manualmente."}</p></div>
+
+              {preselectedBookingId ? (
+                <>
+                  {selectedCancha ? (
+                    <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20 p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="size-5 text-green-600 dark:text-green-400 shrink-0" />
+                        <p className="font-semibold text-green-800 dark:text-green-300 text-sm">Cancha reservada</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{SPORT_TYPE_ICONS[selectedCancha.sport_type]}</span>
+                        <div>
+                          <p className="font-semibold text-sm">{selectedCancha.name}</p>
+                          <p className="text-xs text-muted-foreground">{selectedCancha.address}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t border-green-100 dark:border-green-900">
+                        <span>📅 {dateStr}</span>
+                        <span>⏰ {selectedSlot?.start} – {selectedSlot?.end}</span>
+                      </div>
+                      <Link href={`/canchas/${selectedCancha.id}`}>
+                        <p className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer mt-1">Cambiar cancha (la reserva actual quedará pendiente)</p>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="flex justify-center py-6">
+                      <div className="w-6 h-6 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {error && <p role="alert" className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">{error}</p>}
+                  <Button onClick={goToStep3} disabled={!selectedCancha} className="w-full rounded-xl bg-violet-600 hover:bg-violet-700" size="lg">Siguiente — Invitar amigos <ArrowRight className="size-4 ml-1" /></Button>
+                </>
+              ) : (
+                <>
               <div className="flex flex-col gap-2">
                 <Label>Fecha del partido *</Label>
                 <input type="date" value={dateStr} min={todayDate()} onChange={(e) => { setDateStr(e.target.value); setSelectedSlot(null); }} className="border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" />
@@ -218,26 +324,143 @@ export default function NewMatchPage() {
               </div>
 
               {city && (
-                <div className="space-y-3 border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-800/40">
-                  <div className="flex items-center gap-2"><Building2 className="size-4 text-muted-foreground" /><p className="text-sm font-semibold">Canchas en {city}{s1.sport_id && sports.find((sp) => sp.id === s1.sport_id) && <span className="ml-1 text-muted-foreground font-normal">· {sports.find((sp) => sp.id === s1.sport_id)!.icon} {sports.find((sp) => sp.id === s1.sport_id)!.name}</span>}</p></div>
-                  {loadingCanchas ? <div className="flex justify-center py-5"><div className="w-6 h-6 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" /></div>
-                    : canchas.length === 0 ? <p className="text-sm text-muted-foreground py-1">No hay canchas registradas en {city} aún.</p>
-                    : <div className="space-y-2">{canchas.map((c) => (
-                      <button type="button" key={c.id} onClick={() => setSelectedCancha(selectedCancha?.id === c.id ? null : c)} className={`w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-all text-left ${selectedCancha?.id === c.id ? "border-brand-primary bg-brand-primary/5 shadow-sm" : "border-border hover:border-foreground/30 bg-white dark:bg-zinc-900"}`}>
-                        <div className="flex items-center gap-3 min-w-0"><span className="text-2xl shrink-0">{SPORT_TYPE_ICONS[c.sport_type]}</span><div className="min-w-0"><p className="font-semibold leading-tight truncate">{c.name}</p><p className="text-xs text-muted-foreground truncate">{SPORT_TYPE_LABELS[c.sport_type]} · {c.capacity} jug. · {c.address}</p></div></div>
-                        <div className="text-right shrink-0">{c.discount_percent > 0 && <p className="text-xs text-muted-foreground line-through">${c.price_per_hour.toLocaleString("es-CO")}/h</p>}<p className="font-bold text-brand-primary text-sm">${(c.discount_percent > 0 ? c.price_per_hour * (1 - c.discount_percent / 100) : c.price_per_hour).toLocaleString("es-CO")}/h</p></div>
+                <div className="space-y-3">
+                  {/* Header + toggle */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="size-4 text-muted-foreground" />
+                      <p className="text-sm font-semibold">
+                        Canchas en {city}
+                        {s1.sport_id && sports.find((sp) => sp.id === s1.sport_id) && (
+                          <span className="ml-1 text-muted-foreground font-normal">· {sports.find((sp) => sp.id === s1.sport_id)!.icon} {sports.find((sp) => sp.id === s1.sport_id)!.name}</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setVenueView("map")}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${venueView === "map" ? "bg-white dark:bg-zinc-700 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <Map className="size-3" /> Mapa
                       </button>
-                    ))}</div>}
+                      <button
+                        type="button"
+                        onClick={() => setVenueView("list")}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${venueView === "list" ? "bg-white dark:bg-zinc-700 shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <List className="size-3" /> Lista
+                      </button>
+                    </div>
+                  </div>
+
+                  {loadingCanchas ? (
+                    <div className="flex justify-center py-8"><div className="w-6 h-6 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" /></div>
+                  ) : canchas.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">No hay canchas registradas en {city} aún.</p>
+                  ) : (
+                    <>
+                      {/* Venue filter chips */}
+                      {venues.length > 0 && (
+                        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+                          <button
+                            type="button"
+                            onClick={() => setVenueFilter("__all__")}
+                            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${venueFilter === "__all__" ? "bg-brand-primary text-white border-brand-primary" : "bg-white dark:bg-zinc-900 border-border text-muted-foreground hover:border-foreground/40"}`}
+                          >
+                            Todas
+                          </button>
+                          {venues.map((v) => (
+                            <button
+                              type="button"
+                              key={v.id}
+                              onClick={() => setVenueFilter(venueFilter === v.id ? "__all__" : v.id)}
+                              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${venueFilter === v.id ? "bg-brand-primary text-white border-brand-primary" : "bg-white dark:bg-zinc-900 border-border text-muted-foreground hover:border-foreground/40"}`}
+                            >
+                              {v.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Map view */}
+                      {venueView === "map" && (
+                        <div className="rounded-xl overflow-hidden border border-border/60 shadow-sm">
+                          <Suspense fallback={<div className="flex justify-center items-center h-[300px] bg-zinc-100 dark:bg-zinc-800"><div className="w-6 h-6 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" /></div>}>
+                            <VenueCanchaPickerMap
+                              canchas={venueFilter === "__all__" ? canchas : canchas.filter((c) => c.venue_id === venueFilter)}
+                              venues={venues}
+                              userLocation={userLocation}
+                              selectedCanchaId={selectedCancha?.id ?? null}
+                              onSelectCancha={(c) => setSelectedCancha(selectedCancha?.id === c.id ? null : c)}
+                              height="300px"
+                            />
+                          </Suspense>
+                        </div>
+                      )}
+
+                      {/* List view */}
+                      {venueView === "list" && (
+                        <div className="space-y-2">
+                          {(venueFilter === "__all__" ? canchas : canchas.filter((c) => c.venue_id === venueFilter)).map((c) => (
+                            <button
+                              type="button"
+                              key={c.id}
+                              onClick={() => setSelectedCancha(selectedCancha?.id === c.id ? null : c)}
+                              className={`w-full flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition-all text-left ${selectedCancha?.id === c.id ? "border-brand-primary bg-brand-primary/5 shadow-sm" : "border-border hover:border-foreground/30 bg-white dark:bg-zinc-900"}`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="text-2xl shrink-0">{SPORT_TYPE_ICONS[c.sport_type]}</span>
+                                <div className="min-w-0">
+                                  <p className="font-semibold leading-tight truncate">{c.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{SPORT_TYPE_LABELS[c.sport_type]} · {c.capacity} jug. · {c.address}</p>
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                {c.discount_percent > 0 && <p className="text-xs text-muted-foreground line-through">${c.price_per_hour.toLocaleString("es-CO")}/h</p>}
+                                <p className="font-bold text-brand-primary text-sm">${(c.discount_percent > 0 ? c.price_per_hour * (1 - c.discount_percent / 100) : c.price_per_hour).toLocaleString("es-CO")}/h</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Selected cancha: time slots */}
                   {selectedCancha && (
-                    <div className="border-t pt-3 space-y-3">
-                      <p className="text-sm font-medium">{selectedCancha.name} — horarios disponibles</p>
-                      {!dateStr ? <p className="text-sm text-muted-foreground">Seleccioná la fecha arriba para ver disponibilidad.</p>
-                        : loadingSlots ? <div className="flex justify-center py-3"><div className="w-5 h-5 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" /></div>
-                        : slots.length === 0 ? <p className="text-sm text-muted-foreground">No hay horarios disponibles para el {dateStr} en esta cancha.</p>
-                        : <div className="grid grid-cols-4 gap-1.5">{slots.map((slot) => (
-                          <button type="button" key={slot.start} disabled={!slot.isAvailable} onClick={() => setSelectedSlot(selectedSlot?.start === slot.start ? null : slot)} className={`text-xs font-medium py-2.5 rounded-lg border transition-all ${!slot.isAvailable ? "bg-muted text-muted-foreground border-transparent cursor-not-allowed opacity-60" : selectedSlot?.start === slot.start ? "bg-brand-primary text-white border-brand-primary shadow-sm" : "bg-white dark:bg-zinc-900 border-border hover:border-foreground/40"}`}>{slot.start}{!slot.isAvailable && <span className="block text-[10px] opacity-60">Ocupado</span>}</button>
-                        ))}</div>}
-                      {fieldErrors.slot && <p className="text-xs text-destructive">{fieldErrors.slot}</p>}
+                    <div className="border rounded-xl p-4 bg-zinc-50 dark:bg-zinc-800/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">{selectedCancha.name}</p>
+                        <button type="button" onClick={() => { setSelectedCancha(null); setSelectedSlot(null); }} className="text-xs text-muted-foreground hover:text-destructive transition-colors">Quitar</button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{SPORT_TYPE_LABELS[selectedCancha.sport_type]} · {selectedCancha.capacity} jug. · {selectedCancha.address}</p>
+                      <div className="border-t pt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Horarios disponibles</p>
+                        {!dateStr ? (
+                          <p className="text-sm text-muted-foreground">Seleccioná la fecha arriba para ver disponibilidad.</p>
+                        ) : loadingSlots ? (
+                          <div className="flex justify-center py-3"><div className="w-5 h-5 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" /></div>
+                        ) : slots.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No hay horarios disponibles para el {dateStr} en esta cancha.</p>
+                        ) : (
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {slots.map((slot) => (
+                              <button
+                                type="button"
+                                key={slot.start}
+                                disabled={!slot.isAvailable}
+                                onClick={() => setSelectedSlot(selectedSlot?.start === slot.start ? null : slot)}
+                                className={`text-xs font-medium py-2.5 rounded-lg border transition-all ${!slot.isAvailable ? "bg-muted text-muted-foreground border-transparent cursor-not-allowed opacity-60" : selectedSlot?.start === slot.start ? "bg-brand-primary text-white border-brand-primary shadow-sm" : "bg-white dark:bg-zinc-900 border-border hover:border-foreground/40"}`}
+                              >
+                                {slot.start}
+                                {!slot.isAvailable && <span className="block text-[10px] opacity-60">Ocupado</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {fieldErrors.slot && <p className="text-xs text-destructive mt-1">{fieldErrors.slot}</p>}
+                      </div>
                       {selectedSlot && (
                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2.5 text-sm space-y-0.5">
                           <p className="font-semibold text-amber-800 dark:text-amber-300">Solicitud: {selectedSlot.start}–{selectedSlot.end} en {selectedCancha.name}</p>
@@ -258,6 +481,8 @@ export default function NewMatchPage() {
               )}
               {error && <p role="alert" className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">{error}</p>}
               <Button onClick={goToStep3} className="w-full" size="lg">Siguiente — Invitar amigos <ArrowRight className="size-4 ml-1" /></Button>
+                </>
+              )}
             </div>
           )}
 

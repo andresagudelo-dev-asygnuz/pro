@@ -13,6 +13,7 @@ import {
 import { CANCHAS_SPORT_OPTIONS, type CanchaSportType } from "@/lib/types/db";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
+import { VenueSearchOrCreate } from "@/components/canchas/VenueSearchOrCreate";
 
 
 const DEFAULT_SCHEDULE = Array.from({ length: 7 }, (_, i) => ({
@@ -29,6 +30,8 @@ export default function NuevaCanchaPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [sportType, setSportType] = useState<CanchaSportType>("futbol_5");
+  const [cityValue, setCityValue] = useState("");
+  const [venueId, setVenueId] = useState<string | null>(null);
 
   if (!roles?.is_cancha) {
     return (
@@ -56,7 +59,7 @@ export default function NuevaCanchaPage() {
     const description = (form.elements.namedItem("description") as HTMLTextAreaElement).value.trim();
     const capacity = parseInt((form.elements.namedItem("capacity") as HTMLInputElement).value);
     const address = (form.elements.namedItem("address") as HTMLInputElement).value.trim();
-    const city = (form.elements.namedItem("city") as HTMLInputElement).value.trim();
+    const city = cityValue.trim() || (form.elements.namedItem("city") as HTMLInputElement).value.trim();
     const price_per_hour = parseFloat((form.elements.namedItem("price_per_hour") as HTMLInputElement).value);
     const discount_percent = parseFloat((form.elements.namedItem("discount_percent") as HTMLInputElement).value) || 0;
     const phone = (form.elements.namedItem("phone") as HTMLInputElement).value.trim();
@@ -88,6 +91,7 @@ export default function NuevaCanchaPage() {
         is_active: true,
         phone: phone || undefined,
         whatsapp: whatsapp || undefined,
+        venue_id: venueId,
       },
       user.id,
     );
@@ -161,9 +165,22 @@ export default function NuevaCanchaPage() {
 
             <div className="space-y-2">
               <Label htmlFor="city">Ciudad *</Label>
-              <Input id="city" name="city" required placeholder="Manizales" />
+              <Input
+                id="city"
+                name="city"
+                required
+                placeholder="Manizales"
+                value={cityValue}
+                onChange={(e) => setCityValue(e.target.value)}
+              />
               {fieldErrors.city && <p className="text-xs text-destructive">{fieldErrors.city}</p>}
             </div>
+
+            <VenueSearchOrCreate
+              city={cityValue}
+              value={venueId}
+              onChange={setVenueId}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

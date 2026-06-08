@@ -15,6 +15,7 @@ export type TournamentRow = {
     | "borrador"
     | "abierto_inscripciones"
     | "cerrado_inscripciones"
+    | "in_progress"
     | "cancelado"
     | "finalizado";
   categories: unknown;
@@ -168,8 +169,24 @@ export async function closeRegistrations(
   return transitionTournamentStatus(supabase, id, "abierto_inscripciones", "cerrado_inscripciones", userId);
 }
 
+export async function startTournament(
+  supabase: SupabaseClient, id: string, userId: string,
+): Promise<ApiResult<TournamentRow>> {
+  return transitionTournamentStatus(supabase, id, "cerrado_inscripciones", "in_progress", userId);
+}
+
 export async function finalizeTournament(
   supabase: SupabaseClient, id: string, userId: string,
 ): Promise<ApiResult<TournamentRow>> {
-  return transitionTournamentStatus(supabase, id, "cerrado_inscripciones", "finalizado", userId);
+  const { data, error } = await supabase
+    .from("tournaments")
+    .update({ status: "finalizado", updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("owner_id", userId)
+    .in("status", ["cerrado_inscripciones", "in_progress"])
+    .select()
+    .single();
+  if (error) return { data: null, error: mapDbError(error, "tournament_transition") };
+  if (!data) return { data: null, error: "No se pudo actualizar el torneo. Refrescá la página." };
+  return { data: data as TournamentRow, error: null };
 }

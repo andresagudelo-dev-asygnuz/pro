@@ -4,8 +4,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import {
-  listRegistrations,
-  type RegistrationRow,
+  listRegistrationsWithNames,
+  type RegistrationWithNames,
 } from "@/lib/tournaments/registrations";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/AppLayout";
@@ -39,13 +39,13 @@ function RegistrationCard({
   reg,
   profilesMap,
 }: {
-  reg: RegistrationRow;
+  reg: RegistrationWithNames;
   profilesMap: Map<string, Profile>;
 }) {
   const profile = reg.user_id ? profilesMap.get(reg.user_id) : null;
   const displayName = reg.team_id
-    ? `Equipo · ${reg.team_id.slice(0, 8)}`
-    : profile?.full_name ?? profile?.username ?? reg.user_id?.slice(0, 8) ?? "—";
+    ? (reg.team_name ?? `Equipo · ${reg.team_id.slice(0, 8)}`)
+    : reg.player_name ?? profile?.full_name ?? profile?.username ?? "—";
 
   const initials = profile
     ? initialsFromName(profile.full_name ?? profile.username)
@@ -81,7 +81,7 @@ function Section({
   statusKey,
 }: {
   title: string;
-  rows: RegistrationRow[];
+  rows: RegistrationWithNames[];
   profilesMap: Map<string, Profile>;
   statusKey: string;
 }) {
@@ -118,7 +118,7 @@ export default function TournamentRegistrationsPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const [tournament, setTournament] = useState<TournamentRow | null>(null);
-  const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
+  const [registrations, setRegistrations] = useState<RegistrationWithNames[]>([]);
   const [profilesMap, setProfilesMap] = useState<Map<string, Profile>>(
     new Map(),
   );
@@ -144,9 +144,9 @@ export default function TournamentRegistrationsPage() {
       }
       setTournament(tRow);
 
-      const { data: regs, error: err } = await listRegistrations(supabase, id);
+      const { data: regs, error: err } = await listRegistrationsWithNames(supabase, id);
       if (err) setError(err);
-      const regList = (regs ?? []) as RegistrationRow[];
+      const regList = (regs ?? []) as RegistrationWithNames[];
       setRegistrations(regList);
 
       const userIds = [
