@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
@@ -6,6 +6,10 @@ import { NavDrawer } from "@/components/NavDrawer";
 
 export function AppNav() {
   const { profile } = useAuth();
+  const [location] = useLocation();
+
+  const isOwnerContext = location.startsWith("/mis-canchas") || location.startsWith("/canchas/");
+  const profileLink = isOwnerContext ? "/mis-canchas/perfil" : (profile ? `/profile/${profile.id}` : "#");
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -18,7 +22,7 @@ export function AppNav() {
         </div>
 
         {profile && (
-          <Link href={`/profile/${profile.id}`} className="flex items-center gap-2">
+          <Link href={profileLink} className="flex items-center gap-2">
             <span className="hidden text-sm text-foreground sm:inline">
               {profile.full_name ?? profile.username ?? "Perfil"}
             </span>

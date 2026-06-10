@@ -287,6 +287,62 @@ export async function getParticipatingMatches(
   return { data: matches, error: null, nextCursor: null };
 }
 
+// ── getFeedEnrichmentData — participant counts, user statuses, friends, booking→cancha mapping ──
+export interface FeedEnrichmentData {
+  counts: Map<string, number>;
+  matchUsers: Map<string, Set<string>>;
+  statuses: Map<string, string>;
+  friends: Set<string>;
+  m2c: Map<string, string>;
+}
+
+export async function getFeedEnrichmentData(
+  supabase: SupabaseClient,
+  matchIds: string[],
+  bookingIds: string[],
+  userId: string | undefined,
+): Promise<FeedEnrichmentData> {
+  if (matchIds.length === 0) {
+    return { counts: new Map(), matchUsers: new Map(), statuses: new Map(), friends: new Set(), m2c: new Map() };
+  }
+
+  const [{ data: countData }, { data: myPartsData }, friendsRes, { data: bookingsData }] = await Promise.all([
+    supabase.from("match_participants").select("match_id, user_id").in("match_id", matchIds).eq("status", "joined"),
+    userId
+      ? supabase.from("match_participants").select("match_id, status").in("match_id", matchIds).eq("user_id", userId)
+      : Promise.resolve({ data: [] }),
+    userId
+      ? supabase.from("friendships").select("requester_id, addressee_id").or(`requester_id.eq.${userId},addressee_id.eq.${userId}`).eq("status", "accepted")
+      : Promise.resolve({ data: [] }),
+    bookingIds.length > 0
+      ? supabase.from("cancha_bookings").select("id, cancha_id").in("id", bookingIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const counts = new Map<string, number>();
+  const matchUsers = new Map<string, Set<string>>();
+  (countData ?? []).forEach((r: { match_id: string; user_id: string }) => {
+    counts.set(r.match_id, (counts.get(r.match_id) ?? 0) + 1);
+    if (!matchUsers.has(r.match_id)) matchUsers.set(r.match_id, new Set());
+    matchUsers.get(r.match_id)!.add(r.user_id);
+  });
+
+  const statuses = new Map<string, string>();
+  ((myPartsData ?? []) as { match_id: string; status: string }[]).forEach((r) => statuses.set(r.match_id, r.status));
+
+  const friends = new Set<string>();
+  ((friendsRes.data ?? []) as { requester_id: string; addressee_id: string }[]).forEach((f) => {
+    if (f.requester_id !== userId) friends.add(f.requester_id);
+    if (f.addressee_id !== userId) friends.add(f.addressee_id);
+  });
+
+  const b2c = new Map<string, string>();
+  (bookingsData ?? []).forEach((b: { id: string; cancha_id: string }) => b2c.set(b.id, b.cancha_id));
+  const m2c = new Map<string, string>();
+
+  return { counts, matchUsers, statuses, friends, m2c };
+}
+
 // ── getMatchesWithBookings — matches linked to cancha_bookings for a user ──────
 export async function getMatchesWithBookings(
   supabase: SupabaseClient,

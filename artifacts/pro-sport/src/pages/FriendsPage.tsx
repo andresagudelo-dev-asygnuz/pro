@@ -18,8 +18,6 @@ import { FriendsTabAmigos } from "@/components/friends/FriendsTabAmigos";
 import { FriendsTabSolicitudes } from "@/components/friends/FriendsTabSolicitudes";
 import { FriendsTabBuscar } from "@/components/friends/FriendsTabBuscar";
 import { toast } from "sonner";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { getOrCreateConversation } from "@/lib/chat/api";
 
 
@@ -127,8 +125,10 @@ export default function FriendsPage() {
   const pendingCount = received.length;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader title="Amigos" />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Amigos</h1>
+      </div>
 
       <div className="sticky top-14 z-40 bg-white dark:bg-zinc-900 border-b border-border">
         <div className="container mx-auto px-4">
@@ -212,7 +212,6 @@ export default function FriendsPage() {
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

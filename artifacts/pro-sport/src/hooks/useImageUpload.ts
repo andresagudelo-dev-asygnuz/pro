@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { uploadFile } from "@/lib/storage/api";
 
 export function useImageUpload(bucket: string) {
   const [isUploading, setIsUploading] = useState(false);
@@ -12,19 +13,16 @@ export function useImageUpload(bucket: string) {
     const ext = file.name.split(".").pop() ?? "bin";
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(path, file, { upsert: false });
+    const { url, error: uploadError } = await uploadFile(supabase, bucket, path, file, { upsert: false });
 
     if (uploadError) {
-      setError(uploadError.message);
+      setError(uploadError);
       setIsUploading(false);
       return null;
     }
 
-    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     setIsUploading(false);
-    return data.publicUrl;
+    return url;
   }
 
   return { upload, isUploading, error };

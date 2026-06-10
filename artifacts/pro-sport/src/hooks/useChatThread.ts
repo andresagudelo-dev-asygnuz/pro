@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { listMessages, sendMessage, subscribeToConversation, type MessageWithSender } from "@/lib/chat/api";
 
 type MessagesPage = {
@@ -14,7 +14,6 @@ type InfiniteData = {
 };
 
 export function useChatThread(conversationId: string, currentUserId: string) {
-  const supabase = createClient();
   const queryClient = useQueryClient();
   const queryKey = ["messages", conversationId];
 

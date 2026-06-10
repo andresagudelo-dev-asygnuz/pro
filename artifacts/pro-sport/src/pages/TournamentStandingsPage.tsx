@@ -5,7 +5,6 @@ import { listRegistrationsWithNames } from "@/lib/tournaments/registrations";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
 
 export default function TournamentStandingsPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,16 +31,16 @@ export default function TournamentStandingsPage() {
 
   if (isLoading || regsQuery.isLoading) {
     return (
-      <AppLayout>
+      <>
         <div className="flex items-center justify-center p-12">
           <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container py-8 max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -117,6 +116,6 @@ export default function TournamentStandingsPage() {
           </div>
         )}
       </div>
-    </AppLayout>
+    </>
   );
 }

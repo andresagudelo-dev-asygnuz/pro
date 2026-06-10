@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getMyTournaments, getRegisteredTournaments, type TournamentRow } from "@/lib/tournaments/api";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
 import { Trophy, Plus } from "lucide-react";
 
 
@@ -77,16 +76,16 @@ export default function MyTournamentsPage() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <>
         <div className="flex items-center justify-center p-12 text-muted-foreground">
           <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container py-8 max-w-4xl mx-auto space-y-10">
 
         {/* Promotor section: torneos organizados */}
@@ -155,6 +154,6 @@ export default function MyTournamentsPage() {
         </section>
 
       </div>
-    </AppLayout>
+    </>
   );
 }

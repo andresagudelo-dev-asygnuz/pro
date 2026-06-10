@@ -3,8 +3,6 @@ import { Link } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getMyBookings, updateBookingStatus, type BookingWithCancha } from "@/lib/canchas/api";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -112,6 +110,11 @@ function BookingCard({
               📝 {booking.notes}
             </p>
           )}
+          {booking.status === "pendiente" && booking.payment_status === "sin_anticipo" && (booking as any).created_at && (
+            <div className="mt-2 text-xs text-amber-700 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1.5 rounded-md flex items-center gap-1.5">
+              <span>Falta comprobante (vence a las {new Date(new Date((booking as any).created_at).getTime() + 2 * 60 * 60 * 1000).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })})</span>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -184,8 +187,10 @@ export default function MisReservasPage() {
   const cancelled = bookings.filter((b) => b.status === "cancelada");
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader title="Mis Reservas" backHref="/perfil" />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Mis Reservas</h1>
+      </div>
 
       <main className="container mx-auto px-4 py-4 max-w-2xl space-y-6">
         {loading ? (
@@ -245,7 +250,6 @@ export default function MisReservasPage() {
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

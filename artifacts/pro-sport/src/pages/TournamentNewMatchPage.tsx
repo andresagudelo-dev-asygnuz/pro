@@ -8,7 +8,6 @@ import { createMatch } from "@/lib/tournaments/matches";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AppLayout } from "@/components/AppLayout";
 
 
 export default function TournamentNewMatchPage() {
@@ -81,7 +80,7 @@ export default function TournamentNewMatchPage() {
   );
 
   return (
-    <AppLayout>
+    <>
     <div className="container py-8 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Nuevo partido — {tournament.name}</h1>
@@ -141,6 +140,6 @@ export default function TournamentNewMatchPage() {
         </form>
       )}
     </div>
-    </AppLayout>
+    </>
   );
 }

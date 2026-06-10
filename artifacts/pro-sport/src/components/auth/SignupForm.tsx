@@ -9,6 +9,24 @@ import { Loader2, User, Mail, Lock, CheckCircle2, ChevronRight, MailOpen, PartyP
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 
+function traducirError(msg: string): string {
+  if (msg.includes("User already registered") || msg.includes("already been registered"))
+    return "Ya existe una cuenta con ese correo.";
+  if (msg.includes("Password should be at least"))
+    return "La contraseña debe tener al menos 6 caracteres.";
+  if (msg.includes("Unable to validate email address"))
+    return "El correo ingresado no es válido.";
+  if (msg.includes("Email rate limit exceeded"))
+    return "Demasiados intentos. Esperá unos minutos e intentá de nuevo.";
+  if (msg.includes("For security purposes"))
+    return "Por seguridad, esperá unos segundos antes de volver a intentarlo.";
+  if (msg.includes("Signup is disabled"))
+    return "El registro de nuevos usuarios está deshabilitado temporalmente.";
+  if (msg.includes("Network"))
+    return "Sin conexión. Verificá tu internet e intentá de nuevo.";
+  return "Ocurrió un error. Intentá de nuevo más tarde.";
+}
+
 export function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -59,8 +77,10 @@ export function SignupForm() {
     });
 
     if (error) {
-      setError(error.message);
-      toast.error("Error al registrarse: " + error.message);
+      console.error("[SignupForm] Supabase error:", error.message, error);
+      const msg = traducirError(error.message);
+      setError(msg);
+      toast.error(msg);
       setPending(false);
     } else if (data.session) {
       toast.success("¡Bienvenido a PRO!");

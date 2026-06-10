@@ -1,5 +1,7 @@
 import { ArrowLeft, Share2, Heart } from "lucide-react";
-import { SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, type Cancha } from "@/lib/types/db";
+import { type Cancha } from "@/lib/types/db";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface CanchaHeroProps {
   cancha: Cancha;
@@ -8,16 +10,44 @@ interface CanchaHeroProps {
 }
 
 export function CanchaHero({ cancha, finalPrice, onBack }: CanchaHeroProps) {
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: cancha.name,
+          text: `¡Mira esta cancha: ${cancha.name}!`,
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Enlace copiado al portapapeles");
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+    }
+  };
+
+  const toggleFavorite = () => {
+    setIsFavorite(!isFavorite);
+    toast.success(isFavorite ? "Eliminado de favoritos" : "Añadido a favoritos");
+  };
+
   return (
     <div className="relative h-72 md:h-96 overflow-hidden">
       {/* Background Image/Gradient */}
       <div className="absolute inset-0 bg-zinc-900">
-        <img
-          src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2000"
-          alt={cancha.name}
-          className="w-full h-full object-cover opacity-50 blur-[1px]"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-100 dark:from-zinc-950 via-transparent to-black/60" />
+        {cancha.image_url ? (
+          <img
+            src={cancha.image_url}
+            alt={cancha.name}
+            className="w-full h-full object-cover opacity-60"
+          />
+        ) : (
+          <div className="w-full h-full bg-zinc-300 dark:bg-zinc-800 opacity-80" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-100 dark:from-zinc-950 via-zinc-900/40 to-black/60" />
       </div>
 
       {/* Top Controls */}
@@ -29,32 +59,20 @@ export function CanchaHero({ cancha, finalPrice, onBack }: CanchaHeroProps) {
           <ArrowLeft className="size-4" /> Volver
         </button>
         <div className="flex gap-2">
-          <button className="p-2.5 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/80 hover:text-white">
+          <button 
+            onClick={handleShare}
+            className="p-2.5 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/80 hover:text-white"
+          >
             <Share2 className="size-4" />
           </button>
-          <button className="p-2.5 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/80 hover:text-brand-primary transition-colors">
-            <Heart className="size-4" />
+          <button 
+            onClick={toggleFavorite}
+            className={`p-2.5 bg-black/20 backdrop-blur-md rounded-full border border-white/10 transition-colors ${
+              isFavorite ? "text-red-500" : "text-white/80 hover:text-red-500"
+            }`}
+          >
+            <Heart className={`size-4 ${isFavorite ? "fill-current" : ""}`} />
           </button>
-        </div>
-      </div>
-
-      {/* Quick Stats Overlay */}
-      <div className="absolute bottom-12 left-4 right-4 z-10">
-        <div className="grid grid-cols-3 divide-x divide-white/10 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-          <div className="flex flex-col items-center py-3 px-1 gap-0.5">
-            <p className="text-sm font-black text-brand-primary">${finalPrice.toLocaleString("es-CO")}</p>
-            <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Precio / h</p>
-          </div>
-          <div className="flex flex-col items-center py-3 px-1 gap-0.5">
-            <p className="text-sm font-black text-white">{cancha.capacity}</p>
-            <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Jugadores</p>
-          </div>
-          <div className="flex flex-col items-center py-3 px-1 gap-0.5">
-            <div className="flex items-center gap-1">
-              <span className="text-sm">{SPORT_TYPE_ICONS[cancha.sport_type]}</span>
-            </div>
-            <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">{SPORT_TYPE_LABELS[cancha.sport_type]}</p>
-          </div>
         </div>
       </div>
     </div>

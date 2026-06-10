@@ -3,8 +3,6 @@ import { Link } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { getMyTeams, getPublicTeams, type TeamWithCount } from "@/lib/teams/api";
 import { Button } from "@/components/ui/button";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { Plus, Users, MapPin, Shield, Globe, Lock } from "lucide-react";
 import { SPORT_TYPE_LABELS } from "@/lib/types/db";
 
@@ -73,17 +71,15 @@ export default function TeamsPage() {
   }, [user, profile?.city]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title="Equipos"
-        actions={
-          <Link href="/equipos/nuevo">
-            <Button size="sm" className="gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700">
-              <Plus className="size-3.5" /> Crear
-            </Button>
-          </Link>
-        }
-      />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Equipos</h1>
+        <Link href="/equipos/nuevo">
+          <Button size="sm" className="gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700">
+            <Plus className="size-3.5" /> Crear
+          </Button>
+        </Link>
+      </div>
 
       <main className="container mx-auto px-4 py-5 max-w-2xl space-y-5">
         {!teamsSupported ? (
@@ -142,7 +138,6 @@ export default function TeamsPage() {
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

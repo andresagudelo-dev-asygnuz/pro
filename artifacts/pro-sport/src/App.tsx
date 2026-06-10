@@ -11,6 +11,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
+import OwnerBookingsPage from "@/pages/OwnerBookingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 // Lazy — loaded on demand
@@ -50,9 +51,12 @@ const NuevaCanchaPage            = lazy(() => import("@/pages/NuevaCanchaPage"))
 const CanchaAgendaPage           = lazy(() => import("@/pages/CanchaAgendaPage"));
 const EditCanchaPage             = lazy(() => import("@/pages/EditCanchaPage"));
 const CanchaClientesPage         = lazy(() => import("@/pages/CanchaClientesPage"));
-const CanchaStatsPage            = lazy(() => import("@/pages/CanchaStatsPage"));
-const CanchaEquipoPage           = lazy(() => import("@/pages/CanchaEquipoPage"));
+const CanchaClienteDetallePage   = lazy(() => import("@/pages/CanchaClienteDetallePage"));
 const OwnerDashboardPage         = lazy(() => import("@/pages/OwnerDashboardPage"));
+const OwnerVenuePage             = lazy(() => import("@/pages/OwnerVenuePage"));
+const OwnerVenueEditPage         = lazy(() => import("@/pages/OwnerVenueEditPage"));
+const OwnerEquipoPage            = lazy(() => import("@/pages/OwnerEquipoPage"));
+const OwnerPendingPage           = lazy(() => import("@/pages/OwnerPendingPage"));
 const OwnerProfilePage           = lazy(() => import("@/pages/OwnerProfilePage"));
 const OwnerProfileEditPage       = lazy(() => import("@/pages/OwnerProfileEditPage"));
 const MisReservasPage            = lazy(() => import("@/pages/MisReservasPage"));
@@ -68,6 +72,7 @@ const TeamDetailPage             = lazy(() => import("@/pages/TeamDetailPage"));
 
 const AdminVenuesPage            = lazy(() => import("@/pages/AdminVenuesPage"));
 const AdminVerificationsPage     = lazy(() => import("@/pages/AdminVerificationsPage"));
+const CanchaStatsPage            = lazy(() => import("@/pages/CanchaStatsPage"));
 
 import { PageLoader } from "@/components/ui/PageLoader";
 
@@ -111,19 +116,21 @@ function Router() {
           <ErrorBoundary><ProtectedRoute component={FeedPage} /></ErrorBoundary>
         </Route>
         <Route path="/perfil">
-          <ErrorBoundary><ProtectedRoute component={ProfilePage} /></ErrorBoundary>
+          <ErrorBoundary>
+            <ProtectedRoute component={ProfilePage} layout="none" />
+          </ErrorBoundary>
         </Route>
         <Route path="/perfil/editar">
-          <ErrorBoundary><ProtectedRoute component={ProfileEditPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={ProfileEditPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/onboarding">
           <ErrorBoundary><ProtectedRoute component={OnboardingPage} /></ErrorBoundary>
         </Route>
         <Route path="/notificaciones">
-          <ErrorBoundary><ProtectedRoute component={NotificationsPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={NotificationsPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/verificacion">
-          <ErrorBoundary><ProtectedRoute component={VerificationPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={VerificationPage} layout="player" /></ErrorBoundary>
         </Route>
 
         <Route path="/matches/new">
@@ -133,80 +140,95 @@ function Router() {
           <ErrorBoundary><ProtectedRoute component={EditMatchPage} /></ErrorBoundary>
         </Route>
         <Route path="/matches/:id">
-          <ErrorBoundary><ProtectedRoute component={MatchDetailPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={MatchDetailPage} layout="player" /></ErrorBoundary>
         </Route>
 
         <Route path="/tournaments">
-          <ErrorBoundary><ProtectedRoute component={TournamentsPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TournamentsPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/new">
-          <ErrorBoundary><ProtectedRoute component={NewTournamentPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={NewTournamentPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/mine">
-          <ErrorBoundary><ProtectedRoute component={MyTournamentsPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={MyTournamentsPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/:id">
-          <ErrorBoundary><ProtectedRoute component={TournamentDetailPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TournamentDetailPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/:id/matches">
-          <ErrorBoundary><ProtectedRoute component={TournamentMatchesPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TournamentMatchesPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/:id/matches/new">
-          <ErrorBoundary><ProtectedRoute component={TournamentNewMatchPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TournamentNewMatchPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/:id/matches/:matchId">
-          <ErrorBoundary><ProtectedRoute component={TournamentMatchResultPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TournamentMatchResultPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/:id/standings">
-          <ErrorBoundary><ProtectedRoute component={TournamentStandingsPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TournamentStandingsPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/:id/register">
-          <ErrorBoundary><ProtectedRoute component={TournamentRegisterPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TournamentRegisterPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/tournaments/:id/registrations">
-          <ErrorBoundary><ProtectedRoute component={TournamentRegistrationsPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TournamentRegistrationsPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
         </Route>
 
         <Route path="/mis-partidos">
-          <ErrorBoundary><ProtectedRoute component={MisPartidosPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={MisPartidosPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/mis-reservas">
-          <ErrorBoundary><ProtectedRoute component={MisReservasPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={MisReservasPage} layout="player" /></ErrorBoundary>
         </Route>
 
         {/* Canchas management — specific sub-routes before /:id */}
+        <Route path="/mis-canchas/centro/editar">
+          <ErrorBoundary><ProtectedRoute component={OwnerVenueEditPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/centro">
+          <ErrorBoundary><ProtectedRoute component={OwnerVenuePage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
         <Route path="/mis-canchas/perfil/editar">
-          <ErrorBoundary><ProtectedRoute component={OwnerProfileEditPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={OwnerProfileEditPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/mis-canchas/perfil">
-          <ErrorBoundary><ProtectedRoute component={OwnerProfilePage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={OwnerProfilePage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/mis-canchas/dashboard">
-          <ErrorBoundary><ProtectedRoute component={OwnerDashboardPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={OwnerDashboardPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/equipo">
+          <ErrorBoundary><ProtectedRoute component={OwnerEquipoPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/pendientes">
+          <ErrorBoundary><ProtectedRoute component={OwnerPendingPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/reservas">
+          <ErrorBoundary><ProtectedRoute component={OwnerBookingsPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/mis-canchas">
-          <ErrorBoundary><ProtectedRoute component={MisCanchasPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={MisCanchasPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/canchas/nueva">
-          <ErrorBoundary><ProtectedRoute component={NuevaCanchaPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={NuevaCanchaPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/canchas/:id/agenda">
-          <ErrorBoundary><ProtectedRoute component={CanchaAgendaPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={CanchaAgendaPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/canchas/:id/editar">
-          <ErrorBoundary><ProtectedRoute component={EditCanchaPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={EditCanchaPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/canchas/:id/clientes">
-          <ErrorBoundary><ProtectedRoute component={CanchaClientesPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={CanchaClientesPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas/:id/clientes/:userId">
+          <ErrorBoundary><ProtectedRoute component={CanchaClienteDetallePage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/canchas/:id/stats">
-          <ErrorBoundary><ProtectedRoute component={CanchaStatsPage} /></ErrorBoundary>
-        </Route>
-        <Route path="/canchas/:id/equipo">
-          <ErrorBoundary><ProtectedRoute component={CanchaEquipoPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={CanchaStatsPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
         </Route>
         <Route path="/canchas/:id">
-          <ErrorBoundary><CanchaDetailPage /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={CanchaDetailPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/venues/:id">
           <ErrorBoundary><Suspense fallback={null}><VenueDetailPage /></Suspense></ErrorBoundary>
@@ -221,32 +243,32 @@ function Router() {
         </Route>
 
         <Route path="/jugadores">
-          <ErrorBoundary><ProtectedRoute component={JugadoresPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={JugadoresPage} layout="player" /></ErrorBoundary>
         </Route>
 
         <Route path="/amigos">
-          <ErrorBoundary><ProtectedRoute component={FriendsPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={FriendsPage} layout="player" /></ErrorBoundary>
         </Route>
 
         <Route path="/equipos/nuevo">
-          <ErrorBoundary><ProtectedRoute component={NewTeamPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={NewTeamPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/equipos/:id">
-          <ErrorBoundary><ProtectedRoute component={TeamDetailPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TeamDetailPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/equipos">
-          <ErrorBoundary><ProtectedRoute component={TeamsPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TeamsPage} layout="player" /></ErrorBoundary>
         </Route>
 
         <Route path="/profile/:id">
-          <ErrorBoundary><ProtectedRoute component={UserProfilePage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={UserProfilePage} layout="player" /></ErrorBoundary>
         </Route>
 
         <Route path="/admin/venues">
-          <ErrorBoundary><ProtectedRoute component={AdminVenuesPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={AdminVenuesPage} requireRole="is_admin" layout="none" /></ErrorBoundary>
         </Route>
         <Route path="/admin/verificaciones">
-          <ErrorBoundary><ProtectedRoute component={AdminVerificationsPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={AdminVerificationsPage} requireRole="is_admin" layout="none" /></ErrorBoundary>
         </Route>
 
         <Route component={NotFoundPage} />

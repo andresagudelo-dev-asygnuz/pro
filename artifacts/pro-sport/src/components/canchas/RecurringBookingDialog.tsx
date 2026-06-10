@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
  * after an overlap check.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -38,12 +38,16 @@ import {
   createRecurring,
   listRecurringWithExceptionsForCancha,
 } from "@/lib/canchas/recurring-api";
+import { getCanchaClients } from "@/lib/canchas/clients-api";
 import { hasOverlap } from "@/lib/canchas/overlap";
+import { getMyCanchas } from "@/lib/canchas/api";
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
 const schema = z
   .object({
+    cancha_id: z.string().min(1, "Debes seleccionar una cancha"),
+    client_id: z.string().min(1, "Debes seleccionar un cliente"),
     day_of_week: z.coerce.number().min(0).max(6),
     start_time: z.string().min(1, "Requerido"),
     end_time: z.string().min(1, "Requerido"),
@@ -63,7 +67,7 @@ type FormValues = z.infer<typeof schema>;
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface RecurringBookingDialogProps {
-  canchaId: string;
+  canchaId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
@@ -99,18 +103,14 @@ export function RecurringBookingDialog({
   const [submitting, setSubmitting] = useState(false);
   const [overlapError, setOverlapError] = useState<string | null>(null);
 
-  // Fetch existing recurring + exceptions for overlap check
-  const { data: recurringData } = useQuery({
-    queryKey: ["recurring", canchaId],
+  // Fetch my canchas
+  const { data: myCanchas = [] } = useQuery({
+    queryKey: ["myCanchas", user?.id],
     queryFn: async () => {
-      const { data, error } = await listRecurringWithExceptionsForCancha(
-        supabase,
-        canchaId,
-      );
-      if (error || !data) return { recurrings: [], exceptions: [] };
-      return data;
+      const { data } = await getMyCanchas(supabase, user!.id);
+      return data || [];
     },
-    enabled: !!canchaId && open,
+    enabled: !!user && open,
   });
 
   const {
@@ -123,13 +123,53 @@ export function RecurringBookingDialog({
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      cancha_id: canchaId || "",
+      client_id: user?.id || "",
       day_of_week: 1,
       frequency: "weekly",
     },
   });
 
+  const activeCanchaId = watch("cancha_id");
+
+  // Fetch existing recurring + exceptions for overlap check
+  const { data: recurringData } = useQuery({
+    queryKey: ["recurring", activeCanchaId],
+    queryFn: async () => {
+      if (!activeCanchaId) return { recurrings: [], exceptions: [] };
+      const { data, error } = await listRecurringWithExceptionsForCancha(
+        supabase,
+        activeCanchaId,
+      );
+      if (error || !data) return { recurrings: [], exceptions: [] };
+      return data;
+    },
+    enabled: !!activeCanchaId && open,
+  });
+
+  const { data: clientsData } = useQuery({
+    queryKey: ["cancha-clients", activeCanchaId],
+    queryFn: async () => {
+      if (!activeCanchaId) return [];
+      const { data } = await getCanchaClients(supabase, activeCanchaId);
+      return data || [];
+    },
+    enabled: !!activeCanchaId && open,
+  });
+
   const watchedDayOfWeek = watch("day_of_week");
   const watchedFrequency = watch("frequency");
+
+  useEffect(() => {
+    if (activeCanchaId && myCanchas.length > 0) {
+      const selectedCancha = myCanchas.find((c) => c.id === activeCanchaId);
+      if (selectedCancha?.price_per_hour) {
+        setValue("price_per_session", selectedCancha.price_per_hour, {
+          shouldValidate: true,
+        });
+      }
+    }
+  }, [activeCanchaId, myCanchas, setValue]);
 
   async function onSubmit(values: FormValues) {
     if (!user) {
@@ -165,8 +205,8 @@ export function RecurringBookingDialog({
       const { error } = await createRecurring(
         supabase,
         {
-          cancha_id: canchaId,
-          user_id: user.id,
+          cancha_id: values.cancha_id,
+          user_id: values.client_id,
           day_of_week: values.day_of_week,
           start_time: values.start_time,
           end_time: values.end_time,
@@ -209,6 +249,65 @@ export function RecurringBookingDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-1">
+          {/* Cancha Selection */}
+          <div className="space-y-1.5">
+            <Label>Cancha</Label>
+            <Select
+              value={watch("cancha_id")}
+              onValueChange={(v) =>
+                setValue("cancha_id", v, { shouldValidate: true })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar cancha..." />
+              </SelectTrigger>
+              <SelectContent>
+                {myCanchas.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.cancha_id && (
+              <p className="text-xs text-destructive">
+                {errors.cancha_id.message}
+              </p>
+            )}
+          </div>
+
+          {/* Client Selection */}
+          <div className="space-y-1.5">
+            <Label>Cliente</Label>
+            <Select
+              value={watch("client_id")}
+              onValueChange={(v) =>
+                setValue("client_id", v, { shouldValidate: true })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar cliente..." />
+              </SelectTrigger>
+              <SelectContent>
+                {user && (
+                  <SelectItem value={user.id}>
+                    Yo (Dueño de la cancha)
+                  </SelectItem>
+                )}
+                {clientsData?.filter(c => c.user_id !== user?.id).map((c) => (
+                  <SelectItem key={c.user_id} value={c.user_id}>
+                    {c.full_name || c.username || "Usuario sin nombre"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.client_id && (
+              <p className="text-xs text-destructive">
+                {errors.client_id.message}
+              </p>
+            )}
+          </div>
+
           {/* Day of week */}
           <div className="space-y-1.5">
             <Label>Día de la semana</Label>

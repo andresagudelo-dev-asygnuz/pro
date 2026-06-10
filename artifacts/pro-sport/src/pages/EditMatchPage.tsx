@@ -2,8 +2,11 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import { getAllCanchas, getAvailableSlots, createBooking, updateBookingStatus } from "@/lib/canchas/api";
+import { getAllCanchas, getAvailableSlots, createBooking, updateBookingStatus, getBookingWithCancha, getCanchaOwnerInfo } from "@/lib/canchas/api";
 import { getVenuesByCity } from "@/lib/venues/api";
+import { getRawMatchById, updateMatch, resetParticipantConfirmations, getJoinedParticipantIds, createMatchSystemMessage } from "@/lib/matches/api";
+import { getSportById } from "@/lib/sports/api";
+import { sendNotification } from "@/lib/notifications/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +28,7 @@ function isoToDate(iso: string) { const d = new Date(iso); return `${d.getFullYe
 function isoToTime(iso: string) { const d = new Date(iso); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; }
 
 export default function EditMatchPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
 
@@ -62,17 +65,16 @@ export default function EditMatchPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: m } = await supabase.from("matches").select("*").eq("id", id).maybeSingle();
-      if (!m) { toast.error("Partido no encontrado"); setLocation(`/matches/${id}`); return; }
-      const matchData = m as Match;
+      const { data: matchData } = await getRawMatchById(supabase, id);
+      if (!matchData) { toast.error("Partido no encontrado"); setLocation(`/matches/${id}`); return; }
       if (matchData.organizer_id !== user.id) { toast.error("No tenés permiso para editar este partido."); setLocation(`/matches/${id}`); return; }
       setMatch(matchData); setTitle(matchData.title); setDescription(matchData.description ?? ""); setSkillLevel(matchData.skill_level ?? "any");
       setMaxPlayers(matchData.max_players); setDurationMinutes(matchData.duration_minutes); setIsPublic(matchData.is_public);
       setDateStr(isoToDate(matchData.starts_at)); setTimeStr(isoToTime(matchData.starts_at)); setCity(matchData.city);
-      const { data: sp } = await supabase.from("sports").select("*").eq("id", matchData.sport_id).maybeSingle();
+      const { data: sp } = await getSportById(supabase, matchData.sport_id);
       setSport(sp as Sport | null);
       if (matchData.cancha_booking_id) {
-        const { data: bk } = await supabase.from("cancha_bookings").select("*, canchas(name, address, city)").eq("id", matchData.cancha_booking_id).maybeSingle();
+        const { data: bk } = await getBookingWithCancha(supabase, matchData.cancha_booking_id);
         if (bk) setCurrentBooking(bk as FullBooking);
       } else {
         setManualAddress(matchData.location ?? "");
@@ -143,22 +145,40 @@ export default function EditMatchPage() {
     if (removeCancha && match.cancha_booking_id) {
       await updateBookingStatus(supabase, match.cancha_booking_id, "cancelada");
       if (currentBooking) {
-        const { data: canchaOwner } = await supabase.from("canchas").select("owner_id, name").eq("id", currentBooking.cancha_id).maybeSingle();
-        if (canchaOwner && canchaOwner.owner_id !== user.id) await supabase.from("notifications").insert({ user_id: canchaOwner.owner_id, type: "booking_cancelled", data: { match_id: match.id, match_title: match.title, cancha_name: canchaOwner.name, booking_date: currentBooking.booking_date, start_time: currentBooking.start_time } }).select();
+        const { data: canchaOwner } = await getCanchaOwnerInfo(supabase, currentBooking.cancha_id);
+        if (canchaOwner && canchaOwner.owner_id !== user.id) {
+          await sendNotification(supabase, canchaOwner.owner_id, "booking_cancelled", {
+            cancha_id: currentBooking.cancha_id, cancha_name: canchaOwner.name,
+            booking_date: currentBooking.booking_date, start_time: currentBooking.start_time,
+            end_time: currentBooking.end_time, total_price: currentBooking.total_price,
+          });
+        }
       }
       newCanchaBookingId = null; locationChanged = true; changes.push("cancha (eliminada)");
     } else if (selectedCancha && selectedSlot) {
       if (match.cancha_booking_id && currentBooking) {
         await updateBookingStatus(supabase, match.cancha_booking_id, "cancelada");
-        const { data: oldOwner } = await supabase.from("canchas").select("owner_id, name").eq("id", currentBooking.cancha_id).maybeSingle();
-        if (oldOwner && oldOwner.owner_id !== user.id) await supabase.from("notifications").insert({ user_id: oldOwner.owner_id, type: "booking_cancelled", data: { match_id: match.id, match_title: match.title, cancha_name: currentBooking.canchas?.name ?? oldOwner.name, booking_date: currentBooking.booking_date, start_time: currentBooking.start_time } }).select();
+        const { data: oldOwner } = await getCanchaOwnerInfo(supabase, currentBooking.cancha_id);
+        if (oldOwner && oldOwner.owner_id !== user.id) {
+          await sendNotification(supabase, oldOwner.owner_id, "booking_cancelled", {
+            cancha_id: currentBooking.cancha_id, cancha_name: currentBooking.canchas?.name ?? oldOwner.name,
+            booking_date: currentBooking.booking_date, start_time: currentBooking.start_time,
+            end_time: currentBooking.end_time, total_price: currentBooking.total_price,
+          });
+        }
       }
       const price = selectedCancha.discount_percent > 0 ? selectedCancha.price_per_hour * (1 - selectedCancha.discount_percent / 100) : selectedCancha.price_per_hour;
       const { data: newBooking, error: bookingErr } = await createBooking(supabase, { cancha_id: selectedCancha.id, booking_date: dateStr, start_time: selectedSlot.start, end_time: selectedSlot.end, total_price: price }, user.id);
       if (bookingErr) { toast.error("Error al crear la nueva reserva: " + bookingErr); setSaving(false); return; }
       newCanchaBookingId = newBooking!.id; locationChanged = true; changes.push("cancha");
-      const { data: newOwner } = await supabase.from("canchas").select("owner_id").eq("id", selectedCancha.id).maybeSingle();
-      if (newOwner && newOwner.owner_id !== user.id) await supabase.from("notifications").insert({ user_id: newOwner.owner_id, type: "booking_created", data: { match_id: match.id, match_title: title.trim(), cancha_name: selectedCancha.name, booking_date: dateStr, start_time: selectedSlot.start } }).select();
+      const { data: newOwner } = await getCanchaOwnerInfo(supabase, selectedCancha.id);
+      if (newOwner && newOwner.owner_id !== user.id) {
+        await sendNotification(supabase, newOwner.owner_id, "new_booking", {
+          cancha_id: selectedCancha.id, cancha_name: selectedCancha.name,
+          booking_date: dateStr, start_time: selectedSlot.start, end_time: selectedSlot.end,
+          booker_name: profile?.full_name ?? profile?.username ?? "Organizador", booker_id: user.id,
+        });
+      }
     } else if (startsAtISO !== match.starts_at) {
       locationChanged = true;
     }
@@ -166,17 +186,25 @@ export default function EditMatchPage() {
     const newLocation = selectedCancha ? `${selectedCancha.name} — ${selectedCancha.address}` : (removeCancha ? (manualAddress.trim() || null) : match.location);
     if (newLocation !== match.location) locationChanged = true;
 
-    const { error: matchErr } = await supabase.from("matches").update({ title: title.trim(), description: description.trim() || null, skill_level: skillLevelValue, max_players: maxPlayers, duration_minutes: durationMinutes, is_public: isPublic, starts_at: startsAtISO, city, location: newLocation, cancha_booking_id: newCanchaBookingId, updated_at: new Date().toISOString() }).eq("id", match.id);
-    if (matchErr) { toast.error("Error al guardar: " + matchErr.message); setSaving(false); return; }
+    const { error: matchErr } = await updateMatch(supabase, match.id, {
+      title: title.trim(), description: description.trim() || null, skill_level: skillLevelValue,
+      max_players: maxPlayers, duration_minutes: durationMinutes, is_public: isPublic,
+      starts_at: startsAtISO, city, location: newLocation, cancha_booking_id: newCanchaBookingId,
+    });
+    if (matchErr) { toast.error("Error al guardar: " + matchErr); setSaving(false); return; }
 
-    if (locationChanged || startsAtISO !== match.starts_at) await supabase.from("match_participants").update({ confirmed_at: null }).eq("match_id", match.id).not("confirmed_at", "is", null);
+    if (locationChanged || startsAtISO !== match.starts_at) await resetParticipantConfirmations(supabase, match.id);
 
     if (changes.length > 0) {
-      const { data: parts } = await supabase.from("match_participants").select("user_id").eq("match_id", match.id).neq("user_id", user.id).eq("status", "joined");
-      if (parts && parts.length > 0) await supabase.from("notifications").insert((parts as { user_id: string }[]).map((p) => ({ user_id: p.user_id, type: "match_updated", data: { match_id: match.id, match_title: title.trim(), changes: changes.join(", "), needs_reconfirm: locationChanged || startsAtISO !== match.starts_at } }))).select();
+      const { data: participantIds } = await getJoinedParticipantIds(supabase, match.id, user.id);
+      if (participantIds && participantIds.length > 0) {
+        await Promise.allSettled(participantIds.map((uid) =>
+          sendNotification(supabase, uid, "match_updated", { match_id: match.id, match_title: title.trim() })
+        ));
+      }
       const changesText = changes.join(", ");
       const reconfirmText = (locationChanged || startsAtISO !== match.starts_at) ? " Se requiere re-confirmar asistencia." : "";
-      await supabase.from("messages").insert({ match_id: match.id, sender_id: user.id, content: `📝 El organizador actualizó el partido: ${changesText}.${reconfirmText}` }).select();
+      await createMatchSystemMessage(supabase, match.id, user.id, `📝 El organizador actualizó el partido: ${changesText}.${reconfirmText}`);
     }
 
     toast.success("¡Partido actualizado!"); setLocation(`/matches/${match.id}`); setSaving(false);

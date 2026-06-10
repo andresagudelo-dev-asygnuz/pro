@@ -46,6 +46,7 @@
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/leaflet.markercluster": "^1.5.6",
     "@types/node": "catalog:",
     "@types/nprogress": "^0.2.3",
     "@types/react": "catalog:",
@@ -85,7 +86,9 @@
     "canvas-confetti": "^1.9.4",
     "gsap": "^3.15.0",
     "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
     "nprogress": "^0.2.0",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "react-leaflet-cluster": "^4.1.3"
   }
 }

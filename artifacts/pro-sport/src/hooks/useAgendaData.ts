@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { getCanchaBookingsForDate } from "@/lib/canchas/api";
 import { listRecurringWithExceptionsForCancha, expandToBookings } from "@/lib/canchas/recurring-api";
 import type { ExpandedOccurrence } from "@/lib/canchas/recurring-api";
+import type { PaymentStatus } from "@/lib/types/db";
 
 // ─── AgendaItem discriminated union ─────────────────────────────────────────
 
@@ -24,11 +25,18 @@ export type AgendaItem =
       booking_date: string;
       start_time: string;
       end_time: string;
-      status: string; // "pendiente" | "confirmada" | "cancelada"
+      status: string; // "pendiente" | "en_validacion" | "confirmada" | "finalizada" | "cancelada"
+      payment_status: PaymentStatus;
       total_price: number;
       notes?: string;
       customer_name?: string;
       customer_id?: string;
+      /** ISO timestamp — only present on pending bookings with a countdown. */
+      expires_at?: string | null;
+      /** Storage path to the receipt image, if uploaded. */
+      receipt_url?: string | null;
+      /** Reason for rejection, if applicable. */
+      rejected_reason?: string | null;
       isRecurring: false;
       /** The raw ExpandedOccurrence — undefined for ad-hoc items. */
       occurrence?: undefined;
@@ -80,8 +88,6 @@ function toDateStr(date: Date): string {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useAgendaData(canchaId: string, weekStart: Date): UseAgendaDataResult {
-  const supabase = createClient();
-
   // Visible range: 1 week before weekStart … weekStart + 13 days.
   // This ensures recurring expansions cover the full visible grid plus
   // one extra week on each side to avoid edge-case gaps.
@@ -115,9 +121,13 @@ export function useAgendaData(canchaId: string, weekStart: Date): UseAgendaDataR
             start_time: b.start_time,
             end_time: b.end_time,
             status: b.status,
+            payment_status: b.payment_status ?? "sin_anticipo",
             total_price: Number(b.total_price),
             notes: b.notes ?? undefined,
             customer_id: b.booked_by,
+            expires_at: b.expires_at ?? null,
+            receipt_url: b.receipt_url ?? null,
+            rejected_reason: b.rejected_reason ?? null,
             kind: "adhoc",
             isRecurring: false,
           })

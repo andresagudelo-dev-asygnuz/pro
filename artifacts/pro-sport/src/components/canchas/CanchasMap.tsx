@@ -4,6 +4,9 @@ import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { useLocation } from "wouter";
 import { SPORT_TYPE_ICONS, SPORT_TYPE_LABELS, type Cancha, type Venue } from "@/lib/types/db";
+import MarkerClusterGroup from "react-leaflet-cluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 interface GeoPoint {
   lat: number;
@@ -15,6 +18,8 @@ interface CanchasMapProps {
   venues: Venue[];
   userLocation: GeoPoint | null;
   onCanchaSelect: (id: string) => void;
+  onVenueSelect?: (id: string) => void;
+  mode?: "canchas" | "venues";
   height?: string;
 }
 
@@ -127,58 +132,57 @@ function FitBounds({ markers, userLocation }: { markers: [number, number][]; use
   return null;
 }
 
-export function CanchasMap({ canchas, venues, userLocation, onCanchaSelect, height = "calc(100dvh - 180px)" }: CanchasMapProps) {
+export function CanchasMap({ canchas, venues, userLocation, onCanchaSelect, onVenueSelect, mode = "canchas", height = "calc(100dvh - 180px)" }: CanchasMapProps) {
   const [, navigate] = useLocation();
 
   const venueMap = new Map<string, Venue>(venues.map((v) => [v.id, v]));
 
-  // Group canchas by venue_id
-  const canchasByVenue = new Map<string, Cancha[]>();
-  const canchasWithoutVenue: Cancha[] = [];
+  // Group canchas by venue_id or exact coordinates (canchas mode)
+  const groupedCanchas = new Map<string, { lat: number; lng: number; name: string; canchas: Cancha[] }>();
 
-  for (const c of canchas) {
-    if (c.venue_id) {
-      const group = canchasByVenue.get(c.venue_id) ?? [];
-      group.push(c);
-      canchasByVenue.set(c.venue_id, group);
-    } else {
-      canchasWithoutVenue.push(c);
+  if (mode === "canchas") {
+    for (const c of canchas) {
+      if (c.lat == null || c.lng == null) continue;
+
+      let groupKey = c.venue_id;
+      if (!groupKey) groupKey = `${c.lat},${c.lng}`;
+
+      let lat = c.lat;
+      let lng = c.lng;
+      let name = c.name.split(" ")[0] || "Sede";
+
+      if (c.venue_id) {
+        const venue = venueMap.get(c.venue_id);
+        if (venue) {
+          if (venue.lat != null && venue.lng != null) { lat = venue.lat; lng = venue.lng; }
+          if (venue.name) name = venue.name;
+        }
+      }
+
+      const group = groupedCanchas.get(groupKey) ?? { lat, lng, name, canchas: [] };
+      group.canchas.push(c);
+      groupedCanchas.set(groupKey, group);
     }
+  }
+
+  // Venues with coordinates for venues mode
+  const venuesWithCoords = venues.filter((v) => v.lat != null && v.lng != null);
+
+  // Cancha count per venue (for popup badge)
+  const venueCanchaCount = new Map<string, number>();
+  for (const c of canchas) {
+    if (c.venue_id) venueCanchaCount.set(c.venue_id, (venueCanchaCount.get(c.venue_id) ?? 0) + 1);
   }
 
   // Collect all marker positions for auto-fit
   const allMarkerPositions: [number, number][] = [];
 
-  if (userLocation) {
-    allMarkerPositions.push([userLocation.lat, userLocation.lng]);
-  }
+  if (userLocation) allMarkerPositions.push([userLocation.lat, userLocation.lng]);
 
-  // Venue markers positions
-  for (const [venueId, venueCanchas] of canchasByVenue.entries()) {
-    const venue = venueMap.get(venueId);
-    if (venue?.lat != null && venue?.lng != null) {
-      allMarkerPositions.push([venue.lat, venue.lng]);
-      void venueCanchas; // used below
-    }
-  }
-
-  // Individual cancha markers (no venue or venue without coords)
-  for (const c of canchasWithoutVenue) {
-    if (c.lat != null && c.lng != null) {
-      allMarkerPositions.push([c.lat, c.lng]);
-    }
-  }
-
-  // Also orphan canchas that have a venue_id but the venue lacks coords
-  for (const [venueId, venueCanchas] of canchasByVenue.entries()) {
-    const venue = venueMap.get(venueId);
-    if (!venue || venue.lat == null || venue.lng == null) {
-      for (const c of venueCanchas) {
-        if (c.lat != null && c.lng != null) {
-          allMarkerPositions.push([c.lat, c.lng]);
-        }
-      }
-    }
+  if (mode === "canchas") {
+    for (const group of groupedCanchas.values()) allMarkerPositions.push([group.lat, group.lng]);
+  } else {
+    for (const v of venuesWithCoords) allMarkerPositions.push([v.lat!, v.lng!]);
   }
 
   const defaultCenter: [number, number] = [4.5709, -74.2973];
@@ -189,6 +193,7 @@ export function CanchasMap({ canchas, venues, userLocation, onCanchaSelect, heig
       zoom={6}
       style={{ height, width: "100%" }}
       scrollWheelZoom
+      className="z-0"
     >
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
@@ -209,17 +214,26 @@ export function CanchasMap({ canchas, venues, userLocation, onCanchaSelect, heig
         </Marker>
       )}
 
-      {/* Venue markers */}
-      {Array.from(canchasByVenue.entries()).map(([venueId, venueCanchas]) => {
-        const venue = venueMap.get(venueId);
-        if (!venue || venue.lat == null || venue.lng == null) {
-          // Render individual markers for each cancha with coords
-          return venueCanchas
-            .filter((c) => c.lat != null && c.lng != null)
-            .map((c) => (
+      <MarkerClusterGroup
+        chunkedLoading
+        showCoverageOnHover={false}
+        maxClusterRadius={40}
+        iconCreateFunction={(cluster: any) => {
+          return L.divIcon({
+            html: `<div style="background:#7c3aed;color:white;width:34px;height:34px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;box-shadow:0 3px 10px rgba(124,58,237,0.5)">${cluster.getChildCount()}</div>`,
+            className: "custom-cluster-icon",
+            iconSize: L.point(34, 34, true)
+          });
+        }}
+      >
+        {/* ── CANCHAS MODE ── */}
+        {mode === "canchas" && Array.from(groupedCanchas.entries()).map(([key, group]) => {
+          if (group.canchas.length === 1) {
+            const c = group.canchas[0];
+            return (
               <Marker
                 key={c.id}
-                position={[c.lat!, c.lng!]}
+                position={[group.lat, group.lng]}
                 icon={singleCanchaIcon(SPORT_TYPE_ICONS[c.sport_type])}
                 eventHandlers={{ click: () => onCanchaSelect(c.id) }}
               >
@@ -230,80 +244,86 @@ export function CanchasMap({ canchas, venues, userLocation, onCanchaSelect, heig
                   />
                 </Popup>
               </Marker>
-            ));
-        }
+            );
+          }
 
-        return (
-          <Marker
-            key={venueId}
-            position={[venue.lat, venue.lng]}
-            icon={venueMarkerIcon(venueCanchas.length)}
-          >
-            <Popup minWidth={220} maxWidth={280}>
-              <div style={{ fontFamily: "inherit" }}>
-                {/* Venue header */}
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid #e4e4e7" }}>
-                  <span style={{ fontSize: "20px", lineHeight: 1 }}>🏟️</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: 800, fontSize: "14px", margin: 0, color: "#18181b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{venue.name}</p>
-                    <p style={{ fontSize: "11px", color: "#71717a", margin: 0 }}>{venueCanchas.length} {venueCanchas.length === 1 ? "cancha" : "canchas"}</p>
+          return (
+            <Marker
+              key={key}
+              position={[group.lat, group.lng]}
+              icon={venueMarkerIcon(group.canchas.length)}
+            >
+              <Popup minWidth={220} maxWidth={280}>
+                <div style={{ fontFamily: "inherit" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid #e4e4e7" }}>
+                    <span style={{ fontSize: "20px", lineHeight: 1 }}>🏟️</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 800, fontSize: "14px", margin: 0, color: "#18181b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{group.name}</p>
+                      <p style={{ fontSize: "11px", color: "#71717a", margin: 0 }}>{group.canchas.length} {group.canchas.length === 1 ? "cancha" : "canchas"}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "10px", maxHeight: "200px", overflowY: "auto" }}>
+                    {group.canchas.map((c) => {
+                      const finalPrice = c.discount_percent > 0
+                        ? c.price_per_hour * (1 - c.discount_percent / 100)
+                        : c.price_per_hour;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => { onCanchaSelect(c.id); navigate(`/canchas/${c.id}`); }}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%", textAlign: "left", padding: "6px 8px", borderRadius: "8px", border: "1px solid #e4e4e7", background: "white", cursor: "pointer" }}
+                          onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#f5f3ff"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#7c3aed"; }}
+                          onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "white"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#e4e4e7"; }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                            <span style={{ fontSize: "16px", lineHeight: 1, flexShrink: 0 }}>{SPORT_TYPE_ICONS[c.sport_type]}</span>
+                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#18181b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                          </div>
+                          <span style={{ fontSize: "12px", fontWeight: 700, color: "#7c3aed", flexShrink: 0 }}>${finalPrice.toLocaleString("es-CO")}/h</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
-                {/* Court list */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "10px" }}>
-                  {venueCanchas.map((c) => {
-                    const finalPrice = c.discount_percent > 0
-                      ? c.price_per_hour * (1 - c.discount_percent / 100)
-                      : c.price_per_hour;
-                    return (
-                      <button
-                        key={c.id}
-                        onClick={() => { onCanchaSelect(c.id); navigate(`/canchas/${c.id}`); }}
-                        style={{
-                          display: "flex", alignItems: "center", justifyContent: "space-between",
-                          gap: "8px", width: "100%", textAlign: "left",
-                          padding: "6px 8px", borderRadius: "8px", border: "1px solid #e4e4e7",
-                          background: "white", cursor: "pointer",
-                        }}
-                        onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#f5f3ff"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#7c3aed"; }}
-                        onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "white"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#e4e4e7"; }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
-                          <span style={{ fontSize: "16px", lineHeight: 1, flexShrink: 0 }}>{SPORT_TYPE_ICONS[c.sport_type]}</span>
-                          <span style={{ fontSize: "12px", fontWeight: 600, color: "#18181b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-                        </div>
-                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#7c3aed", flexShrink: 0 }}>
-                          ${finalPrice.toLocaleString("es-CO")}/h
-                        </span>
-                      </button>
-                    );
-                  })}
+        {/* ── VENUES MODE ── */}
+        {mode === "venues" && venuesWithCoords.map((venue) => {
+          const count = venueCanchaCount.get(venue.id) ?? 0;
+          return (
+            <Marker
+              key={venue.id}
+              position={[venue.lat!, venue.lng!]}
+              icon={venueMarkerIcon(count || 1)}
+              eventHandlers={{ click: () => onVenueSelect?.(venue.id) }}
+            >
+              <Popup minWidth={200} maxWidth={260}>
+                <div style={{ fontFamily: "inherit" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "22px", lineHeight: 1 }}>🏟️</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 800, fontSize: "14px", margin: 0, color: "#18181b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{venue.name}</p>
+                      <p style={{ fontSize: "11px", color: "#71717a", margin: 0 }}>{venue.city} · {count} {count === 1 ? "cancha" : "canchas"}</p>
+                    </div>
+                  </div>
+                  {venue.address && (
+                    <p style={{ fontSize: "11px", color: "#71717a", margin: "0 0 10px 0" }}>📍 {venue.address}</p>
+                  )}
+                  <button
+                    onClick={() => { onVenueSelect?.(venue.id); navigate(`/venues/${venue.id}`); }}
+                    style={{ display: "block", width: "100%", background: "#7c3aed", color: "white", border: "none", borderRadius: "8px", padding: "8px 12px", fontWeight: 700, fontSize: "13px", cursor: "pointer", textAlign: "center" }}
+                  >
+                    Ver Centro →
+                  </button>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
-
-      {/* Individual cancha markers (no venue) */}
-      {canchasWithoutVenue
-        .filter((c) => c.lat != null && c.lng != null)
-        .map((c) => (
-          <Marker
-            key={c.id}
-            position={[c.lat!, c.lng!]}
-            icon={singleCanchaIcon(SPORT_TYPE_ICONS[c.sport_type])}
-            eventHandlers={{ click: () => onCanchaSelect(c.id) }}
-          >
-            <Popup>
-              <CanchaPopupContent
-                cancha={c}
-                onGo={() => { onCanchaSelect(c.id); navigate(`/canchas/${c.id}`); }}
-              />
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          );
+        })}
+      </MarkerClusterGroup>
     </MapContainer>
   );
 }

@@ -265,6 +265,12 @@ export interface ConversationWithLastMessage {
   last_message_at: string | null;
   unread_count: number;
   last_message_content: string | null;
+  other_participant?: {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+  };
 }
 
 export async function listConversations(
@@ -315,6 +321,51 @@ export async function listConversations(
     last_message_text: string | null;
   }>;
 
+  // Enrich peer (friend/direct) conversations with the other participant's profile
+  // so the chat list can display the person's name instead of the generic "Chat" title.
+  const peerConvIds = rows
+    .filter((r) => r.type === "friend" || r.type === "direct")
+    .map((r) => r.id);
+  const otherPartMap = new Map<
+    string,
+    { id: string; full_name: string | null; username: string | null; avatar_url: string | null }
+  >();
+
+  if (peerConvIds.length > 0) {
+    const { data: peerParts } = await supabase
+      .from("conversation_participants")
+      .select("conversation_id, user_id")
+      .in("conversation_id", peerConvIds)
+      .neq("user_id", userId);
+
+    if (peerParts && peerParts.length > 0) {
+      const otherIds = [
+        ...new Set(
+          (peerParts as Array<{ conversation_id: string; user_id: string }>).map((p) => p.user_id)
+        ),
+      ];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, username, avatar_url")
+        .in("id", otherIds);
+
+      const profileMap = new Map(
+        ((profiles ?? []) as Array<{
+          id: string;
+          full_name: string | null;
+          username: string | null;
+          avatar_url: string | null;
+        }>).map((p) => [p.id, p])
+      );
+      (peerParts as Array<{ conversation_id: string; user_id: string }>).forEach((p) => {
+        if (!otherPartMap.has(p.conversation_id)) {
+          const profile = profileMap.get(p.user_id);
+          if (profile) otherPartMap.set(p.conversation_id, profile);
+        }
+      });
+    }
+  }
+
   // Compute unread count per conversation
   const result: ConversationWithLastMessage[] = await Promise.all(
     rows.map(async (conv) => {
@@ -336,6 +387,7 @@ export async function listConversations(
         last_message_at: conv.last_message_at,
         unread_count: unread,
         last_message_content: conv.last_message_text,
+        other_participant: otherPartMap.get(conv.id),
       };
     })
   );
@@ -399,6 +451,75 @@ export async function listMessages(
     messages.length === limit ? messages[0].created_at : null;
 
   return { data: messages, error: null, nextCursor };
+}
+
+// ── Get or create a direct conversation with a friend ────────────────────────
+export async function getOrCreateFriendConversation(
+  supabase: SupabaseClient,
+  otherUserId: string,
+): Promise<{ data: string | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("get_or_create_friend_conversation", {
+    other_user_id: otherUserId,
+  });
+  if (error) return { data: null, error: mapDbError(error, "getOrCreateFriendConversation") };
+  return { data: data as string | null, error: null };
+}
+
+// ── getConversationMeta — fetch conversation + both participant profiles ───────
+type ProfileMini = { id: string; full_name: string | null; username: string | null; avatar_url: string | null };
+
+export interface ConversationMetaResult {
+  conversation: Conversation | null;
+  myProfile: ProfileMini | null;
+  otherProfile: ProfileMini | null;
+  matchStatus: string | null;
+}
+
+export async function getConversationMeta(
+  supabase: SupabaseClient,
+  conversationId: string,
+  userId: string,
+): Promise<{ data: ConversationMetaResult | null; error: string | null }> {
+  const [convRes, myProfRes] = await Promise.all([
+    supabase.from("conversations").select("*").eq("id", conversationId).single(),
+    supabase.from("profiles").select("id, full_name, username, avatar_url").eq("id", userId).single(),
+  ]);
+
+  const conv = convRes.data as Conversation | null;
+  if (!conv) return { data: null, error: mapDbError(convRes.error, "getConversationMeta_conv") };
+
+  const myProfile = myProfRes.data as ProfileMini | null;
+
+  const { data: parts } = await supabase
+    .from("conversation_participants")
+    .select("user_id")
+    .eq("conversation_id", conversationId)
+    .neq("user_id", userId);
+
+  const otherId = (parts as Array<{ user_id: string }> | null)?.[0]?.user_id;
+  let otherProfile: ProfileMini | null = null;
+  if (otherId) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name, username, avatar_url")
+      .eq("id", otherId)
+      .single();
+    otherProfile = data as ProfileMini | null;
+  }
+
+  let matchStatus: string | null = null;
+  if (conv.type === "match" && conv.reference_id) {
+    const { data: matchRow } = await supabase
+      .from("matches")
+      .select("status")
+      .eq("id", conv.reference_id)
+      .single();
+    if (matchRow) matchStatus = (matchRow as { status: string }).status;
+  }
+
+  await markConversationRead(supabase, conversationId, userId);
+
+  return { data: { conversation: conv, myProfile, otherProfile, matchStatus }, error: null };
 }
 
 // ── Leave / delete a conversation (removes current user from participants) ────

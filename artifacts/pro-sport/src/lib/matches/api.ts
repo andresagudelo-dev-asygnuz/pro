@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapDbError } from "@/lib/errors/map-db-error";
 import type { FeedMatch } from "@/lib/feed/api";
+import type { Match } from "@/lib/types/db";
 
 // Note: src/lib/matches/conflicts.ts handles conflict detection logic.
 // This file provides CRUD and participant operations — no overlap.
@@ -11,12 +12,13 @@ export interface MatchInput {
   title: string;
   sport_id: string;
   city: string;
-  location: string;
+  location: string | null;
   starts_at: string;
   duration_minutes: number;
   max_players: number;
-  description?: string;
-  skill_level?: string;
+  is_public?: boolean;
+  description?: string | null;
+  skill_level?: string | null;
   cancha_booking_id?: string | null;
 }
 
@@ -38,7 +40,7 @@ export async function createMatch(
   supabase: SupabaseClient,
   input: MatchInput,
   organizerId: string
-): Promise<ApiResult<{ id: string }>> {
+): Promise<ApiResult<{ id: string; title: string }>> {
   const { data, error } = await supabase
     .from("matches")
     .insert({
@@ -55,11 +57,11 @@ export async function createMatch(
       organizer_id: organizerId,
       status: "open",
     })
-    .select("id")
+    .select("id, title")
     .single();
 
   if (error) return { data: null, error: mapDbError(error, "match_create") };
-  return { data: data as { id: string }, error: null };
+  return { data: data as { id: string; title: string }, error: null };
 }
 
 // ── updateMatch ───────────────────────────────────────────────────────────────
@@ -81,6 +83,7 @@ export async function updateMatch(
       ...(input.description !== undefined && { description: input.description }),
       ...(input.skill_level !== undefined && { skill_level: input.skill_level }),
       ...(input.cancha_booking_id !== undefined && { cancha_booking_id: input.cancha_booking_id }),
+      ...(input.is_public !== undefined && { is_public: input.is_public }),
     })
     .eq("id", matchId);
 
@@ -235,5 +238,280 @@ export async function leaveMatch(
     .eq("user_id", userId);
 
   if (error) return { data: null, error: mapDbError(error, "match_leave") };
+  return { data: null, error: null };
+}
+
+// ── requestJoinMatch — create a "requested" participant entry ────────────────
+export async function requestJoinMatch(
+  supabase: SupabaseClient,
+  matchId: string,
+  userId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_participants")
+    .insert({ match_id: matchId, user_id: userId, status: "requested" });
+  if (error) return { data: null, error: mapDbError(error, "requestJoinMatch") };
+  return { data: null, error: null };
+}
+
+// ── cancelJoinRequest — remove a pending join request ────────────────────────
+export async function cancelJoinRequest(
+  supabase: SupabaseClient,
+  matchId: string,
+  userId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_participants")
+    .delete()
+    .eq("match_id", matchId)
+    .eq("user_id", userId)
+    .eq("status", "requested");
+  if (error) return { data: null, error: mapDbError(error, "cancelJoinRequest") };
+  return { data: null, error: null };
+}
+
+// ── getRawMatchById — returns full Match row (for edit forms) ─────────────────
+export async function getRawMatchById(
+  supabase: SupabaseClient,
+  matchId: string,
+): Promise<ApiResult<Match>> {
+  const { data, error } = await supabase
+    .from("matches")
+    .select("*")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (error) return { data: null, error: mapDbError(error, "getRawMatchById") };
+  return { data: data as Match | null, error: null };
+}
+
+// ── resetParticipantConfirmations — clear confirmed_at after schedule change ──
+export async function resetParticipantConfirmations(
+  supabase: SupabaseClient,
+  matchId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_participants")
+    .update({ confirmed_at: null })
+    .eq("match_id", matchId)
+    .not("confirmed_at", "is", null);
+  if (error) return { data: null, error: mapDbError(error, "resetConfirmations") };
+  return { data: null, error: null };
+}
+
+// ── getJoinedParticipantIds — user_ids of joined participants, excluding one user
+export async function getJoinedParticipantIds(
+  supabase: SupabaseClient,
+  matchId: string,
+  excludeUserId: string,
+): Promise<ApiResult<string[]>> {
+  const { data, error } = await supabase
+    .from("match_participants")
+    .select("user_id")
+    .eq("match_id", matchId)
+    .neq("user_id", excludeUserId)
+    .eq("status", "joined");
+  if (error) return { data: null, error: mapDbError(error, "getJoinedParticipantIds") };
+  return { data: (data ?? []).map((r: { user_id: string }) => r.user_id), error: null };
+}
+
+// ── upsertMatchRatings — bulk upsert ratings after match ends ─────────────────
+export async function upsertMatchRatings(
+  supabase: SupabaseClient,
+  rows: { match_id: string; rater_id: string; rated_id: string; rating: number }[],
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_ratings")
+    .upsert(rows, { onConflict: "match_id,rater_id,rated_id" });
+  if (error) return { data: null, error: mapDbError(error, "upsertMatchRatings") };
+  return { data: null, error: null };
+}
+
+// ── getMatchParticipantsRaw — full MatchParticipant rows ordered by joined_at ──
+export async function getMatchParticipantsRaw(
+  supabase: SupabaseClient,
+  matchId: string,
+): Promise<ApiResult<import("@/lib/types/db").MatchParticipant[]>> {
+  const { data, error } = await supabase
+    .from("match_participants")
+    .select("*")
+    .eq("match_id", matchId)
+    .order("joined_at");
+  if (error) return { data: null, error: mapDbError(error, "getMatchParticipantsRaw") };
+  return { data: (data ?? []) as import("@/lib/types/db").MatchParticipant[], error: null };
+}
+
+// ── getMatchWaitlistRaw — full MatchWaitlist rows ordered by joined_at ─────
+export async function getMatchWaitlistRaw(
+  supabase: SupabaseClient,
+  matchId: string,
+): Promise<ApiResult<import("@/lib/types/db").MatchWaitlist[]>> {
+  const { data, error } = await supabase
+    .from("match_waitlist")
+    .select("*")
+    .eq("match_id", matchId)
+    .order("joined_at");
+  if (error) return { data: null, error: mapDbError(error, "getMatchWaitlistRaw") };
+  return { data: (data ?? []) as import("@/lib/types/db").MatchWaitlist[], error: null };
+}
+
+// ── joinMatchDirect — insert participant with status 'joined' (no conflict check) ──
+export async function joinMatchDirect(
+  supabase: SupabaseClient,
+  matchId: string,
+  userId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_participants")
+    .insert({ match_id: matchId, user_id: userId, status: "joined" });
+  if (error) return { data: null, error: mapDbError(error, "joinMatchDirect") };
+  return { data: null, error: null };
+}
+
+// ── leaveMatchDirect — delete participant row ──────────────────────────────
+export async function leaveMatchDirect(
+  supabase: SupabaseClient,
+  matchId: string,
+  userId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_participants")
+    .delete()
+    .eq("match_id", matchId)
+    .eq("user_id", userId);
+  if (error) return { data: null, error: mapDbError(error, "leaveMatchDirect") };
+  return { data: null, error: null };
+}
+
+// ── confirmMatchAttendance — set confirmed_at for a participant ────────────
+export async function confirmMatchAttendance(
+  supabase: SupabaseClient,
+  matchId: string,
+  userId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_participants")
+    .update({ confirmed_at: new Date().toISOString() })
+    .eq("match_id", matchId)
+    .eq("user_id", userId);
+  if (error) return { data: null, error: mapDbError(error, "confirmMatchAttendance") };
+  return { data: null, error: null };
+}
+
+// ── cancelMatchById — set match status to 'cancelled' ─────────────────────
+export async function cancelMatchById(
+  supabase: SupabaseClient,
+  matchId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("matches")
+    .update({ status: "cancelled" })
+    .eq("id", matchId);
+  if (error) return { data: null, error: mapDbError(error, "cancelMatchById") };
+  return { data: null, error: null };
+}
+
+// ── acceptParticipantRequest — promote 'requested' → 'joined' ─────────────
+export async function acceptParticipantRequest(
+  supabase: SupabaseClient,
+  matchId: string,
+  participantUserId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_participants")
+    .update({ status: "joined" })
+    .eq("match_id", matchId)
+    .eq("user_id", participantUserId);
+  if (error) return { data: null, error: mapDbError(error, "acceptParticipantRequest") };
+  return { data: null, error: null };
+}
+
+// ── rejectParticipantRequest — delete a pending request ───────────────────
+export async function rejectParticipantRequest(
+  supabase: SupabaseClient,
+  matchId: string,
+  participantUserId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_participants")
+    .delete()
+    .eq("match_id", matchId)
+    .eq("user_id", participantUserId);
+  if (error) return { data: null, error: mapDbError(error, "rejectParticipantRequest") };
+  return { data: null, error: null };
+}
+
+// ── toggleWaitlist — join or leave the match waitlist ─────────────────────
+export async function joinWaitlist(
+  supabase: SupabaseClient,
+  matchId: string,
+  userId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("match_waitlist")
+    .insert({ match_id: matchId, user_id: userId });
+  if (error) return { data: null, error: mapDbError(error, "joinWaitlist") };
+  return { data: null, error: null };
+}
+
+export async function leaveWaitlist(
+  supabase: SupabaseClient,
+  entryId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase.from("match_waitlist").delete().eq("id", entryId);
+  if (error) return { data: null, error: mapDbError(error, "leaveWaitlist") };
+  return { data: null, error: null };
+}
+
+// ── upsertMatchChatAccess — ensure conversation row + participant membership ──
+export async function upsertMatchChatAccess(
+  supabase: SupabaseClient,
+  matchId: string,
+  matchTitle: string,
+  userId: string,
+): Promise<ApiResult<null>> {
+  const { error: convErr } = await supabase
+    .from("conversations")
+    .insert(
+      { id: matchId, type: "match", reference_id: matchId, title: matchTitle, subtitle: "Chat del partido" }
+    );
+  if (convErr && convErr.code !== "23505") return { data: null, error: mapDbError(convErr, "upsertMatchConv") };
+  
+  const { error: partErr } = await supabase
+    .from("conversation_participants")
+    .insert(
+      { conversation_id: matchId, user_id: userId }
+    );
+  if (partErr && partErr.code !== "23505") return { data: null, error: mapDbError(partErr, "upsertMatchConvPart") };
+  
+  return { data: null, error: null };
+}
+
+// ── getMatchMessages — paginated messages for a match conversation ─────────
+export async function getMatchMessages(
+  supabase: SupabaseClient,
+  matchId: string,
+  limit = 200,
+): Promise<ApiResult<Array<{ id: string; sender_id: string; content: string; created_at: string }>>> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("id, sender_id, content, created_at")
+    .eq("conversation_id", matchId)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  if (error) return { data: null, error: mapDbError(error, "getMatchMessages") };
+  return { data: (data ?? []) as Array<{ id: string; sender_id: string; content: string; created_at: string }>, error: null };
+}
+
+// ── createMatchSystemMessage — insert a system/update message in match chat ───
+export async function createMatchSystemMessage(
+  supabase: SupabaseClient,
+  matchId: string,
+  senderId: string,
+  content: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("messages")
+    .insert({ conversation_id: matchId, sender_id: senderId, content });
+  if (error) return { data: null, error: mapDbError(error, "createMatchSystemMessage") };
   return { data: null, error: null };
 }

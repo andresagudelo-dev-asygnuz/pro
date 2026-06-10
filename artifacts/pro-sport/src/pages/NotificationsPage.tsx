@@ -5,13 +5,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useNotifCount } from "@/context/NotifContext";
 import {
   Bell, CheckCircle2, MessageSquare, UserPlus, Mail,
-  Check, X, Trash2, Eye, CalendarCheck, Building2, Trophy,
+  Check, X, Trash2, Eye, CalendarCheck, Building2, Trophy, Upload, AlertCircle
 } from "lucide-react";
 import { NotificationItem } from "@/components/ui/NotificationItem";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { initialsFromName } from "@/lib/format";
 import { toast } from "sonner";
 import {
@@ -31,7 +29,7 @@ const FILTER_LABELS: Record<Filter, string> = {
 };
 
 function isBookingType(t: string) {
-  return ["booking_new_request","booking_confirmed","booking_cancelled","booking_cancelled_owner","booking_created"].includes(t);
+  return ["booking_new_request","booking_confirmed","booking_cancelled","booking_cancelled_owner","booking_created","booking_receipt_uploaded","booking_payment_rejected"].includes(t);
 }
 function isMatchType(t: string) {
   return ["match_request","match_accepted","match_invite","match_updated"].includes(t);
@@ -84,6 +82,8 @@ export default function NotificationsPage() {
     if (type === "tournament_match_scheduled") return <Trophy className="size-4 text-blue-500" />;
     if (type === "tournament_result")        return <Trophy className="size-4 text-amber-500" />;
     if (type === "tournament_cancelled")     return <Trophy className="size-4 text-red-400" />;
+    if (type === "booking_receipt_uploaded") return <Upload className="size-4 text-violet-500" />;
+    if (type === "booking_payment_rejected") return <AlertCircle className="size-4 text-red-500" />;
     return <Bell className="size-4 text-muted-foreground" />;
   };
 
@@ -116,6 +116,10 @@ export default function NotificationsPage() {
         return <span>❌ Tu reserva en <strong>{(cancha_name as string) || "la cancha"}</strong>{dateStr ? <> del {dateStr}</> : ""}{timeStr ? <> a las {timeStr}</> : ""} fue <strong>cancelada</strong>.</span>;
       case "booking_created":
         return <span>🏟️ Nueva reserva en <strong>{(cancha_name as string) || "tu cancha"}</strong>{dateStr ? <> para el {dateStr}</> : ""}{timeStr ? <> a las {timeStr}</> : ""}.</span>;
+      case "booking_receipt_uploaded":
+        return <span>🧾 <strong>{(booker_name as string) || "Un usuario"}</strong> subió el comprobante de pago para <strong>{(cancha_name as string) || "la cancha"}</strong>{dateStr ? <> del {dateStr}</> : ""}{timeStr ? <> a las {timeStr}</> : ""}.</span>;
+      case "booking_payment_rejected":
+        return <span>⚠️ Tu comprobante de pago para <strong>{(cancha_name as string) || "la cancha"}</strong>{dateStr ? <> del {dateStr}</> : ""}{timeStr ? <> a las {timeStr}</> : ""} fue <strong>rechazado</strong>. Razón: {d.reason as string}.</span>;
       case "tournament_registered":
         return <span>🏆 Te inscribiste en <strong>{(tournament_name as string) || "el torneo"}</strong>. Tu inscripción está <strong>pendiente de aprobación</strong>.</span>;
       case "tournament_accepted":
@@ -140,11 +144,11 @@ export default function NotificationsPage() {
     
     if (d.cancha_id) {
       // Notificaciones para el DUEÑO (ir a Agenda)
-      if (n.type === "booking_new_request" || n.type === "booking_created") {
+      if (n.type === "booking_new_request" || n.type === "booking_created" || n.type === "booking_receipt_uploaded") {
         return `/canchas/${d.cancha_id as string}/agenda`;
       }
       // Notificaciones para el JUGADOR (ir a Mis Reservas)
-      if (n.type === "booking_confirmed" || n.type === "booking_cancelled" || n.type === "booking_cancelled_owner") {
+      if (n.type === "booking_confirmed" || n.type === "booking_cancelled" || n.type === "booking_cancelled_owner" || n.type === "booking_payment_rejected") {
         return `/mis-reservas`;
       }
       // Default para canchas
@@ -174,28 +178,23 @@ export default function NotificationsPage() {
   const hasActionable = friendRequests.length > 0 || matchInvitations.length > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title={
-          <>
-            Notificaciones
-            {unreadCount > 0 && (
-              <span className="ml-2 text-xs font-semibold bg-violet-600 text-white px-2 py-0.5 rounded-full">
-                {unreadCount}
-              </span>
-            )}
-          </>
-        }
-        backHref="/feed"
-        actions={
-          unreadCount > 0 ? (
-            <Button variant="ghost" size="sm" onClick={markAllRead}
-              className="text-xs text-muted-foreground rounded-xl gap-1">
-              <Eye className="size-3" /> Todas leídas
-            </Button>
-          ) : undefined
-        }
-      />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+          Notificaciones
+          {unreadCount > 0 && (
+            <span className="text-xs font-semibold bg-violet-600 text-white px-2 py-0.5 rounded-full">
+              {unreadCount}
+            </span>
+          )}
+        </h1>
+        {unreadCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={markAllRead}
+            className="text-xs text-muted-foreground rounded-xl gap-1">
+            <Eye className="size-3" /> Todas leídas
+          </Button>
+        )}
+      </div>
 
       <main className="container mx-auto px-4 py-4 max-w-2xl space-y-4">
         {/* Filtros */}
@@ -357,7 +356,6 @@ export default function NotificationsPage() {
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

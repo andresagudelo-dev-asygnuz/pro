@@ -290,7 +290,8 @@ export type CanchaSportType =
   | "futbol_11" | "futbol_9" | "futbol_5" | "futbol_sala"
   | "padel" | "tenis" | "basket" | "voleibol" | "otro";
 
-export type BookingStatus = "pendiente" | "confirmada" | "cancelada";
+export type BookingStatus = "pendiente" | "en_validacion" | "confirmada" | "finalizada" | "cancelada";
+export type PaymentStatus = "sin_anticipo" | "anticipo_pagado" | "pagado_total" | "rechazado";
 
 export interface Cancha {
   id: string;
@@ -309,8 +310,19 @@ export interface Cancha {
   venue_id: string | null;
   lat: number | null;
   lng: number | null;
+  image_url: string | null;
+  payment_nequi: string | null;
+  payment_instructions: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface VenuePaymentMethod {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  account_name?: string;
+  qr_url?: string;
 }
 
 export interface Venue {
@@ -322,6 +334,14 @@ export interface Venue {
   lng: number | null;
   description: string | null;
   phone: string | null;
+  whatsapp: string | null;
+  owner_id: string | null;
+  banner_url: string | null;
+  logo_url: string | null;
+  payment_instructions: string | null;
+  payment_methods: VenuePaymentMethod[];
+  rating_avg: number;
+  rating_count: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -344,9 +364,15 @@ export interface CanchaBooking {
   start_time: string;
   end_time: string;
   status: BookingStatus;
+  payment_status: PaymentStatus;
   match_id: string | null;
   total_price: number;
+  paid_amount: number | null;
   notes: string | null;
+  expires_at: string | null;
+  receipt_url: string | null;
+  receipt_uploaded_at: string | null;
+  rejected_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -501,6 +527,35 @@ export interface MatchInvitation {
   inviter_id: string;
   invitee_id: string;
   status: MatchInvitationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Social Feed (El Tercer Tiempo) ──────────────────────────────────────────
+
+export interface Post {
+  id: string;
+  author_id: string;
+  match_id: string | null;
+  cancha_id: string | null;
+  content: string | null;
+  media_urls: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PostLike {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
   created_at: string;
   updated_at: string;
 }

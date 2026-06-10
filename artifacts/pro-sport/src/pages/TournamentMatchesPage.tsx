@@ -6,7 +6,6 @@ import { useTournamentMatches } from "@/hooks/useTournamentMatches";
 import { MatchCard } from "@/components/tournaments/MatchCard";
 import { MatchResultDialog } from "@/components/tournaments/MatchResultDialog";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
 import type { MatchWithNames } from "@/lib/tournaments/matches";
 
 export default function TournamentMatchesPage() {
@@ -42,16 +41,16 @@ export default function TournamentMatchesPage() {
 
   if (isLoading) {
     return (
-      <AppLayout>
+      <>
         <div className="flex items-center justify-center p-12">
           <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="container py-6 max-w-4xl mx-auto space-y-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -122,6 +121,6 @@ export default function TournamentMatchesPage() {
         onConfirm={handleConfirmResult}
         isLoading={isRecording}
       />
-    </AppLayout>
+    </>
   );
 }

@@ -3,12 +3,12 @@ import { useParams, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
 import { ArrowLeft, Clock, Mail, Lock, X } from "lucide-react";
 import { toast } from "sonner";
 import { getFriends, sendMatchInvitations } from "@/lib/friends/api";
 import { sendNotification } from "@/lib/notifications/api";
 import { checkMatchConflict } from "@/lib/matches/conflicts";
+import { upsertMatchRatings } from "@/lib/matches/api";
 import type { FriendWithProfile } from "@/lib/friends/api";
 import { useMatchDetail, type FullBooking } from "@/hooks/useMatchDetail";
 import { MatchCanchaCard } from "@/components/matches/MatchCanchaCard";
@@ -16,6 +16,7 @@ import { MatchHeroCard } from "@/components/matches/MatchHeroCard";
 import { MatchActionsPanel } from "@/components/matches/MatchActionsPanel";
 import { MatchPlayersSection } from "@/components/matches/MatchPlayersSection";
 import { MatchChatSection } from "@/components/matches/MatchChatSection";
+import { PaymentPendingModal } from "@/components/canchas/PaymentPendingModal";
 
 export default function MatchDetailPage() {
   const { user, profile } = useAuth();
@@ -41,6 +42,7 @@ export default function MatchDetailPage() {
   const chatInputRef  = useRef<HTMLInputElement>(null);
 
   const [showInvitePanel, setShowInvitePanel]     = useState(false);
+  const [showPaymentModal, setShowPaymentModal]   = useState(false);
   const [friends, setFriends]                     = useState<FriendWithProfile[]>([]);
   const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
   const [sendingInvites, setSendingInvites]       = useState(false);
@@ -127,8 +129,8 @@ export default function MatchDetailPage() {
       setSubmittingRatings(false);
       return;
     }
-    const { error: ratingErr } = await supabase.from("match_ratings").upsert(rows, { onConflict: "match_id,rater_id,rated_id" });
-    if (ratingErr) { toast.error("Error: " + ratingErr.message); }
+    const { error: ratingErr } = await upsertMatchRatings(supabase, rows);
+    if (ratingErr) { toast.error("Error: " + ratingErr); }
     else { toast.success("¡Calificaciones enviadas!"); setRatingsSubmitted(true); }
     setSubmittingRatings(false);
   }
@@ -170,19 +172,19 @@ export default function MatchDetailPage() {
   }
 
   if (loading) return (
-    <AppLayout>
+    <>
       <div className="flex flex-col gap-3 max-w-2xl mx-auto">
         <div className="h-10 w-32 rounded-xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
         <div className="h-28 rounded-2xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
         <div className="h-64 rounded-3xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
       </div>
-    </AppLayout>
+    </>
   );
 
   if (error || !match) return (
-    <AppLayout>
+    <>
       <div className="p-6 bg-destructive/15 text-destructive rounded-xl text-center">{error ?? "Partido no encontrado"}</div>
-    </AppLayout>
+    </>
   );
 
   // ── Access guard ───────────────────────────────────────────────────────────
@@ -197,7 +199,7 @@ export default function MatchDetailPage() {
 
       if (_hasPendingInvite) {
         return (
-          <AppLayout>
+          <>
             <div className="flex flex-col gap-4 max-w-md mx-auto py-8">
               <button onClick={() => setLocation("/feed")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground self-start">
                 <ArrowLeft className="size-4" /> Volver al feed
@@ -219,13 +221,13 @@ export default function MatchDetailPage() {
                 </div>
               </div>
             </div>
-          </AppLayout>
+          </>
         );
       }
 
       if (_myStatus === "requested") {
         return (
-          <AppLayout>
+          <>
             <div className="flex flex-col gap-4 max-w-md mx-auto py-8">
               <button onClick={() => setLocation("/feed")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground self-start">
                 <ArrowLeft className="size-4" /> Volver al feed
@@ -242,12 +244,12 @@ export default function MatchDetailPage() {
                 </Button>
               </div>
             </div>
-          </AppLayout>
+          </>
         );
       }
 
       return (
-        <AppLayout>
+        <>
           <div className="flex flex-col gap-4 max-w-md mx-auto py-8">
             <button onClick={() => setLocation("/feed")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground self-start">
               <ArrowLeft className="size-4" /> Volver al feed
@@ -263,7 +265,7 @@ export default function MatchDetailPage() {
               <Button onClick={() => setLocation("/feed")} variant="outline" className="rounded-xl">Volver al feed</Button>
             </div>
           </div>
-        </AppLayout>
+        </>
       );
     }
   }
@@ -291,7 +293,7 @@ export default function MatchDetailPage() {
   const canChat         = isJoined || isOrganizer;
 
   return (
-    <AppLayout>
+    <>
       <div className="flex flex-col gap-3 max-w-2xl mx-auto">
         <button
           onClick={() => setLocation("/feed")}
@@ -300,7 +302,13 @@ export default function MatchDetailPage() {
           <ArrowLeft className="size-4" /> Volver al feed
         </button>
 
-        {canchaBooking && <MatchCanchaCard canchaBooking={canchaBooking as FullBooking} />}
+        {canchaBooking && (
+          <MatchCanchaCard 
+            canchaBooking={canchaBooking as FullBooking} 
+            isOrganizer={isOrganizer}
+            onOpenPayment={() => setShowPaymentModal(true)}
+          />
+        )}
 
         <MatchHeroCard
           match={match}
@@ -395,7 +403,25 @@ export default function MatchDetailPage() {
           onSetRating={(uid, rating) => setMyRatings((prev) => ({ ...prev, [uid]: rating }))}
           onSubmitRatings={handleSubmitRatings}
         />
+
+        {canchaBooking && (
+          <PaymentPendingModal
+            open={showPaymentModal}
+            onClose={() => { setShowPaymentModal(false); window.location.reload(); }}
+            bookingId={canchaBooking.id}
+            userId={user!.id}
+            canchaName={canchaBooking.canchas?.name ?? ""}
+            bookingDate={canchaBooking.booking_date}
+            startTime={canchaBooking.start_time ?? ""}
+            endTime={canchaBooking.end_time ?? ""}
+            totalPrice={canchaBooking.total_price}
+            paymentMethods={[]}
+            paymentInstructions={null}
+            expiresAt={canchaBooking.expires_at ?? new Date(Date.now() + 15 * 60000).toISOString()}
+            matchId={match?.id}
+          />
+        )}
       </div>
-    </AppLayout>
+    </>
   );
 }

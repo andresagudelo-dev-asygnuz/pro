@@ -5,34 +5,65 @@ import { trackEvent } from "@/lib/analytics";
 
 export function LaunchBanner() {
   const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
+    days: 0, hours: 0, minutes: 0, seconds: 0,
   });
+  const [launched, setLaunched] = useState(false);
 
   useEffect(() => {
-    const targetDate = new Date("2026-05-15T00:00:00").getTime();
+    const targetDate = new Date("2026-06-15T00:00:00").getTime();
 
-    const timer = setInterval(() => {
+    const tick = () => {
       const now = new Date().getTime();
       const distance = targetDate - now;
-
-      if (distance < 0) {
-        clearInterval(timer);
+      if (distance <= 0) {
+        setLaunched(true);
         return;
       }
-
       setTimeLeft({
-        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        days:    Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours:   Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
         minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
         seconds: Math.floor((distance % (1000 * 60)) / 1000),
       });
-    }, 1000);
+    };
 
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  if (launched) {
+    return (
+      <div className="fixed top-0 left-0 w-full z-[100] bg-zinc-950/80 backdrop-blur-md border-b border-white/10 py-3">
+        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary">
+              <Zap className="h-3 w-3 text-white fill-current" />
+            </div>
+            <span className="text-xs md:text-sm font-black uppercase tracking-widest text-white italic">
+              ¡<span className="text-brand-primary">PRO Manizales</span> ya está en vivo! 🎉
+            </span>
+          </div>
+          <div className="hidden lg:flex items-center gap-4">
+            <Link
+              href="/feedback"
+              onClick={() => trackEvent("feedback_banner_click")}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all hover:scale-105 flex items-center gap-1"
+            >
+              ¡AYUDAR A MEJORAR! 🚀
+            </Link>
+            <Link
+              href="/login"
+              onClick={() => trackEvent("login_banner_click")}
+              className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(124,58,237,0.4)] transition-all hover:scale-105 flex items-center gap-1"
+            >
+              Inicia sesión
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed top-0 left-0 w-full z-[100] bg-zinc-950/80 backdrop-blur-md border-b border-white/10 py-3">
@@ -74,15 +105,19 @@ export function LaunchBanner() {
         </div>
 
         <div className="hidden lg:flex items-center gap-4">
-          <span className="bg-brand-secondary/20 text-brand-secondary text-[10px] font-black px-3 py-1 rounded-full border border-brand-secondary/30 uppercase tracking-tighter">
-            Fase de Validación
-          </span>
           <Link
             href="/feedback"
             onClick={() => trackEvent("feedback_banner_click")}
             className="bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all hover:scale-105 flex items-center gap-1 animate-bounce-subtle"
           >
             ¡AYUDAR A MEJORAR! 🚀
+          </Link>
+          <Link
+            href="/login"
+            onClick={() => trackEvent("login_banner_click")}
+            className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(124,58,237,0.4)] transition-all hover:scale-105 flex items-center gap-1 animate-bounce-subtle"
+          >
+            Inicia sesión
           </Link>
         </div>
       </div>

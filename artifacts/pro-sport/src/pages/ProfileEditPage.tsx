@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { AppLayout } from "@/components/AppLayout";
+import { uploadFile } from "@/lib/storage/api";
+import { upsertPlayerProfile } from "@/lib/profiles/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +49,7 @@ const SKILL_DEFS = [
 ];
 
 export default function ProfileEditPage() {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, roles, updateProfile } = useAuth();
   const [, setLocation] = useLocation();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,13 +97,21 @@ export default function ProfileEditPage() {
     setUploadingAvatar(true);
     try {
       const dataUrl = await resizeToDataUrl(file, 512, 0.88);
-      setAvatarUrl(dataUrl);
-      updateProfile({ avatar_url: dataUrl });
-      const { error } = await supabase
-        .from("profiles")
-        .update({ avatar_url: dataUrl, updated_at: new Date().toISOString() })
-        .eq("id", user.id);
-      if (error) throw error;
+      
+      // Convert Data URL to Blob for upload
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      
+      const fileName = `${user.id}/${Date.now()}.jpg`;
+      const { url: publicUrl, error: uploadError } = await uploadFile(supabase, "avatars", fileName, blob, { upsert: true, contentType: "image/jpeg" });
+
+      if (uploadError) throw new Error(uploadError);
+      if (!publicUrl) throw new Error("No se obtuvo la URL pública.");
+
+      setAvatarUrl(publicUrl);
+      updateProfile({ avatar_url: publicUrl });
+      const { error } = await upsertPlayerProfile(supabase, user.id, { avatar_url: publicUrl });
+      if (error) throw new Error(error);
       toast.success("Foto de perfil actualizada.");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error desconocido";
@@ -134,26 +143,22 @@ export default function ProfileEditPage() {
     if (!city) errs.city = "Ingresá tu ciudad.";
     if (Object.keys(errs).length > 0) { setFieldErrors(errs); setPending(false); return; }
 
-    const { error: err } = await supabase
-      .from("profiles")
-      .update({
-        username: username || null,
-        full_name,
-        city,
-        bio: bio || null,
-        primary_skill_level: skillLevel || null,
-        position: position || null,
-        preferred_foot: preferredFoot || null,
-        ...skills,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
+    const { error: err } = await upsertPlayerProfile(supabase, user.id, {
+      username: username || null,
+      full_name,
+      city,
+      bio: bio || null,
+      primary_skill_level: (skillLevel as import("@/lib/types/db").SkillLevel) || null,
+      position: (position as import("@/lib/types/db").PlayerPosition) || null,
+      preferred_foot: (preferredFoot as import("@/lib/types/db").DominantFoot) || null,
+      ...skills,
+    });
 
     if (err) {
-      if (err.message.includes("unique") || err.code === "23505") {
+      if (err.includes("unique") || err.includes("23505")) {
         setFieldErrors({ username: "Ese username ya está en uso." });
       } else {
-        setError("Error al guardar: " + err.message);
+        setError("Error al guardar: " + err);
       }
     } else {
       // Update context immediately — no re-fetch needed
@@ -178,7 +183,7 @@ export default function ProfileEditPage() {
   );
 
   return (
-    <AppLayout>
+    <>
       <div className="max-w-lg mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">Editar perfil</h1>
 
@@ -237,93 +242,99 @@ export default function ProfileEditPage() {
                 {fieldErrors.city && <p className="text-xs text-destructive">{fieldErrors.city}</p>}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <Label>Nivel</Label>
-                  <Select value={skillLevel} onValueChange={setSkillLevel}>
-                    <SelectTrigger><SelectValue placeholder="Elegí tu nivel" /></SelectTrigger>
-                    <SelectContent>
-                      {SKILL_LEVELS.map((lvl) => (
-                        <SelectItem key={lvl.value} value={lvl.value}>{lvl.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Posición</Label>
-                  <Select value={position} onValueChange={setPosition}>
-                    <SelectTrigger><SelectValue placeholder="Tu posición" /></SelectTrigger>
-                    <SelectContent>
-                      {PLAYER_POSITIONS.map((pos) => (
-                        <SelectItem key={pos.value} value={pos.value}>{pos.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Pie de habilidad</Label>
-                <Select value={preferredFoot} onValueChange={setPreferredFoot}>
-                  <SelectTrigger><SelectValue placeholder="Tu pie hábil" /></SelectTrigger>
-                  <SelectContent>
-                    {PREFERRED_FOOT_OPTIONS.map((foot) => (
-                      <SelectItem key={foot.value} value={foot.value}>{foot.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!roles?.is_cancha && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-2">
+                      <Label>Nivel</Label>
+                      <Select value={skillLevel} onValueChange={setSkillLevel}>
+                        <SelectTrigger><SelectValue placeholder="Elegí tu nivel" /></SelectTrigger>
+                        <SelectContent>
+                          {SKILL_LEVELS.map((lvl) => (
+                            <SelectItem key={lvl.value} value={lvl.value}>{lvl.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Posición</Label>
+                      <Select value={position} onValueChange={setPosition}>
+                        <SelectTrigger><SelectValue placeholder="Tu posición" /></SelectTrigger>
+                        <SelectContent>
+                          {PLAYER_POSITIONS.map((pos) => (
+                            <SelectItem key={pos.value} value={pos.value}>{pos.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label>Pie de habilidad</Label>
+                    <Select value={preferredFoot} onValueChange={setPreferredFoot}>
+                      <SelectTrigger><SelectValue placeholder="Tu pie hábil" /></SelectTrigger>
+                      <SelectContent>
+                        {PREFERRED_FOOT_OPTIONS.map((foot) => (
+                          <SelectItem key={foot.value} value={foot.value}>{foot.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" name="bio" placeholder="Contá un poco de vos como deportista…"
-                  rows={3} defaultValue={profile?.bio ?? ""} />
-              </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea id="bio" name="bio" placeholder="Contá un poco de vos como deportista…"
+                      rows={3} defaultValue={profile?.bio ?? ""} />
+                  </div>
+                </>
+              )}
 
               {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
             </form>
           </div>
 
           {/* Skills section */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Habilidades</p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">OVR</span>
-                <span className="text-lg font-black text-violet-600">{ovr}</span>
+          {!roles?.is_cancha && (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Habilidades</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">OVR</span>
+                  <span className="text-lg font-black text-violet-600">{ovr}</span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {SKILL_DEFS.map(({ key, label, name }) => {
+                  const val = skills[key];
+                  return (
+                    <div key={key}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-8">{label}</span>
+                          <span className="text-xs text-muted-foreground">{name}</span>
+                        </div>
+                        <span className="text-sm font-black text-zinc-900 dark:text-white tabular-nums">{val}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={99}
+                        value={val}
+                        onChange={(e) => setSkills((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
+                        className="w-full accent-violet-600 h-2 rounded-full cursor-pointer"
+                      />
+                      <div className="flex justify-between mt-0.5">
+                        <span className="text-[9px] text-muted-foreground/50">1</span>
+                        <span className="text-[9px] text-muted-foreground/50">99</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <div className="space-y-4">
-              {SKILL_DEFS.map(({ key, label, name }) => {
-                const val = skills[key];
-                return (
-                  <div key={key}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-8">{label}</span>
-                        <span className="text-xs text-muted-foreground">{name}</span>
-                      </div>
-                      <span className="text-sm font-black text-zinc-900 dark:text-white tabular-nums">{val}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={99}
-                      value={val}
-                      onChange={(e) => setSkills((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
-                      className="w-full accent-violet-600 h-2 rounded-full cursor-pointer"
-                    />
-                    <div className="flex justify-between mt-0.5">
-                      <span className="text-[9px] text-muted-foreground/50">1</span>
-                      <span className="text-[9px] text-muted-foreground/50">99</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           {/* Profile blocks (morpho, conditional, technical) */}
-          {user && (
+          {user && !roles?.is_cancha && (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border p-6 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Perfil deportivo</p>
               {blocksLoading ? (
@@ -356,6 +367,6 @@ export default function ProfileEditPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 }

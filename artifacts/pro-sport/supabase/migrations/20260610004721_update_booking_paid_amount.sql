@@ -1,0 +1,2 @@
+ALTER TABLE cancha_bookings 
+  ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(10, 2) DEFAULT 0;

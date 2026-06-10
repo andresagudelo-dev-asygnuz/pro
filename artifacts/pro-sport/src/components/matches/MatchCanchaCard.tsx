@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, Building2, MapPin, CalendarCheck, Clock, DollarSign, Phone } from "lucide-react";
+import { CheckCircle2, AlertCircle, Building2, MapPin, CalendarCheck, Clock, DollarSign, Phone, Upload } from "lucide-react";
 import type { FullBooking } from "@/hooks/useMatchDetail";
 
 const STATUS_MAP = {
@@ -7,11 +7,25 @@ const STATUS_MAP = {
   cancelada:  { label: "Reserva cancelada",        color: "text-zinc-500",                            bg: "bg-zinc-50 dark:bg-zinc-800/40",           border: "border-zinc-200 dark:border-zinc-700",      dot: "bg-zinc-400"    },
 };
 
-interface Props { canchaBooking: FullBooking }
+interface Props { 
+  canchaBooking: FullBooking;
+  isOrganizer?: boolean;
+  onOpenPayment?: () => void;
+}
 
-export function MatchCanchaCard({ canchaBooking }: Props) {
+export function MatchCanchaCard({ canchaBooking, isOrganizer, onOpenPayment }: Props) {
   const s = STATUS_MAP[canchaBooking.status as keyof typeof STATUS_MAP] ?? STATUS_MAP.cancelada;
   const cancha = canchaBooking.canchas;
+
+  // Calcula hora de expiración si está pendiente y sin pago
+  const createdAt = (canchaBooking as any).created_at;
+  const isPendingPayment = canchaBooking.status === "pendiente" && canchaBooking.payment_status === "sin_anticipo";
+  let expirationText = "";
+  if (isPendingPayment && createdAt) {
+    const d = new Date(createdAt);
+    d.setHours(d.getHours() + 2); // 2 hours grace period
+    expirationText = `Vence a las ${d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}`;
+  }
 
   return (
     <div className={`rounded-2xl border ${s.border} ${s.bg} overflow-hidden`}>
@@ -57,6 +71,24 @@ export function MatchCanchaCard({ canchaBooking }: Props) {
           </div>
         )}
       </div>
+
+      {isPendingPayment && isOrganizer && (
+        <div className="px-4 py-3 border-t border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+              Falta comprobante
+              {expirationText && <span className="ml-1 opacity-80">({expirationText})</span>}
+            </span>
+          </div>
+          <button 
+            type="button"
+            onClick={onOpenPayment}
+            className="w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg py-2 text-sm font-semibold transition-colors"
+          >
+            <Upload className="size-4" /> Subir comprobante de pago
+          </button>
+        </div>
+      )}
     </div>
   );
 }

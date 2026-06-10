@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import { getCanchaById, getAvailableSlots, createBooking } from "@/lib/canchas/api";
+import { getCanchaById, getAvailableSlots } from "@/lib/canchas/api";
+import { createPendingBooking } from "@/lib/canchas/receipt-api";
+import { format } from "date-fns";
 import { sendNotification } from "@/lib/notifications/api";
 import { Button } from "@/components/ui/button";
-import { MapPin, Phone, MessageCircle, CheckCircle2, Clock, ShieldCheck, Calendar, Info, Loader2, ChevronRight, Lock } from "lucide-react";
+import { MapPin, Phone, MessageCircle, CheckCircle2, Clock, ShieldCheck, Calendar, Info, Loader2, ChevronRight, Lock, Navigation } from "lucide-react";
 import { CanchaHero } from "@/components/canchas/CanchaHero";
-import { BottomNav } from "@/components/BottomNav";
-import { type Cancha, type TimeSlot } from "@/lib/types/db";
+import { PaymentPendingModal } from "@/components/canchas/PaymentPendingModal";
+import { getVenueById } from "@/lib/venues/api";
+import { SPORT_TYPE_LABELS, SPORT_TYPE_ICONS, type Cancha, type TimeSlot, type Venue } from "@/lib/types/db";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -27,6 +30,7 @@ export default function CanchaDetailPage() {
   const [, setLocation] = useLocation();
 
   const [cancha, setCancha] = useState<Cancha | null>(null);
+  const [venue, setVenue] = useState<Venue | null>(null);
   const [loadingCancha, setLoadingCancha] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,10 +44,25 @@ export default function CanchaDetailPage() {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
 
+  // Payment pending modal state
+  const [pendingBooking, setPendingBooking] = useState<{
+    id: string;
+    expiresAt: string;
+    startTime: string;
+    endTime: string;
+    totalPrice: number;
+    matchId?: string;
+  } | null>(null);
+
   useEffect(() => {
     getCanchaById(supabase, id).then(({ data, error }) => {
       if (error) setError(error);
-      else setCancha(data);
+      else {
+        setCancha(data);
+        if (data?.venue_id) {
+          getVenueById(supabase, data.venue_id).then(res => setVenue(res.data));
+        }
+      }
       setLoadingCancha(false);
     });
   }, [id]);
@@ -70,22 +89,22 @@ export default function CanchaDetailPage() {
         ? cancha.price_per_hour * (1 - cancha.discount_percent / 100)
         : cancha.price_per_hour;
 
-    const { data: createdBooking, error } = await createBooking(
+    const { data: createdBooking, error } = await createPendingBooking(
       supabase,
       {
         cancha_id: cancha.id,
+        booked_by: user.id,
         booking_date: selectedDate,
-        start_time: selectedSlot.start,
-        end_time: selectedSlot.end,
+        start_time: selectedSlot.start + ":00",
+        end_time: selectedSlot.end + ":00",
         total_price: finalPrice,
         notes: notes || undefined,
       },
-      user.id,
     );
 
     if (error) {
       setBookingError(error);
-    } else {
+    } else if (createdBooking) {
       // Notify cancha owner about new booking request
       const { data: bookerProfile } = await supabase
         .from("profiles")
@@ -103,15 +122,18 @@ export default function CanchaDetailPage() {
           || "Un usuario",
         booker_id: user.id,
       });
-      // Redirect to create match with pre-selected booking
-      const bookingParams = new URLSearchParams({
-        booking_id: createdBooking!.id,
-        cancha_id: cancha.id,
-        date: selectedDate,
-        start: selectedSlot!.start,
-        end: selectedSlot!.end,
+
+      setBooked(true);
+      // Show payment pending modal instead of redirecting
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      setPendingBooking({
+        id: createdBooking.id,
+        matchId: createdBooking.match_id,
+        expiresAt,
+        startTime: selectedSlot!.start,
+        endTime: selectedSlot!.end,
+        totalPrice: finalPrice,
       });
-      setLocation(`/matches/new?${bookingParams.toString()}`);
     }
     setBooking(false);
   }
@@ -146,7 +168,7 @@ export default function CanchaDetailPage() {
 
       {/* ══ CONTENT ═══════════════════════════════════════════════════════ */}
       <main className="container mx-auto px-4 -mt-6 relative z-20 max-w-lg space-y-6">
-        
+
         {/* Profile Header Card */}
         <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-xl border border-border/50">
           <div className="flex items-center gap-4 mb-5">
@@ -175,6 +197,22 @@ export default function CanchaDetailPage() {
           </div>
 
           <div className="space-y-4">
+            {/* Stats re-located from Hero */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-zinc-50 dark:bg-zinc-950/50 rounded-xl p-3 border border-border/50 flex flex-col items-center justify-center text-center">
+                <span className="text-base font-black text-brand-primary">${finalPrice.toLocaleString("es-CO")}</span>
+                <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">Precio / h</span>
+              </div>
+              <div className="bg-zinc-50 dark:bg-zinc-950/50 rounded-xl p-3 border border-border/50 flex flex-col items-center justify-center text-center">
+                <span className="text-base font-black">{cancha.capacity}</span>
+                <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">Jugadores</span>
+              </div>
+              <div className="bg-zinc-50 dark:bg-zinc-950/50 rounded-xl p-3 border border-border/50 flex flex-col items-center justify-center text-center">
+                <span className="text-base mb-0.5">{SPORT_TYPE_ICONS[cancha.sport_type]}</span>
+                <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">{SPORT_TYPE_LABELS[cancha.sport_type]}</span>
+              </div>
+            </div>
+
             <div className="flex items-start gap-3 p-3 bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl border border-border/50">
               <Info className="size-5 text-brand-primary shrink-0 mt-0.5" />
               <p className="text-sm text-muted-foreground leading-relaxed">
@@ -189,8 +227,39 @@ export default function CanchaDetailPage() {
               <span className="font-bold text-foreground text-right max-w-[200px] truncate">{cancha.address}</span>
             </div>
 
+            <div className="space-y-2">
+              <div className="rounded-2xl overflow-hidden h-40 border border-border/50 bg-zinc-100 dark:bg-zinc-900 relative">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  src={`https://maps.google.com/maps?q=${
+                    cancha.lat && cancha.lng
+                      ? `${cancha.lat},${cancha.lng}`
+                      : encodeURIComponent(`${cancha.address}, ${cancha.city}`)
+                  }&z=15&output=embed`}
+                />
+              </div>
+              <Button asChild variant="outline" className="w-full h-11 rounded-xl border-border/50 shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-800">
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${
+                    cancha.lat && cancha.lng
+                      ? `${cancha.lat},${cancha.lng}`
+                      : encodeURIComponent(`${cancha.address}, ${cancha.city}`)
+                  }`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Navigation className="size-4 mr-2 text-brand-primary" />
+                  Cómo llegar
+                </a>
+              </Button>
+            </div>
+
             {(cancha.phone || cancha.whatsapp) && (
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 {cancha.phone && (
                   <Button asChild variant="outline" className="flex-1 rounded-xl h-11 border-border/50 hover:bg-zinc-50 dark:hover:bg-zinc-800">
                     <a href={`tel:${cancha.phone}`}>
@@ -246,7 +315,7 @@ export default function CanchaDetailPage() {
 
           <AnimatePresence mode="wait">
             {loadingSlots ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="flex flex-col items-center justify-center py-12 gap-3"
               >
@@ -254,7 +323,7 @@ export default function CanchaDetailPage() {
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Buscando horarios...</p>
               </motion.div>
             ) : slots.length === 0 ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl p-8 border border-dashed border-border text-center"
               >
@@ -263,7 +332,7 @@ export default function CanchaDetailPage() {
                 <p className="text-[10px] text-muted-foreground/60 uppercase mt-1">Intentá con otra fecha</p>
               </motion.div>
             ) : (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="space-y-4"
               >
@@ -285,7 +354,7 @@ export default function CanchaDetailPage() {
                     >
                       <span className="text-xs font-black tabular-nums">{slot.start}</span>
                       <span className="text-[9px] opacity-60 font-bold uppercase tracking-tighter">hasta {slot.end}</span>
-                      
+
                       {!slot.isAvailable && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/5">
                           <Lock className="size-3 opacity-30" />
@@ -299,7 +368,7 @@ export default function CanchaDetailPage() {
           </AnimatePresence>
 
           {selectedSlot && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
               className="space-y-4 border-t border-dashed pt-6"
             >
@@ -338,9 +407,9 @@ export default function CanchaDetailPage() {
                   </Button>
                 </Link>
               ) : (
-                <Button 
-                  className="w-full h-14 rounded-2xl bg-brand-primary hover:bg-brand-primary/90 text-white font-black uppercase tracking-widest text-sm gap-2 shadow-xl shadow-brand-primary/20 active:scale-[0.98] transition-all" 
-                  onClick={handleBook} 
+                <Button
+                  className="w-full h-14 rounded-2xl bg-brand-primary hover:bg-brand-primary/90 text-white font-black uppercase tracking-widest text-sm gap-2 shadow-xl shadow-brand-primary/20 active:scale-[0.98] transition-all"
+                  onClick={handleBook}
                   disabled={booking}
                 >
                   {booking ? (
@@ -360,7 +429,28 @@ export default function CanchaDetailPage() {
           )}
         </div>
       </main>
-      <BottomNav />
+
+      {/* Payment pending modal */}
+      {pendingBooking && user && (
+        <PaymentPendingModal
+          open={!!pendingBooking}
+          onClose={() => {
+            setPendingBooking(null);
+            setLocation(`/canchas/${cancha.id}`);
+          }}
+          bookingId={pendingBooking.id}
+          userId={user.id}
+          canchaName={cancha.name}
+          matchId={pendingBooking.matchId}
+          bookingDate={format(selectedDate, "yyyy-MM-dd")}
+          startTime={pendingBooking.startTime}
+          endTime={pendingBooking.endTime}
+          totalPrice={pendingBooking.totalPrice}
+          paymentMethods={venue?.payment_methods || []}
+          paymentInstructions={venue?.payment_instructions || cancha.payment_instructions}
+          expiresAt={pendingBooking.expiresAt}
+        />
+      )}
     </div>
   );
 }

@@ -217,12 +217,13 @@ export async function listRegistrationsWithNames(
 
   if (error) return { data: null, error: mapDbError(error, "regs_with_names") };
 
-  const rows: RegistrationWithNames[] = ((data ?? []) as any[]).map((r) => ({
+  type RawRow = { id: string; tournament_id: string; team_id: string | null; user_id: string | null; status: string; registered_by: string; created_at: string; updated_at: string; team: { name: string } | null; profile: { full_name: string | null; username: string | null } | null };
+  const rows: RegistrationWithNames[] = ((data ?? []) as unknown as RawRow[]).map((r) => ({
     id: r.id,
     tournament_id: r.tournament_id,
     team_id: r.team_id,
     user_id: r.user_id,
-    status: r.status,
+    status: r.status as RegistrationRow["status"],
     registered_by: r.registered_by,
     created_at: r.created_at,
     updated_at: r.updated_at,

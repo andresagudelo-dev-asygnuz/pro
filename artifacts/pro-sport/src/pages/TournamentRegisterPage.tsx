@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import { createTeam, getMyTeams, registerSoloToTournament, registerTeamToTournament, type TeamRow } from "@/lib/tournaments/registrations";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
 
 
 export default function TournamentRegisterPage() {
@@ -62,7 +61,7 @@ export default function TournamentRegisterPage() {
   const inputCls = "w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm";
 
   return (
-    <AppLayout>
+    <>
     <div className="container py-8 max-w-xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Inscripción al torneo</h1>
@@ -112,6 +111,6 @@ export default function TournamentRegisterPage() {
         </section>
       )}
     </div>
-    </AppLayout>
+    </>
   );
 }

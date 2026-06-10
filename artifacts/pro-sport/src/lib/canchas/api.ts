@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { mapDbError } from "@/lib/errors/map-db-error";
-import type { Cancha, CanchaSchedule, CanchaBooking, CanchaSportType, TimeSlot } from "@/lib/types/db";
+import type { Cancha, CanchaSchedule, CanchaBooking, CanchaSportType, TimeSlot, PaymentStatus } from "@/lib/types/db";
 
 type ApiResult<T> = { error: string | null; data: T | null };
 
@@ -16,6 +16,18 @@ function generateSlots(opensAt: string, closesAt: string, durationMinutes = 60):
     slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
   }
   return slots;
+}
+
+export async function listActiveCanchasBasic(
+  supabase: SupabaseClient,
+): Promise<ApiResult<{ id: string; name: string }[]>> {
+  const { data, error } = await supabase
+    .from("canchas")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("name");
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data: (data ?? []) as { id: string; name: string }[] };
 }
 
 export async function getAllCanchas(
@@ -57,6 +69,19 @@ export async function getCanchaById(
   return { error: null, data: data as Cancha };
 }
 
+export async function assignCanchaToVenue(
+  supabase: SupabaseClient,
+  canchaId: string,
+  venueId: string,
+): Promise<ApiResult<null>> {
+  const { error } = await supabase
+    .from("canchas")
+    .update({ venue_id: venueId })
+    .eq("id", canchaId);
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data: null };
+}
+
 export type CanchaInput = {
   name: string;
   description?: string;
@@ -72,6 +97,7 @@ export type CanchaInput = {
   venue_id?: string | null;
   lat?: number | null;
   lng?: number | null;
+  image_url?: string | null;
 };
 
 export async function createCancha(
@@ -217,6 +243,38 @@ export async function createBooking(
 
 export type BookingWithCancha = CanchaBooking & { canchas: Cancha };
 
+export type BookingWithCanchaInfo = CanchaBooking & {
+  canchas: { name: string; address: string; city: string } | null;
+};
+
+export async function getBookingWithCancha(
+  supabase: SupabaseClient,
+  bookingId: string,
+): Promise<ApiResult<BookingWithCanchaInfo>> {
+  const { data, error } = await supabase
+    .from("cancha_bookings")
+    .select("*, canchas(name, address, city)")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data: data as BookingWithCanchaInfo | null };
+}
+
+export type CanchaOwnerInfo = { owner_id: string; name: string };
+
+export async function getCanchaOwnerInfo(
+  supabase: SupabaseClient,
+  canchaId: string,
+): Promise<ApiResult<CanchaOwnerInfo>> {
+  const { data, error } = await supabase
+    .from("canchas")
+    .select("owner_id, name")
+    .eq("id", canchaId)
+    .maybeSingle();
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data: data as CanchaOwnerInfo | null };
+}
+
 export async function getMyBookings(
   supabase: SupabaseClient,
   userId: string,
@@ -245,6 +303,23 @@ export async function getCanchaBookingsForDate(
   return { error: null, data: (data ?? []) as CanchaBooking[] };
 }
 
+export async function getClientBookingsForCancha(
+  supabase: SupabaseClient,
+  canchaId: string,
+  userId: string,
+  limit = 10,
+): Promise<ApiResult<CanchaBooking[]>> {
+  const { data, error } = await supabase
+    .from("cancha_bookings")
+    .select("*")
+    .eq("cancha_id", canchaId)
+    .eq("booked_by", userId)
+    .order("booking_date", { ascending: false })
+    .limit(limit);
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data: (data ?? []) as CanchaBooking[] };
+}
+
 export async function updateBookingStatus(
   supabase: SupabaseClient,
   bookingId: string,
@@ -253,6 +328,21 @@ export async function updateBookingStatus(
   const { data, error } = await supabase
     .from("cancha_bookings")
     .update({ status })
+    .eq("id", bookingId)
+    .select()
+    .single();
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data: data as CanchaBooking };
+}
+
+export async function updateBookingPaymentStatus(
+  supabase: SupabaseClient,
+  bookingId: string,
+  paymentStatus: PaymentStatus,
+): Promise<ApiResult<CanchaBooking>> {
+  const { data, error } = await supabase
+    .from("cancha_bookings")
+    .update({ payment_status: paymentStatus })
     .eq("id", bookingId)
     .select()
     .single();
@@ -281,6 +371,26 @@ export async function getOwnerPendingBookings(
     .eq("status", "pendiente")
     .order("booking_date")
     .order("start_time");
+  if (error) return { error: mapDbError(error), data: null };
+  return { error: null, data: (data ?? []) as PendingBookingWithCancha[] };
+}
+
+export async function getOwnerAllBookings(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ApiResult<PendingBookingWithCancha[]>> {
+  const { data: myCanchas } = await supabase
+    .from("canchas")
+    .select("id")
+    .eq("owner_id", userId);
+  if (!myCanchas?.length) return { error: null, data: [] };
+  const ids = myCanchas.map((c: { id: string }) => c.id);
+  const { data, error } = await supabase
+    .from("cancha_bookings")
+    .select("*, canchas(name, sport_type)")
+    .in("cancha_id", ids)
+    .order("booking_date", { ascending: false })
+    .order("start_time", { ascending: false });
   if (error) return { error: mapDbError(error), data: null };
   return { error: null, data: (data ?? []) as PendingBookingWithCancha[] };
 }

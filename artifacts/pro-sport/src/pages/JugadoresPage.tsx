@@ -4,8 +4,6 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { searchPlayers, type PlayerSearchFilters } from "@/lib/profiles/api";
 import { PlayerCard } from "@/components/PlayerCard";
-import { PageHeader } from "@/components/PageHeader";
-import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -62,8 +60,10 @@ export default function JugadoresPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader title="Jugadores" backHref="/feed" />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Jugadores</h1>
+      </div>
 
       {/* Filter bar */}
       <div className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-border/50 px-4 py-3">
@@ -171,7 +171,6 @@ export default function JugadoresPage() {
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

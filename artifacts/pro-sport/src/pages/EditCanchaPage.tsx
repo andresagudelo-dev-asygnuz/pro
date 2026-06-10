@@ -1,117 +1,143 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation } from "wouter";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getCanchaById, updateCancha } from "@/lib/canchas/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { CANCHAS_SPORT_OPTIONS, type Cancha, type CanchaSportType } from "@/lib/types/db";
-import { Save } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
+import { CANCHAS_SPORT_OPTIONS, type CanchaSportType } from "@/lib/types/db";
+import { Save, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { VenueSearchOrCreate } from "@/components/canchas/VenueSearchOrCreate";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { canchaSchema, type CanchaFormValues } from "@/lib/validations/cancha";
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription
+} from "@/components/ui/form";
 
+
+function resizeToDataUrl(file: File, maxPx = 1024, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+      const w = Math.round(img.width * ratio);
+      const h = Math.round(img.height * ratio);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("No se pudo leer la imagen.")); };
+    img.src = objectUrl;
+  });
+}
 
 export default function EditCanchaPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
-  const [cancha, setCancha] = useState<Cancha | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [sportType, setSportType] = useState<CanchaSportType>("futbol_5");
-  const [capacity, setCapacity] = useState(10);
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [pricePerHour, setPricePerHour] = useState(0);
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [phone, setPhone] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [venueId, setVenueId] = useState<string | null>(null);
+  const { data: fetchedCancha, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ["cancha", id],
+    queryFn: async () => {
+      const { data, error } = await getCanchaById(supabase, id!);
+      if (error) throw new Error(error);
+      if (!data) throw new Error("Cancha no encontrada");
+      if (user && data.owner_id !== user.id) {
+        throw new Error("No tenés permisos para editar esta cancha.");
+      }
+      return data;
+    },
+    enabled: !!id && !!user
+  });
+
+  const form = useForm<CanchaFormValues>({
+    resolver: zodResolver(canchaSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      sport_type: "futbol_5",
+      capacity: 10,
+      price_per_hour: 0,
+      discount_percent: 0,
+    },
+  });
 
   useEffect(() => {
-    getCanchaById(supabase, id).then(({ data, error }) => {
-      if (error || !data) {
-        setError(error ?? "Cancha no encontrada");
-        setLoading(false);
-        return;
-      }
-      if (user && data.owner_id !== user.id) {
-        setError("No tenés permisos para editar esta cancha.");
-        setLoading(false);
-        return;
-      }
-      setCancha(data);
-      setName(data.name);
-      setDescription(data.description ?? "");
-      setSportType(data.sport_type);
-      setCapacity(data.capacity);
-      setAddress(data.address);
-      setCity(data.city);
-      setPricePerHour(data.price_per_hour);
-      setDiscountPercent(data.discount_percent);
-      setPhone(data.phone ?? "");
-      setWhatsapp(data.whatsapp ?? "");
-      setVenueId(data.venue_id ?? null);
-      setLoading(false);
-    });
-  }, [id, user]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const errs: Record<string, string> = {};
-    if (name.trim().length < 2) errs.name = "El nombre debe tener al menos 2 caracteres.";
-    if (!address.trim()) errs.address = "Ingresá la dirección.";
-    if (!city.trim()) errs.city = "Ingresá la ciudad.";
-    if (isNaN(pricePerHour) || pricePerHour < 0) errs.pricePerHour = "Precio inválido.";
-    if (capacity < 1) errs.capacity = "La capacidad debe ser mayor a 0.";
-    if (Object.keys(errs).length > 0) {
-      setFieldErrors(errs);
-      return;
+    if (fetchedCancha) {
+      form.reset({
+        name: fetchedCancha.name,
+        description: fetchedCancha.description ?? "",
+        sport_type: fetchedCancha.sport_type as any,
+        capacity: fetchedCancha.capacity,
+        price_per_hour: fetchedCancha.price_per_hour,
+        discount_percent: fetchedCancha.discount_percent,
+      });
+      setImageUrl(fetchedCancha.image_url ?? null);
     }
-    setFieldErrors({});
-    setSaving(true);
+  }, [fetchedCancha, form]);
 
-    const { error: updateErr } = await updateCancha(supabase, id, {
-      name: name.trim(),
-      description: description.trim() || undefined,
-      sport_type: sportType,
-      capacity,
-      address: address.trim(),
-      city: city.trim(),
-      price_per_hour: pricePerHour,
-      discount_percent: discountPercent,
-      phone: phone.trim() || undefined,
-      whatsapp: whatsapp.trim() || undefined,
-      venue_id: venueId,
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Solo se permiten imágenes (JPG, PNG, WebP)."); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("La imagen no puede superar 10 MB."); return; }
+
+    setUploadingImage(true);
+    try {
+      const dataUrl = await resizeToDataUrl(file, 1024, 0.85);
+      setImageUrl(dataUrl);
+      toast.success("Foto de la cancha cargada temporalmente.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error("Error al cargar la foto: " + msg);
+    } finally {
+      setUploadingImage(false);
+      e.target.value = "";
+    }
+  }
+
+  async function onSubmit(data: CanchaFormValues) {
+    setError(null);
+
+    const { error: updateErr } = await updateCancha(supabase, id!, {
+      name: data.name,
+      description: data.description || undefined,
+      sport_type: data.sport_type as CanchaSportType,
+      capacity: data.capacity,
+      price_per_hour: data.price_per_hour,
+      discount_percent: data.discount_percent || 0,
+      image_url: imageUrl || null,
     });
 
     if (updateErr) {
       setError(updateErr);
-      setSaving(false);
       return;
     }
+
+    queryClient.invalidateQueries({ queryKey: ["cancha", id] });
+    queryClient.invalidateQueries({ queryKey: ["owner-canchas", user?.id] });
 
     toast.success("¡Cancha actualizada!");
     setLocation(`/canchas/${id}/agenda`);
   }
+
+  const loadError = queryError ? (queryError as Error).message : null;
 
   if (loading) {
     return (
@@ -121,10 +147,10 @@ export default function EditCanchaPage() {
     );
   }
 
-  if (error && !cancha) {
+  if (loadError && !fetchedCancha) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8">
-        <p className="text-muted-foreground text-center">{error}</p>
+        <p className="text-muted-foreground text-center">{loadError}</p>
         <Link href="/mis-canchas">
           <Button variant="outline">Mis canchas</Button>
         </Link>
@@ -133,187 +159,169 @@ export default function EditCanchaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader title={`Editar — ${cancha?.name ?? ""}`} backHref={`/canchas/${id}/agenda`} />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Editar — {fetchedCancha?.name ?? ""}</h1>
+      </div>
 
       <main className="container mx-auto px-4 py-6 max-w-lg">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 p-6 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre de la cancha *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ej: La Bombonera"
-              />
-              {fieldErrors.name && (
-                <p className="text-xs text-destructive">{fieldErrors.name}</p>
+
+          {/* Image upload (outside react-hook-form to avoid complex base64 state sync, although can be inside) */}
+          <div className="space-y-2 pb-6">
+            <Label>Foto de la cancha</Label>
+            <div
+              className="w-full aspect-video rounded-xl border-2 border-dashed border-border/60 bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors relative overflow-hidden"
+              onClick={() => !uploadingImage && fileInputRef.current?.click()}
+            >
+              {imageUrl ? (
+                <img src={imageUrl} alt="Cancha" className="w-full h-full object-cover" />
+              ) : (
+                <>
+                  {uploadingImage ? (
+                    <Loader2 className="size-8 text-muted-foreground animate-spin mb-2" />
+                  ) : (
+                    <Camera className="size-8 text-muted-foreground mb-2" />
+                  )}
+                  <span className="text-sm text-muted-foreground font-medium">
+                    {uploadingImage ? "Procesando..." : "Tocá para subir una foto"}
+                  </span>
+                </>
               )}
+              {imageUrl && !uploadingImage && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <span className="text-white font-medium flex items-center gap-2">
+                    <Camera className="size-5" /> Cambiar foto
+                  </span>
+                </div>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Descripción</Label>
-              <Textarea
-                id="description"
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Características, comodidades…"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tipo de deporte *</Label>
-              <Select
-                value={sportType}
-                onValueChange={(v) => setSportType(v as CanchaSportType)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CANCHAS_SPORT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="capacity">Capacidad (jugadores) *</Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={capacity}
-                  onChange={(e) =>
-                    setCapacity(parseInt(e.target.value) || 1)
-                  }
-                />
-                {fieldErrors.capacity && (
-                  <p className="text-xs text-destructive">
-                    {fieldErrors.capacity}
-                  </p>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre de la cancha *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ej: La Bombonera" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="price">Precio/hora ($) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={pricePerHour}
-                  onChange={(e) =>
-                    setPricePerHour(parseFloat(e.target.value) || 0)
-                  }
-                />
-                {fieldErrors.pricePerHour && (
-                  <p className="text-xs text-destructive">
-                    {fieldErrors.pricePerHour}
-                  </p>
+              />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea rows={2} placeholder="Características, comodidades…" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
+
+              <FormField
+                control={form.control}
+                name="sport_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de deporte *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CANCHAS_SPORT_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Capacidad (jugadores) *</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={1} max={100} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="price_per_hour"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Precio/hora ($) *</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} step={1000} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="discount">Descuento (%)</Label>
-              <Input
-                id="discount"
-                type="number"
-                min={0}
-                max={100}
-                step={5}
-                value={discountPercent}
-                onChange={(e) =>
-                  setDiscountPercent(parseFloat(e.target.value) || 0)
-                }
+              <FormField
+                control={form.control}
+                name="discount_percent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descuento (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} max={100} step={5} {...field} />
+                    </FormControl>
+                    <FormDescription>Dejalo en 0 si no tenés descuento activo.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <p className="text-xs text-muted-foreground">
-                Dejalo en 0 si no tenés descuento activo.
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Dirección *</Label>
-              <Input
-                id="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Calle 50 #23-45"
-              />
-              {fieldErrors.address && (
-                <p className="text-xs text-destructive">
-                  {fieldErrors.address}
+              <div className="bg-muted/30 border rounded-xl p-4 flex flex-col gap-1">
+                <span className="text-sm font-medium">Información heredada</span>
+                <p className="text-xs text-muted-foreground">
+                  Esta cancha hereda su dirección, ciudad y teléfonos del centro deportivo al que pertenece. Si deseas modificarlos, edita la configuración del centro.
+                </p>
+              </div>
+
+              {error && (
+                <p className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3">
+                  {error}
                 </p>
               )}
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="city">Ciudad *</Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Manizales"
-              />
-              {fieldErrors.city && (
-                <p className="text-xs text-destructive">{fieldErrors.city}</p>
-              )}
-            </div>
-
-            <VenueSearchOrCreate
-              city={city}
-              value={venueId}
-              onChange={setVenueId}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+57 300 000 0000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp</Label>
-                <Input
-                  id="whatsapp"
-                  type="tel"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  placeholder="+57 300 000 0000"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3">
-                {error}
-              </p>
-            )}
-
-            <Button
-              type="submit"
-              disabled={saving}
-              className="w-full rounded-xl gap-2"
-            >
-              <Save className="size-4" />
-              {saving ? "Guardando cambios…" : "Guardar cambios"}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                disabled={form.formState.isSubmitting}
+                className="w-full rounded-xl gap-2"
+              >
+                <Save className="size-4" />
+                {form.formState.isSubmitting ? "Guardando cambios…" : "Guardar cambios"}
+              </Button>
+            </form>
+          </Form>
         </div>
       </main>
-      <BottomNav />
     </div>
   );
 }

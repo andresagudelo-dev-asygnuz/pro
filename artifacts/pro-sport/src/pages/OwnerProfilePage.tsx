@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import { AppLayout } from "@/components/AppLayout";
+import { uploadFile } from "@/lib/storage/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import { getMyCanchas } from "@/lib/canchas/api";
+import { updateProfileFields } from "@/lib/profiles/api";
 import type { Cancha } from "@/lib/types/db";
 import {
   Camera, Pencil, MapPin, Phone, Globe, LayoutDashboard,
@@ -61,9 +62,7 @@ export default function OwnerProfilePage() {
     try {
       const dataUrl = await resizeToDataUrl(file, 1400, 500, 0.85);
       updateProfile({ banner_url: dataUrl });
-      const { error } = await supabase.from("profiles")
-        .update({ banner_url: dataUrl, updated_at: new Date().toISOString() })
-        .eq("id", user.id);
+      const { error } = await updateProfileFields(supabase, user.id, { banner_url: dataUrl });
       if (error) throw error;
       toast.success("Banner actualizado.");
     } catch (err: unknown) {
@@ -82,12 +81,20 @@ export default function OwnerProfilePage() {
     setUploadingAvatar(true);
     try {
       const dataUrl = await resizeToDataUrl(file, 512, 512, 0.88);
-      updateProfile({ avatar_url: dataUrl });
-      const { error } = await supabase.from("profiles")
-        .update({ avatar_url: dataUrl, updated_at: new Date().toISOString() })
-        .eq("id", user.id);
-      if (error) throw error;
-      toast.success("Foto de perfil actualizada.");
+      
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      
+      const fileName = `${user.id}/${Date.now()}.jpg`;
+      const { url: publicUrl, error: uploadError } = await uploadFile(supabase, "avatars", fileName, blob, { upsert: true, contentType: "image/jpeg" });
+
+      if (uploadError) throw new Error(uploadError);
+      if (!publicUrl) throw new Error("No se obtuvo la URL pública.");
+
+      updateProfile({ avatar_url: publicUrl });
+      const { error } = await updateProfileFields(supabase, user.id, { avatar_url: publicUrl });
+      if (error) throw new Error(error);
+      toast.success("Foto de perfil de cancha actualizada");
     } catch (err: unknown) {
       toast.error("Error al guardar la foto: " + (err instanceof Error ? err.message : ""));
     } finally {
@@ -100,7 +107,7 @@ export default function OwnerProfilePage() {
   const activeCanchas = canchas.filter((c) => c.is_active).length;
 
   return (
-    <AppLayout>
+    <>
       <div className="-mx-4 -mt-6 min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
 
         {/* ── Banner ── */}
@@ -324,6 +331,6 @@ export default function OwnerProfilePage() {
 
         </main>
       </div>
-    </AppLayout>
+    </>
   );
 }

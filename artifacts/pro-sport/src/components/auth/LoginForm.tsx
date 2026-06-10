@@ -7,6 +7,32 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 
+function traducirError(msg: string): string {
+  if (msg.includes("Email not confirmed"))
+    return "Confirmá tu correo antes de ingresar. Revisá tu bandeja de entrada.";
+  if (msg.includes("Invalid login credentials"))
+    return "Email o contraseña incorrectos.";
+  if (msg.includes("User already registered"))
+    return "Ya existe una cuenta con ese correo.";
+  if (msg.includes("Password should be at least"))
+    return "La contraseña debe tener al menos 6 caracteres.";
+  if (msg.includes("Unable to validate email address"))
+    return "El correo ingresado no es válido.";
+  if (msg.includes("Email rate limit exceeded"))
+    return "Demasiados intentos. Esperá unos minutos e intentá de nuevo.";
+  if (msg.includes("For security purposes"))
+    return "Por seguridad, esperá unos segundos antes de volver a intentarlo.";
+  if (msg.includes("Token has expired"))
+    return "El enlace expiró. Solicitá uno nuevo.";
+  if (msg.includes("User not found"))
+    return "No encontramos una cuenta con ese correo.";
+  if (msg.includes("Signup is disabled"))
+    return "El registro de nuevos usuarios está deshabilitado temporalmente.";
+  if (msg.includes("Network"))
+    return "Sin conexión. Verificá tu internet e intentá de nuevo.";
+  return "Ocurrió un error. Intentá de nuevo más tarde.";
+}
+
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -24,8 +50,9 @@ export function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError(error.message);
-      toast.error("Error al iniciar sesión: " + error.message);
+      const msg = traducirError(error.message);
+      setError(msg);
+      toast.error(msg);
       setPending(false);
     } else {
       toast.success("¡Bienvenido de nuevo!");

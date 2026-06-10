@@ -6,7 +6,8 @@ type EventNames =
   | 'game_contact_submit'
   | 'game_beta_interest'
   | 'game_finish'
-  | 'share_link_click';
+  | 'share_link_click'
+  | 'login_banner_click';
 
 type GtagFn = (command: string, eventName: string, params?: Record<string, unknown>) => void;
 type WindowWithGtag = Window & typeof globalThis & { gtag?: GtagFn };

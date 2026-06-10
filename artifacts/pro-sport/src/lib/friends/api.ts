@@ -233,5 +233,6 @@ export async function getPendingMatchInvitations(
     .eq("status", "pending")
     .order("created_at", { ascending: false });
   if (error) return { error: mapDbError(error), data: null };
-  return { error: null, data: (data ?? []) as any };
+  type Row = MatchInvitation & { matches: { title: string; starts_at: string } | null };
+  return { error: null, data: (data ?? []) as Row[] };
 }

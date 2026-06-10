@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Trophy, Plus, Building2, User, MessageCircle } from "lucide-react";
+import { Home, Trophy, Plus, Building2, User, MessageCircle, Globe } from "lucide-react";
 import { useNotifCount } from "@/context/NotifContext";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
@@ -18,7 +18,7 @@ type NavItem = {
 const BASE_NAV_ITEMS: NavItem[] = [
   {
     href: "/feed",
-    label: "Inicio",
+    label: "Feed",
     Icon: Home,
     matchPaths: ["/feed", "/matches", "/tournaments"],
   },

@@ -3,8 +3,6 @@ import { Link } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { formatMatchDate } from "@/lib/format";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { InfiniteScrollSentinel } from "@/components/ui/InfiniteScrollSentinel";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -13,9 +11,10 @@ import { Plus, Calendar, Users, Loader2 } from "lucide-react";
 import type { FeedMatch } from "@/lib/feed/api";
 import { MatchCardSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { KEYS } from "@/lib/queryKeys";
 
 
-type Tab = "organizados" | "participando";
+type Tab = "organizados" | "participando" | "historial";
 
 const STATUS_COLORS: Record<string, string> = {
   open: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
@@ -85,7 +84,7 @@ export default function MisPartidosPage() {
   const [tab, setTab] = useState<Tab>("organizados");
 
   const organizedQuery = useInfiniteQuery({
-    queryKey: ["my-matches", "organized", user?.id],
+    queryKey: KEYS.myMatches(user?.id ?? "", "organized"),
     queryFn: ({ pageParam }) =>
       getOrganizedMatches(supabase, user!.id, { cursor: pageParam, limit: 20 }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -94,7 +93,7 @@ export default function MisPartidosPage() {
   });
 
   const participatingQuery = useInfiniteQuery({
-    queryKey: ["my-matches", "participating", user?.id],
+    queryKey: KEYS.myMatches(user?.id ?? "", "participating"),
     queryFn: ({ pageParam }) =>
       getParticipatingMatches(supabase, user!.id, { cursor: pageParam, limit: 20 }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -110,18 +109,15 @@ export default function MisPartidosPage() {
   const list: FeedMatch[] = isOrganizedTab ? organized : participating;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title="Mis Partidos"
-        backHref="/perfil"
-        actions={
-          <Link href="/matches/new">
-            <Button size="sm" className="gap-1.5 rounded-xl">
-              <Plus className="size-3.5" /> Crear
-            </Button>
-          </Link>
-        }
-      />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Mis Partidos</h1>
+        <Link href="/matches/new">
+          <Button size="sm" className="gap-1.5 rounded-xl">
+            <Plus className="size-3.5" /> Crear
+          </Button>
+        </Link>
+      </div>
 
       <div className="sticky top-14 z-40 bg-white dark:bg-zinc-900 border-b border-border/50 px-4 pb-3 pt-2 flex gap-2">
         <button
@@ -182,7 +178,6 @@ export default function MisPartidosPage() {
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

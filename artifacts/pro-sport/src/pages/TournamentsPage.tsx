@@ -2,8 +2,6 @@ import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { InfiniteScrollSentinel } from "@/components/ui/InfiniteScrollSentinel";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getTournaments } from "@/lib/tournaments/api";
@@ -56,10 +54,10 @@ export default function TournamentsPage() {
   const tournaments = data?.pages.flatMap((p) => p.data ?? []) ?? [];
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title="Torneos"
-        actions={<>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Torneos</h1>
+        <div className="flex items-center gap-2">
           {roles?.is_promoter && (
             <Link href="/tournaments/mine">
               <Button variant="outline" size="sm" className="rounded-xl text-xs">Mis torneos</Button>
@@ -72,8 +70,8 @@ export default function TournamentsPage() {
               </Button>
             </Link>
           )}
-        </>}
-      />
+        </div>
+      </div>
 
       <main className="container mx-auto px-4 py-4 max-w-2xl">
         {isLoading ? (
@@ -172,7 +170,6 @@ export default function TournamentsPage() {
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

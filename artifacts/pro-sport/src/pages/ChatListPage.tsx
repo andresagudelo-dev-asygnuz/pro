@@ -3,9 +3,8 @@ import { useLocation, Link } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { listConversations, type ConversationWithLastMessage } from "@/lib/chat/api";
-import { PageHeader } from "@/components/PageHeader";
-import { BottomNav } from "@/components/BottomNav";
+import { listConversations, getOrCreateFriendConversation, type ConversationWithLastMessage } from "@/lib/chat/api";
+import { ScreenLayout } from "@/components/ScreenLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { InfiniteScrollSentinel } from "@/components/ui/InfiniteScrollSentinel";
 import { initialsFromName } from "@/lib/format";
@@ -100,9 +99,7 @@ export default function ChatListPage() {
 
   async function handleStartChat(friend: FriendWithProfile["profile"]) {
     if (!user) return;
-    const { data: convId, error } = await supabase.rpc("get_or_create_friend_conversation", {
-      other_user_id: friend.id,
-    });
+    const { data: convId, error } = await getOrCreateFriendConversation(supabase, friend.id);
 
     if (error || !convId) {
       toast.error("No se pudo iniciar el chat.");
@@ -130,19 +127,18 @@ export default function ChatListPage() {
   const totalUnread = conversations.reduce((acc, c) => acc + (c.unread_count ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title={
-          <div className="flex items-center gap-2">
-            <span className="font-black italic tracking-tighter uppercase">Chat</span>
-            {totalUnread > 0 && (
-              <span className="text-[10px] font-black bg-brand-primary text-white px-1.5 py-0.5 rounded-full animate-pulse">
-                {totalUnread}
-              </span>
-            )}
-          </div>
-        }
-      />
+    <ScreenLayout
+      title={
+        <div className="flex items-center gap-2">
+          <span className="font-black italic tracking-tighter uppercase">Chat</span>
+          {totalUnread > 0 && (
+            <span className="text-[10px] font-black bg-brand-primary text-white px-1.5 py-0.5 rounded-full animate-pulse">
+              {totalUnread}
+            </span>
+          )}
+        </div>
+      }
+    >
 
       <main className="container mx-auto px-4 py-4 max-w-2xl space-y-3">
         {/* Buscador + botón nuevo chat */}
@@ -217,6 +213,10 @@ export default function ChatListPage() {
               <AnimatePresence initial={false}>
                 {filtered.map((c, index) => {
                   const hasUnread = (c.unread_count ?? 0) > 0;
+                  const isPeer = c.type === "friend" || c.type === "direct";
+                  const displayName = isPeer && c.other_participant
+                    ? (c.other_participant.full_name ?? c.other_participant.username ?? c.title ?? "Chat")
+                    : (c.title ?? "Chat");
 
                   return (
                     <motion.button
@@ -234,8 +234,11 @@ export default function ChatListPage() {
                       <div className="relative shrink-0">
                         <div className="relative">
                           <Avatar className="size-14 border-2 border-transparent group-hover:border-brand-primary/20 transition-all duration-300">
+                            {isPeer && c.other_participant?.avatar_url && (
+                              <AvatarImage src={c.other_participant.avatar_url} />
+                            )}
                             <AvatarFallback className="text-base font-black italic bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
-                              {initialsFromName(c.title ?? "")}
+                              {initialsFromName(displayName)}
                             </AvatarFallback>
                           </Avatar>
                           {/* Type badge */}
@@ -255,7 +258,7 @@ export default function ChatListPage() {
                             "text-sm truncate tracking-tight",
                             hasUnread ? "font-black text-foreground italic uppercase" : "font-bold text-foreground"
                           )}>
-                            {c.title}
+                            {displayName}
                           </p>
                           <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter tabular-nums shrink-0">
                             {formatRelativeTime(c.last_message_at)}
@@ -303,8 +306,6 @@ export default function ChatListPage() {
           </>
         )}
       </main>
-
-      <BottomNav />
 
       {/* Drawer nuevo chat */}
       <Sheet open={isNewChatOpen} onOpenChange={(open) => {
@@ -381,6 +382,6 @@ export default function ChatListPage() {
           </div>
         </SheetContent>
       </Sheet>
-    </div>
+    </ScreenLayout>
   );
 }

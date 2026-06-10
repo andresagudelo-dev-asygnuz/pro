@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifCount } from "@/context/NotifContext";
@@ -21,6 +21,11 @@ import { checkMatchConflict } from "@/lib/matches/conflicts";
 import { ENABLED_CITIES } from "@/lib/types/db";
 import { useFeedData } from "@/hooks/useFeedData";
 import type { FeedMatch } from "@/lib/feed/api";
+import { getFeedEnrichmentData } from "@/lib/feed/api";
+import { listSports } from "@/lib/sports/api";
+import { listActiveCanchasBasic } from "@/lib/canchas/api";
+import { requestJoinMatch, cancelJoinRequest } from "@/lib/matches/api";
+import { sendNotification } from "@/lib/notifications/api";
 import { FeedPostSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -53,71 +58,64 @@ function relTime(iso: string) {
   return formatMatchDate(iso);
 }
 
+import { CommunityFeedTab } from "@/components/social/CommunityFeedTab";
+
 export default function FeedPage() {
   const { profile, user } = useAuth();
   const { unreadCount } = useNotifCount();
   const [, setLocation] = useLocation();
 
-  const [participantCounts, setParticipantCounts] = useState<Map<string, number>>(new Map());
-  const [myStatuses, setMyStatuses] = useState<Map<string, string>>(new Map());
-  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
-  const [matchParticipants, setMatchParticipants] = useState<Map<string, Set<string>>>(new Map());
-  const [matchCanchas, setMatchCanchas] = useState<Map<string, string>>(new Map());
-  const [sendingRequest, setSendingRequest] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState<"noticias" | "eventos">("noticias");
+
   const [filterSport, setFilterSport] = useState("");
   const [filterCity, setFilterCity] = useState("");
-  const [filterCanchaId, setFilterCanchaId] = useState("");
   const [filterPrivacy, setFilterPrivacy] = useState("");
+  const [filterCanchaId, setFilterCanchaId] = useState("");
   const [filterFriendsOnly, setFilterFriendsOnly] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sendingRequest, setSendingRequest] = useState<string | null>(null);
 
-  const { data: sports = [] } = useQuery<Sport[]>({ queryKey: ["sports"], queryFn: async () => { const { data } = await supabase.from("sports").select("*").order("name"); return (data ?? []) as Sport[]; } });
-  const sportsMap = useMemo(() => new Map(sports.map((s) => [s.id, s])), [sports]);
-  const { data: canchas = [] } = useQuery<{ id: string; name: string }[]>({ queryKey: ["canchas-list"], queryFn: async () => { const { data } = await supabase.from("canchas").select("id, name").order("name"); return data ?? []; } });
-
-  const feedFilters = useMemo(() => ({
-    city: filterCity || undefined,
+  const { matches, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useFeedData({
     sport_id: filterSport || undefined,
-  }), [filterCity, filterSport]);
+    city: filterCity || undefined,
+  });
 
-  const { matches, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useFeedData(feedFilters);
+  const { data: sports = [] } = useQuery<Sport[]>({
+    queryKey: ["sports"],
+    queryFn: async () => {
+      const { data } = await listSports(supabase);
+      return data ?? [];
+    },
+  });
 
-  // Fetch per-user data (statuses, friends, cancha mappings) whenever matches change
-  useEffect(() => {
-    async function loadUserData(matchList: FeedMatch[]) {
-      if (matchList.length === 0) return;
-      const matchIds = matchList.map((m) => m.id);
-      const bookingIds = matchList.map((m) => m.cancha_booking_id).filter(Boolean) as string[];
-      const [{ data: countData }, { data: myPartsData }, friendsRes, { data: bookingsData }] = await Promise.all([
-        supabase.from("match_participants").select("match_id, user_id").in("match_id", matchIds).eq("status", "joined"),
-        user ? supabase.from("match_participants").select("match_id, status").in("match_id", matchIds).eq("user_id", user.id) : Promise.resolve({ data: [] }),
-        user ? supabase.from("friendships").select("requester_id, addressee_id").or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`).eq("status", "accepted") : Promise.resolve({ data: [] }),
-        bookingIds.length > 0 ? supabase.from("cancha_bookings").select("id, cancha_id").in("id", bookingIds) : Promise.resolve({ data: [] }),
-      ]);
-      const counts = new Map<string, number>(); const matchUsers = new Map<string, Set<string>>();
-      (countData ?? []).forEach((r: { match_id: string; user_id: string }) => {
-        counts.set(r.match_id, (counts.get(r.match_id) ?? 0) + 1);
-        if (!matchUsers.has(r.match_id)) matchUsers.set(r.match_id, new Set());
-        matchUsers.get(r.match_id)!.add(r.user_id);
-      });
-      setParticipantCounts(counts); setMatchParticipants(matchUsers);
-      const statuses = new Map<string, string>();
-      ((myPartsData ?? []) as { match_id: string; status: string }[]).forEach((r) => statuses.set(r.match_id, r.status));
-      setMyStatuses(statuses);
-      const friends = new Set<string>();
-      ((friendsRes.data ?? []) as { requester_id: string; addressee_id: string }[]).forEach((f) => {
-        if (f.requester_id !== user?.id) friends.add(f.requester_id);
-        if (f.addressee_id !== user?.id) friends.add(f.addressee_id);
-      });
-      setFriendIds(friends);
-      const b2c = new Map<string, string>();
-      (bookingsData ?? []).forEach((b: { id: string; cancha_id: string }) => b2c.set(b.id, b.cancha_id));
-      const m2c = new Map<string, string>();
-      matchList.forEach((m) => { if (m.cancha_booking_id && b2c.has(m.cancha_booking_id)) m2c.set(m.id, b2c.get(m.cancha_booking_id)!); });
-      setMatchCanchas(m2c);
-    }
-    if (matches.length > 0) loadUserData(matches);
-  }, [matches, user]);
+  const { data: canchas = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["canchas-feed-filter"],
+    queryFn: async () => {
+      const { data } = await listActiveCanchasBasic(supabase);
+      return data ?? [];
+    },
+  });
+
+  const sportsMap = useMemo(() => new Map(sports.map((s) => [s.id, s])), [sports]);
+
+  const matchIds = useMemo(() => matches.map(m => m.id), [matches]);
+  const bookingIds = useMemo(() => matches.map(m => m.cancha_booking_id).filter(Boolean) as string[], [matches]);
+
+  const { data: userData } = useQuery({
+    queryKey: ["feed-user-data", matchIds, user?.id],
+    queryFn: async () => {
+      return getFeedEnrichmentData(supabase, matchIds, bookingIds, user?.id);
+    },
+    enabled: matches.length > 0,
+  });
+
+  const participantCounts = userData?.counts ?? new Map<string, number>();
+  const matchParticipants = userData?.matchUsers ?? new Map<string, Set<string>>();
+  const myStatuses = userData?.statuses ?? new Map<string, string>();
+  const friendIds = userData?.friends ?? new Set<string>();
+  const matchCanchas = userData?.m2c ?? new Map<string, string>();
+
+  const queryClient = useQueryClient();
 
   async function handleSendRequest(matchId: string) {
     if (!user) return; setSendingRequest(matchId);
@@ -133,21 +131,41 @@ export default function FeedPage() {
       });
       if (conflict.conflict) { toast.error(conflict.reason, { duration: 6000 }); setSendingRequest(null); return; }
     }
-    const { error } = await supabase.from("match_participants").insert({ match_id: matchId, user_id: user.id, status: "requested" });
+    const { error } = await requestJoinMatch(supabase, matchId, user.id);
     if (error) { toast.error("No se pudo enviar la solicitud."); }
     else {
-      setMyStatuses((p) => new Map([...p, [matchId, "requested"]]));
+      queryClient.setQueryData(["feed-user-data", matchIds, user.id], (old: any) => {
+        if (!old) return old;
+        const newStatuses = new Map(old.statuses);
+        newStatuses.set(matchId, "requested");
+        return { ...old, statuses: newStatuses };
+      });
       toast.success("¡Solicitud enviada! El organizador la revisará pronto.");
-      if (match && match.organizer_id !== user.id) supabase.from("notifications").insert({ user_id: match.organizer_id, type: "match_request", data: { match_id: match.id, match_title: match.title, requester_id: user.id, requester_name: profile?.full_name || profile?.username || "Alguien" } }).then();
+      if (match && match.organizer_id !== user.id) {
+        sendNotification(supabase, match.organizer_id, "match_request", {
+          match_id: match.id,
+          match_title: match.title,
+          requester_id: user.id,
+          requester_name: profile?.full_name ?? profile?.username ?? "Alguien",
+        });
+      }
     }
     setSendingRequest(null);
   }
 
   async function handleCancelRequest(matchId: string) {
     if (!user) return; setSendingRequest(matchId);
-    const { error } = await supabase.from("match_participants").delete().eq("match_id", matchId).eq("user_id", user.id).eq("status", "requested");
+    const { error } = await cancelJoinRequest(supabase, matchId, user.id);
     if (error) toast.error("No se pudo cancelar la solicitud.");
-    else { setMyStatuses((p) => { const n = new Map(p); n.delete(matchId); return n; }); toast.success("Solicitud cancelada."); }
+    else { 
+      queryClient.setQueryData(["feed-user-data", matchIds, user.id], (old: any) => {
+        if (!old) return old;
+        const newStatuses = new Map(old.statuses);
+        newStatuses.delete(matchId);
+        return { ...old, statuses: newStatuses };
+      });
+      toast.success("Solicitud cancelada."); 
+    }
     setSendingRequest(null);
   }
 
@@ -189,53 +207,76 @@ export default function FeedPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
-          <button onClick={() => setFilterSport("")} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${filterSport === "" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent shadow-sm" : "bg-background border-border hover:border-foreground/30 text-muted-foreground"}`}>Todos</button>
-          {sports.map((sp) => (
-            <button key={sp.id} onClick={() => setFilterSport(filterSport === sp.id ? "" : sp.id)} className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${filterSport === sp.id ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent shadow-sm" : "bg-background border-border hover:border-foreground/30 text-muted-foreground"}`}>
-              {sp.icon && <span>{sp.icon}</span>}{sp.name}
-            </button>
-          ))}
-          <button onClick={() => setShowFilters(!showFilters)} className={`shrink-0 ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${hasFilters ? "bg-violet-600 text-white border-transparent" : "bg-background border-border text-muted-foreground hover:border-foreground/30"}`}>
-            <SlidersHorizontal className="size-3" />Filtros{hasFilters ? " ✓" : ""}
+        <div className="flex border-b border-border">
+          <button 
+            onClick={() => setActiveTab("noticias")}
+            className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "noticias" ? "border-violet-600 text-violet-600" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            Noticias
+          </button>
+          <button 
+            onClick={() => setActiveTab("eventos")}
+            className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "eventos" ? "border-violet-600 text-violet-600" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            Eventos
           </button>
         </div>
 
-        {showFilters && (
-          <div className="px-4 pb-3 flex flex-col gap-3">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Select value={filterCity} onValueChange={(v) => setFilterCity(v === "all" ? "" : v)}>
-                  <SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue placeholder="Ciudad" /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">Todas</SelectItem>{ENABLED_CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <Select value={filterCanchaId} onValueChange={(v) => setFilterCanchaId(v === "all" ? "" : v)}>
-                  <SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue placeholder="Complejo / Cancha" /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">Todas</SelectItem>{canchas.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <Select value={filterPrivacy} onValueChange={(v) => setFilterPrivacy(v === "all" ? "" : v)}>
-                  <SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue placeholder="Privacidad" /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="public">Públicos</SelectItem><SelectItem value="private">Privados</SelectItem></SelectContent>
-                </Select>
-              </div>
+        {activeTab === "eventos" && (
+          <>
+            <div className="flex items-center gap-2 px-4 py-3 overflow-x-auto scrollbar-none">
+              <button onClick={() => setFilterSport("")} className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${filterSport === "" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent shadow-sm" : "bg-background border-border hover:border-foreground/30 text-muted-foreground"}`}>Todos</button>
+              {sports.map((sp) => (
+                <button key={sp.id} onClick={() => setFilterSport(filterSport === sp.id ? "" : sp.id)} className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${filterSport === sp.id ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent shadow-sm" : "bg-background border-border hover:border-foreground/30 text-muted-foreground"}`}>
+                  {sp.icon && <span>{sp.icon}</span>}{sp.name}
+                </button>
+              ))}
+              <button onClick={() => setShowFilters(!showFilters)} className={`shrink-0 ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${hasFilters ? "bg-violet-600 text-white border-transparent" : "bg-background border-border text-muted-foreground hover:border-foreground/30"}`}>
+                <SlidersHorizontal className="size-3" />Filtros{hasFilters ? " ✓" : ""}
+              </button>
             </div>
-            <div className="flex items-center justify-between bg-muted/50 rounded-xl p-2.5 px-3">
-              <div className="flex items-center gap-2"><Users className="size-4 text-violet-600" /><Label htmlFor="friends-toggle" className="text-xs font-semibold cursor-pointer">Juegan mis amigos</Label></div>
-              <Switch id="friends-toggle" checked={filterFriendsOnly} onCheckedChange={setFilterFriendsOnly} />
-            </div>
-            {hasFilters && <button onClick={clearFilters} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground py-2 rounded-xl hover:bg-muted transition-colors border border-dashed border-border"><X className="size-3" /> Limpiar todos los filtros</button>}
-          </div>
+
+            {showFilters && (
+              <div className="px-4 pb-3 flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select value={filterCity} onValueChange={(v) => setFilterCity(v === "all" ? "" : v)}>
+                      <SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue placeholder="Ciudad" /></SelectTrigger>
+                      <SelectContent><SelectItem value="all">Todas</SelectItem>{ENABLED_CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <Select value={filterCanchaId} onValueChange={(v) => setFilterCanchaId(v === "all" ? "" : v)}>
+                      <SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue placeholder="Complejo / Cancha" /></SelectTrigger>
+                      <SelectContent><SelectItem value="all">Todas</SelectItem>{canchas.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <Select value={filterPrivacy} onValueChange={(v) => setFilterPrivacy(v === "all" ? "" : v)}>
+                      <SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue placeholder="Privacidad" /></SelectTrigger>
+                      <SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="public">Públicos</SelectItem><SelectItem value="private">Privados</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-muted/50 rounded-xl p-2.5 px-3">
+                  <div className="flex items-center gap-2"><Users className="size-4 text-violet-600" /><Label htmlFor="friends-toggle" className="text-xs font-semibold cursor-pointer">Juegan mis amigos</Label></div>
+                  <Switch id="friends-toggle" checked={filterFriendsOnly} onCheckedChange={setFilterFriendsOnly} />
+                </div>
+                {hasFilters && <button onClick={clearFilters} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground py-2 rounded-xl hover:bg-muted transition-colors border border-dashed border-border"><X className="size-3" /> Limpiar todos los filtros</button>}
+              </div>
+            )}
+          </>
         )}
       </header>
 
       <main className="container mx-auto px-4 py-4 max-w-2xl">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black text-zinc-900 dark:text-white">Partidos</h1>
+        {activeTab === "noticias" ? (
+          <CommunityFeedTab />
+        ) : (
+          <>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-black text-zinc-900 dark:text-white">Partidos</h1>
             {!isLoading && <p className="text-sm text-muted-foreground mt-0.5">{filtered.length} {filtered.length === 1 ? "partido abierto" : "partidos abiertos"}{hasFilters ? " con filtros" : ""}</p>}
           </div>
           <div className="flex gap-2">
@@ -283,7 +324,7 @@ export default function FeedPage() {
 
               return (
                 <div key={match.id}>
-                  <div onClick={canEnterDetail ? () => setLocation(`/matches/${match.id}`) : undefined} className={`group relative bg-gradient-to-br ${theme.bg} rounded-2xl border border-border/60 border-l-4 ${theme.accent} shadow-sm ${canEnterDetail ? "hover:shadow-lg cursor-pointer" : "cursor-default"} transition-all duration-300 overflow-hidden`}>
+                  <div onClick={canEnterDetail ? () => setLocation(`/matches/${match.id}`) : undefined} className={`group relative bg-gradient-to-br ${theme.bg} rounded-2xl border border-border/60 shadow-sm ${canEnterDetail ? "hover:shadow-md hover:border-violet-200 dark:hover:border-violet-800 cursor-pointer" : "cursor-default"} transition-all duration-300 overflow-hidden`}>
                     {urgency.urgent && !myStatus && <div className="absolute top-3 right-3 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse"><Flame className="size-2.5" />HOT</div>}
                     <div className="p-4 pb-3">
                       <div className="flex items-start gap-3">
@@ -331,6 +372,8 @@ export default function FeedPage() {
               <p className="text-center text-muted-foreground text-sm py-6">Ya viste todo el feed</p>
             )}
           </div>
+        )}
+          </>
         )}
       </main>
       <BottomNav />

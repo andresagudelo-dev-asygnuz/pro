@@ -1,23 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/context/AuthContext";
+import { getPendingVerifications, createSignedVerificationUrl, reviewVerification, type VerificationWithUrl } from "@/lib/verifications/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
-
-
-type QueueRow = {
-  id: string;
-  user_id: string;
-  status: string;
-  storage_path: string | null;
-  mime_type: string | null;
-  file_size_bytes: number | null;
-  uploaded_at: string | null;
-  rejection_reason: string | null;
-  signed_url?: string | null;
-  profile?: { full_name: string | null; username: string | null } | null;
-};
 
 function VerificationActions({
   verificationId,
@@ -71,24 +56,18 @@ function VerificationActions({
 }
 
 export default function AdminVerificationsPage() {
-  const [rows, setRows] = useState<QueueRow[]>([]);
+  const [rows, setRows] = useState<VerificationWithUrl[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("age_verifications")
-        .select("*, profile:profiles(full_name, username)")
-        .eq("status", "pendiente")
-        .order("uploaded_at", { ascending: true });
-
+      const { data } = await getPendingVerifications(supabase);
       const rowsWithUrls = await Promise.all(
-        ((data ?? []) as QueueRow[]).map(async (row) => {
-          if (!row.storage_path) return { ...row, signed_url: null };
-          const { data: urlData } = await supabase.storage
-            .from("age-verifications")
-            .createSignedUrl(row.storage_path, 3600);
-          return { ...row, signed_url: urlData?.signedUrl ?? null };
+        data.map(async (row) => {
+          const signed_url = row.storage_path
+            ? await createSignedVerificationUrl(supabase, row.storage_path)
+            : null;
+          return { ...row, signed_url };
         })
       );
       setRows(rowsWithUrls);
@@ -97,19 +76,14 @@ export default function AdminVerificationsPage() {
   }, []);
 
   async function handleReview(verificationId: string, decision: "aprobada" | "rechazada", reason?: string) {
-    const update: Record<string, unknown> = {
-      status: decision,
-      reviewed_at: new Date().toISOString(),
-    };
-    if (decision === "rechazada" && reason) update.rejection_reason = reason;
-    await supabase.from("age_verifications").update(update).eq("id", verificationId);
+    await reviewVerification(supabase, verificationId, decision, reason);
     setRows((prev) => prev.filter((r) => r.id !== verificationId));
   }
 
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
 
   return (
-    <AppLayout>
+    <>
     <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 py-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Cola de verificaciones</h1>
@@ -166,6 +140,6 @@ export default function AdminVerificationsPage() {
         </ul>
       )}
     </div>
-    </AppLayout>
+    </>
   );
 }

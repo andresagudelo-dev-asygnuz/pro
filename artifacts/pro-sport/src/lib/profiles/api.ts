@@ -11,6 +11,44 @@ import type {
 type ApiResult<T> = { data: T | null; error: string | null };
 type PaginatedResult<T> = { data: T | null; error: string | null; nextCursor: string | null };
 
+export async function getProfileById(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ApiResult<Profile>> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) return { data: null, error: mapDbError(error, "getProfileById") };
+  return { data: data as Profile | null, error: null };
+}
+
+export async function getProfilesByIds(
+  supabase: SupabaseClient,
+  ids: string[],
+): Promise<ApiResult<Profile[]>> {
+  if (ids.length === 0) return { data: [], error: null };
+  const { data, error } = await supabase.from("profiles").select("*").in("id", ids);
+  if (error) return { data: null, error: mapDbError(error, "getProfilesByIds") };
+  return { data: (data ?? []) as Profile[], error: null };
+}
+
+export async function updateProfileFields(
+  supabase: SupabaseClient,
+  userId: string,
+  updates: Partial<Profile>,
+): Promise<ApiResult<Profile>> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", userId)
+    .select()
+    .single();
+  if (error) return { data: null, error: mapDbError(error, "updateProfileFields") };
+  return { data: data as Profile, error: null };
+}
+
 export interface PlayerSearchFilters {
   city?: string;
   skill_level?: string;
@@ -145,6 +183,20 @@ export async function updateTechnicalFootball(
     .single();
   if (error) return { data: null, error: mapDbError(error, "updateTechnicalFootball") };
   return { data: result as ProfileTechnicalFootball, error: null };
+}
+
+export async function upsertPlayerProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  data: Partial<Profile>,
+): Promise<ApiResult<Profile>> {
+  const { data: result, error } = await supabase
+    .from("profiles")
+    .upsert({ id: userId, ...data, updated_at: new Date().toISOString() })
+    .select()
+    .single();
+  if (error) return { data: null, error: mapDbError(error, "upsertPlayerProfile") };
+  return { data: result as Profile, error: null };
 }
 
 const BLOCK_TABLE = {

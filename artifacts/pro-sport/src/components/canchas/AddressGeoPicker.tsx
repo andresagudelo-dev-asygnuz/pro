@@ -1,11 +1,12 @@
 import "leaflet/dist/leaflet.css";
 import { useState } from "react";
 import L from "leaflet";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { geocodeAddress } from "@/lib/geo/nominatim";
+import { MapPin, Navigation } from "lucide-react";
 
 export interface GeoPickerValue {
   address: string;
@@ -77,6 +78,27 @@ export function AddressGeoPicker({ value, onChange, city }: AddressGeoPickerProp
     }
   }
 
+  function handleUseMyLocation() {
+    if (!navigator.geolocation) {
+      alert("Tu navegador no soporta geolocalización.");
+      return;
+    }
+    setSearching(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        onChange({ ...value, lat: latitude, lng: longitude });
+        setMapCenter([latitude, longitude]);
+        setMapKey((k) => k + 1);
+        setSearching(false);
+      },
+      () => {
+        alert("No se pudo obtener tu ubicación. Verifica los permisos.");
+        setSearching(false);
+      }
+    );
+  }
+
   const hasCoords = value.lat != null && value.lng != null;
 
   return (
@@ -103,40 +125,47 @@ export function AddressGeoPicker({ value, onChange, city }: AddressGeoPickerProp
           disabled={searching}
           className="shrink-0"
         >
-          {searching ? "Buscando…" : "Buscar en mapa"}
+          Buscar
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={handleUseMyLocation}
+          disabled={searching}
+          className="shrink-0 flex items-center gap-1"
+          title="Usar mi ubicación actual"
+        >
+          <Navigation className="size-4" />
         </Button>
       </div>
 
-      {hasCoords ? (
-        <div className="rounded-xl overflow-hidden border border-border/60 mt-2">
-          <MapContainer
-            key={mapKey}
-            center={mapCenter}
-            zoom={16}
-            style={{ height: "240px", width: "100%" }}
-            scrollWheelZoom={false}
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            />
+      <div className="rounded-xl overflow-hidden border border-border/60 mt-2">
+        <MapContainer
+          key={mapKey}
+          center={mapCenter}
+          zoom={16}
+          style={{ height: "240px", width: "100%" }}
+          scrollWheelZoom={false}
+        >
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          />
+          {hasCoords && (
             <DraggableMarker
               position={[value.lat!, value.lng!]}
               onDrag={(lat, lng) => onChange({ ...value, lat, lng })}
             />
-            <MapClickHandler
-              onClick={(lat, lng) => onChange({ ...value, lat, lng })}
-            />
-          </MapContainer>
-          <p className="text-xs text-muted-foreground px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/50">
-            Arrastrá el pin o hacé clic en el mapa para ajustar la ubicación exacta.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-dashed border-border/60 h-16 flex items-center justify-center text-sm text-muted-foreground">
-          Buscá la dirección para ver el mapa
-        </div>
-      )}
+          )}
+          <MapClickHandler
+            onClick={(lat, lng) => onChange({ ...value, lat, lng })}
+          />
+        </MapContainer>
+        <p className="text-xs text-muted-foreground px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/50">
+          Arrastrá el pin o hacé clic en el mapa para ajustar la ubicación exacta.
+        </p>
+      </div>
     </div>
   );
 }

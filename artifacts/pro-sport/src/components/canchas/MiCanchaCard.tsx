@@ -85,38 +85,26 @@ export function MiCanchaCard({ cancha: c, pendingCount: cPending, isToggling, on
         )}
 
         {/* Action buttons */}
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-2 gap-2">
           <Link href={`/canchas/${c.id}/agenda`}>
-            <button className={`relative flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-center w-full transition-colors text-xs font-medium ${
+            <button className={`relative flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl text-center w-full transition-colors text-xs font-semibold ${
               cPending > 0
                 ? "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100"
-                : "bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                : "bg-zinc-50 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}>
               <Calendar className="size-4" />
               Agenda
               {cPending > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white dark:border-zinc-900 shadow-sm">
                   {cPending}
                 </span>
               )}
             </button>
           </Link>
           <Link href={`/canchas/${c.id}/clientes`}>
-            <button className="flex flex-col items-center gap-1 py-2 px-1 rounded-xl w-full bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs font-medium">
+            <button className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl w-full bg-zinc-50 dark:bg-zinc-800/50 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs font-semibold">
               <Users className="size-4" />
               Clientes
-            </button>
-          </Link>
-          <Link href={`/canchas/${c.id}/equipo`}>
-            <button className="flex flex-col items-center gap-1 py-2 px-1 rounded-xl w-full bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs font-medium">
-              <Shield className="size-4" />
-              Equipo
-            </button>
-          </Link>
-          <Link href={`/canchas/${c.id}/stats`}>
-            <button className="flex flex-col items-center gap-1 py-2 px-1 rounded-xl w-full bg-zinc-50 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs font-medium">
-              <BarChart2 className="size-4" />
-              Stats
             </button>
           </Link>
         </div>

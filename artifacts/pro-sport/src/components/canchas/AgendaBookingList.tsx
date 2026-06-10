@@ -1,21 +1,44 @@
 import { Link } from "wouter";
-import { CheckCircle2, XCircle, Users, MessageCircle, ExternalLink } from "lucide-react";
+import { CheckCircle2, XCircle, Users, MessageCircle, ExternalLink, FileSearch } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookingCardSkeleton } from "@/components/ui/skeletons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { initialsFromName } from "@/lib/format";
-import { type CanchaBooking, type Profile } from "@/lib/types/db";
+import { type CanchaBooking, type PaymentStatus, type Profile } from "@/lib/types/db";
 
-type BookingFilter = "all" | "pendiente" | "confirmada" | "cancelada";
+type BookingFilter = "all" | "pendiente" | "en_validacion" | "confirmada" | "cancelada";
 
-const STATUS_CONFIG = {
+const PAYMENT_CONFIG: Record<PaymentStatus, { label: string; style: string }> = {
+  sin_anticipo: {
+    label: "Sin anticipo",
+    style: "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700",
+  },
+  anticipo_pagado: {
+    label: "Anticipo ✓",
+    style: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700",
+  },
+  pagado_total: {
+    label: "Pagado total ✓",
+    style: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700",
+  },
+};
+
+const STATUS_CONFIG: Record<string, { label: string; style: string }> = {
   pendiente: {
     label: "Pendiente",
     style: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700",
   },
+  en_validacion: {
+    label: "Por validar",
+    style: "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700",
+  },
   confirmada: {
     label: "Confirmada",
     style: "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700",
+  },
+  finalizada: {
+    label: "Finalizada",
+    style: "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700",
   },
   cancelada: {
     label: "Cancelada",
@@ -24,7 +47,7 @@ const STATUS_CONFIG = {
 };
 
 const FILTER_LABELS: Record<BookingFilter, string> = {
-  all: "Todas", pendiente: "Pendientes", confirmada: "Confirmadas", cancelada: "Canceladas",
+  all: "Todas", pendiente: "Pendientes", en_validacion: "Por validar", confirmada: "Confirmadas", cancelada: "Canceladas",
 };
 
 interface AgendaBookingListProps {
@@ -36,7 +59,9 @@ interface AgendaBookingListProps {
   bookingFilter: BookingFilter;
   onFilterChange: (f: BookingFilter) => void;
   onBookingAction: (booking: CanchaBooking, status: "confirmada" | "cancelada") => void;
+  onPaymentStatusChange: (bookingId: string, paymentStatus: PaymentStatus) => void;
   onOpenChat: (booking: CanchaBooking) => void;
+  onViewReceipt?: (booking: CanchaBooking) => void;
 }
 
 export function AgendaBookingList({
@@ -48,12 +73,15 @@ export function AgendaBookingList({
   bookingFilter,
   onFilterChange,
   onBookingAction,
+  onPaymentStatusChange,
   onOpenChat,
+  onViewReceipt,
 }: AgendaBookingListProps) {
   const filteredBookings = bookingFilter === "all" ? bookings : bookings.filter((b) => b.status === bookingFilter);
   const filterCounts: Record<BookingFilter, number> = {
     all: bookings.length,
     pendiente: bookings.filter((b) => b.status === "pendiente").length,
+    en_validacion: bookings.filter((b) => b.status === "en_validacion").length,
     confirmada: bookings.filter((b) => b.status === "confirmada").length,
     cancelada: bookings.filter((b) => b.status === "cancelada").length,
   };
@@ -62,7 +90,7 @@ export function AgendaBookingList({
     <>
       {bookings.length > 0 && (
         <div className="flex gap-2 px-5 pt-3 pb-1 overflow-x-auto scrollbar-none">
-          {(["all", "pendiente", "confirmada", "cancelada"] as BookingFilter[]).map((f) => {
+          {(["all", "pendiente", "en_validacion", "confirmada", "cancelada"] as BookingFilter[]).map((f) => {
             const count = filterCounts[f];
             if (f !== "all" && count === 0) return null;
             return (
@@ -112,6 +140,8 @@ export function AgendaBookingList({
                   className={`rounded-xl border transition-colors ${
                     b.status === "pendiente"
                       ? "border-amber-200 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-900/10"
+                      : b.status === "en_validacion"
+                      ? "border-orange-200 dark:border-orange-700/60 bg-orange-50/30 dark:bg-orange-900/10"
                       : "border-border/60 bg-background"
                   }`}
                 >
@@ -134,6 +164,26 @@ export function AgendaBookingList({
                       </p>
                       {b.notes && (
                         <p className="text-xs text-muted-foreground truncate">📝 {b.notes}</p>
+                      )}
+                      {/* Payment status quick-toggle */}
+                      {b.status !== "cancelada" && (
+                        <div className="flex gap-1 mt-1.5 flex-wrap">
+                          {(["sin_anticipo", "anticipo_pagado", "pagado_total"] as PaymentStatus[]).map((ps) => {
+                            const pc = PAYMENT_CONFIG[ps];
+                            const isActive = (b.payment_status ?? "sin_anticipo") === ps;
+                            return (
+                              <button
+                                key={ps}
+                                onClick={(e) => { e.stopPropagation(); onPaymentStatusChange(b.id, ps); }}
+                                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border transition-all ${
+                                  isActive ? pc.style : "border-border/40 text-muted-foreground hover:border-border"
+                                }`}
+                              >
+                                {pc.label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${cfg.style}`}>
@@ -160,6 +210,15 @@ export function AgendaBookingList({
                     </button>
 
                     <div className="flex-1" />
+
+                    {b.status === "en_validacion" && onViewReceipt && (
+                      <button
+                        onClick={() => onViewReceipt(b)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors font-medium"
+                      >
+                        <FileSearch className="size-3.5" /> Ver comprobante
+                      </button>
+                    )}
 
                     {b.status === "pendiente" && (
                       <div className="flex gap-1">

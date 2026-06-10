@@ -16,9 +16,13 @@ import {
   User,
   Shield,
   LogOut,
-  ChevronRight,
   UserSearch,
   Bell,
+  Building,
+  Building2,
+  RefreshCcw,
+  ChevronRight,
+  ListChecks,
 } from "lucide-react";
 
 
@@ -37,10 +41,12 @@ const QUICK_ITEMS = [
 ];
 
 export function NavDrawer() {
-  const { profile } = useAuth();
+  const { profile, roles } = useAuth();
   const { unreadCount } = useNotifCount();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [open, setOpen] = useState(false);
+
+  const isOwnerView = location.startsWith("/mis-canchas");
 
   async function handleSignOut() {
     setOpen(false);
@@ -113,6 +119,62 @@ export function NavDrawer() {
             </div>
 
             <div className="mx-3 my-3 border-t" />
+
+            {roles?.is_cancha && (
+              <div className="px-3 mb-3">
+                <p className="px-2 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                  Mi Centro
+                </p>
+                <button
+                  onClick={() => handleNav("/mis-canchas/centro")}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors text-left mb-1"
+                >
+                  <Building2 className="size-4 text-violet-500 dark:text-violet-400 shrink-0" />
+                  <span className="text-sm font-medium">Mi Centro Deportivo</span>
+                </button>
+              </div>
+            )}
+
+            {roles?.is_cancha && (
+              <div className="px-3 mb-3">
+                <p className="px-2 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                  Modo de Vista
+                </p>
+                <button
+                  onClick={() => handleNav(isOwnerView ? "/feed" : "/mis-canchas/dashboard")}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-brand-primary/20 bg-brand-primary/5 hover:bg-brand-primary/10 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <RefreshCcw className="size-4 text-brand-primary shrink-0" />
+                    <span className="text-sm font-medium text-brand-primary">
+                      Cambiar a {isOwnerView ? "Jugador" : "Negocio"}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {roles?.is_promoter && (
+              <div className="px-3 mb-3">
+                <p className="px-2 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                  Promotor
+                </p>
+                <button
+                  onClick={() => handleNav("/tournaments/new")}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-amber-400/20 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors text-left mb-1"
+                >
+                  <PlusCircle className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Crear torneo</span>
+                </button>
+                <button
+                  onClick={() => handleNav("/tournaments/mine")}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted transition-colors text-left"
+                >
+                  <ListChecks className="size-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm">Mis torneos</span>
+                </button>
+              </div>
+            )}
 
             <div className="px-3">
               <p className="px-2 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">

@@ -12,11 +12,11 @@ import { RecurringOccurrenceMenu } from "@/components/canchas/RecurringOccurrenc
 import { RecurringSeriesList } from "@/components/canchas/RecurringSeriesList";
 import { Button } from "@/components/ui/button";
 import { Pencil, AlertCircle, RefreshCw, Repeat2, Plus } from "lucide-react";
-import { BottomNav } from "@/components/BottomNav";
 import { CanchaOwnerTabs } from "@/components/CanchaOwnerTabs";
 import { AgendaDaySkeleton } from "@/components/ui/skeletons";
 import { type CanchaBooking, type Profile } from "@/lib/types/db";
 import { AgendaBookingList } from "@/components/canchas/AgendaBookingList";
+import { BookingReceiptViewer } from "@/components/canchas/BookingReceiptViewer";
 import type { AgendaItem } from "@/hooks/useAgendaData";
 import type { ExpandedOccurrence } from "@/lib/canchas/recurring-api";
 
@@ -36,7 +36,7 @@ function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
 
-type BookingFilter = "all" | "pendiente" | "confirmada" | "cancelada";
+type BookingFilter = "all" | "pendiente" | "en_validacion" | "confirmada" | "cancelada";
 
 export default function CanchaAgendaPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,6 +53,7 @@ export default function CanchaAgendaPage() {
   const [showSeriesList, setShowSeriesList] = useState(false);
   const [selectedOccurrence, setSelectedOccurrence] =
     useState<ExpandedOccurrence | null>(null);
+  const [receiptBooking, setReceiptBooking] = useState<CanchaBooking | null>(null);
 
   const { items: agendaItems, refetch: refetchAgenda } = useAgendaData(id ?? "", weekStart);
 
@@ -74,7 +75,7 @@ export default function CanchaAgendaPage() {
     cancha, schedule, loadingCancha, savingSchedule,
     bookings, bookerProfiles, loadingBookings, openingChat, slotMinutes,
     loadBookings, updateDay, applyToGroup, applyPreset,
-    changeSlotDuration, saveSchedule, handleBookingAction, openChat,
+    changeSlotDuration, saveSchedule, handleBookingAction, handlePaymentStatusChange, openChat,
   } = useAgendaActions({
     canchaId: id ?? "",
     userId: user?.id,
@@ -185,7 +186,9 @@ export default function CanchaAgendaPage() {
             bookingFilter={bookingFilter}
             onFilterChange={setBookingFilter}
             onBookingAction={handleBookingAction}
+            onPaymentStatusChange={handlePaymentStatusChange}
             onOpenChat={openChat}
+            onViewReceipt={(b) => setReceiptBooking(b)}
           />
         </div>
 
@@ -270,7 +273,18 @@ export default function CanchaAgendaPage() {
         />
       )}
 
-      <BottomNav />
+      {receiptBooking && (
+        <BookingReceiptViewer
+          booking={receiptBooking}
+          open={!!receiptBooking}
+          onClose={() => setReceiptBooking(null)}
+          onUpdated={() => {
+            setReceiptBooking(null);
+            loadBookings(selectedDate);
+          }}
+        />
+      )}
+
     </div>
   );
 }

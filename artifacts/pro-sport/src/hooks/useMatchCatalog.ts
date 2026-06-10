@@ -2,15 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { ENABLED_CITIES } from "@/lib/types/db";
 import type { Sport } from "@/lib/types/db";
+import { listSports } from "@/lib/sports/api";
+import { KEYS, STALE } from "@/lib/queryKeys";
 
 export function useMatchCatalog() {
   const { data: sports = [], isLoading: loadingSports } = useQuery<Sport[]>({
-    queryKey: ["sports"],
+    queryKey: KEYS.sports,
     queryFn: async () => {
-      const { data } = await supabase.from("sports").select("id, name, icon").order("name");
+      const { data } = await listSports(supabase);
       return (data ?? []) as Sport[];
     },
-    staleTime: 5 * 60 * 1000, // sports don't change often
+    staleTime: STALE.static,
   });
 
   return {

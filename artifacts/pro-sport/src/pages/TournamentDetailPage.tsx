@@ -5,7 +5,6 @@ import { TournamentHeader } from "@/components/tournaments/TournamentHeader";
 import { TournamentStatsGrid } from "@/components/tournaments/TournamentStatsGrid";
 import { TournamentStateActions } from "@/components/tournaments/TournamentStateActions";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
 
 export default function TournamentDetailPage() {
   const { user } = useAuth();
@@ -15,23 +14,23 @@ export default function TournamentDetailPage() {
 
   if (isLoading) {
     return (
-      <AppLayout>
+      <>
         <div className="flex items-center justify-center p-12">
           <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   if (error || !tournament) {
     return (
-      <AppLayout>
+      <>
         <div className="container py-8 max-w-3xl mx-auto">
           <div className="bg-destructive/15 text-destructive p-4 rounded-2xl">
             {error ?? "Torneo no encontrado"}
           </div>
         </div>
-      </AppLayout>
+      </>
     );
   }
 
@@ -40,7 +39,7 @@ export default function TournamentDetailPage() {
   const hasSlots = tournament.slots_filled < tournament.slots;
 
   return (
-    <AppLayout>
+    <>
       <div className="py-8 max-w-3xl mx-auto space-y-6">
         <TournamentHeader tournament={tournament} />
 
@@ -107,6 +106,6 @@ export default function TournamentDetailPage() {
           )}
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 }

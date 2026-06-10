@@ -20,8 +20,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
+import { ScreenLayout } from "@/components/ScreenLayout";
 import {
   SPORT_TYPE_LABELS,
   SPORT_TYPE_ICONS,
@@ -30,7 +29,7 @@ import {
   type CanchaSportType,
   type Venue,
 } from "@/lib/types/db";
-import { Search, Plus, MapPin, Users, Map as MapIcon, List, Navigation, Check, ChevronsUpDown } from "lucide-react";
+import { Search, Plus, MapPin, Users, Map as MapIcon, List, Navigation, Check, ChevronsUpDown, Building2, Star } from "lucide-react";
 
 const CanchasMap = lazy(() =>
   import("@/components/canchas/CanchasMap").then((m) => ({ default: m.CanchasMap })),
@@ -112,6 +111,38 @@ function CanchaCard({ cancha, distanceKm }: { cancha: Cancha; distanceKm?: numbe
   );
 }
 
+function VenueCard({ venue, canchaCount }: { venue: Venue; canchaCount: number }) {
+  return (
+    <Link href={`/venues/${venue.id}`}>
+      <div className="group rounded-2xl border border-border/60 shadow-sm hover:shadow-md overflow-hidden cursor-pointer transition-all">
+        {/* Mini banner */}
+        <div className="h-24 relative">
+          {venue.banner_url
+            ? <img src={venue.banner_url} alt={venue.name} className="w-full h-full object-cover" />
+            : <div className="w-full h-full bg-gradient-to-br from-violet-900 to-indigo-900" />}
+          {venue.logo_url && (
+            <div className="absolute bottom-2 left-3 w-10 h-10 rounded-xl border-2 border-white overflow-hidden bg-white">
+              <img src={venue.logo_url} alt="Logo" className="w-full h-full object-cover" />
+            </div>
+          )}
+        </div>
+        {/* Info */}
+        <div className="p-3 bg-white dark:bg-zinc-900">
+          <p className="font-semibold text-sm group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors">{venue.name}</p>
+          <p className="text-xs text-muted-foreground">{venue.city} · {canchaCount} cancha{canchaCount !== 1 ? "s" : ""}</p>
+          {venue.rating_count > 0 && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <Star className="size-3 text-amber-500 fill-amber-500" />
+              <span className="text-xs font-medium">{venue.rating_avg.toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">({venue.rating_count})</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function computeDistance(
   cancha: Cancha,
   userLocation: GeoPoint,
@@ -129,6 +160,7 @@ export default function CanchasPage() {
   const [canchas, setCanchas] = useState<Cancha[]>([]);
   const [allVenues, setAllVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contentMode, setContentMode] = useState<"canchas" | "centros">("canchas");
   const [error, setError] = useState<string | null>(null);
   const [city, setCity] = useState("");
   const [sportType, setSportType] = useState<CanchaSportType | "">("");
@@ -251,28 +283,27 @@ export default function CanchasPage() {
     : canchas;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title="Canchas"
-        actions={
-          <>
-            {roles?.is_cancha && (
-              <Link href="/mis-canchas">
-                <Button variant="outline" size="sm" className="rounded-xl text-xs">
-                  Mis canchas
-                </Button>
-              </Link>
-            )}
-            {roles?.is_cancha && (
-              <Link href="/canchas/nueva">
-                <Button size="sm" className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
-                  <Plus className="size-3.5" /> Agregar
-                </Button>
-              </Link>
-            )}
-          </>
-        }
-      />
+    <ScreenLayout
+      title="Canchas"
+      actions={
+        <>
+          {roles?.is_cancha && (
+            <Link href="/mis-canchas">
+              <Button variant="outline" size="sm" className="rounded-xl text-xs">
+                Mis canchas
+              </Button>
+            </Link>
+          )}
+          {roles?.is_cancha && (
+            <Link href="/canchas/nueva">
+              <Button size="sm" className="rounded-xl gap-1.5 bg-violet-600 hover:bg-violet-700">
+                <Plus className="size-3.5" /> Agregar
+              </Button>
+            </Link>
+          )}
+        </>
+      }
+    >
 
       {/* Sticky filter bar */}
       <div ref={filterBarRef} className="sticky top-14 z-40 bg-white dark:bg-zinc-900 border-b border-border/50 px-4 pb-3 pt-2 space-y-2">
@@ -384,32 +415,134 @@ export default function CanchasPage() {
           </Popover>
         )}
 
-        {/* List / Map toggle */}
-        <div className="flex justify-end gap-1">
-          <button
-            onClick={() => switchView("list")}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-              viewMode === "list"
-                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
-                : "bg-background border-border text-muted-foreground hover:border-foreground/30"
-            }`}
-          >
-            <List className="size-3" /> Lista
-          </button>
-          <button
-            onClick={handleSwitchToMap}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-              viewMode === "map"
-                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
-                : "bg-background border-border text-muted-foreground hover:border-foreground/30"
-            }`}
-          >
-            <MapIcon className="size-3" /> Mapa
-          </button>
+        {/* Content mode + List / Map toggle */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Content mode: Canchas / Centros */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => setContentMode("canchas")}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                contentMode === "canchas"
+                  ? "bg-violet-600 text-white border-transparent"
+                  : "bg-background border-border text-muted-foreground hover:border-foreground/30"
+              }`}
+            >
+              Canchas
+            </button>
+            <button
+              onClick={() => setContentMode("centros")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                contentMode === "centros"
+                  ? "bg-violet-600 text-white border-transparent"
+                  : "bg-background border-border text-muted-foreground hover:border-foreground/30"
+              }`}
+            >
+              <Building2 className="size-3" /> Centros
+            </button>
+          </div>
+
+          {/* List / Map toggle — available for both modes */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => switchView("list")}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                viewMode === "list"
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
+                  : "bg-background border-border text-muted-foreground hover:border-foreground/30"
+              }`}
+            >
+              <List className="size-3" /> Lista
+            </button>
+            <button
+              onClick={handleSwitchToMap}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
+                viewMode === "map"
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-transparent"
+                  : "bg-background border-border text-muted-foreground hover:border-foreground/30"
+              }`}
+            >
+              <MapIcon className="size-3" /> Mapa
+            </button>
+          </div>
         </div>
       </div>
 
-      {loading ? (
+      {/* ── Centros mode ── */}
+      {contentMode === "centros" && (() => {
+        const filteredByCity = city.trim()
+          ? allVenues.filter((v) => v.city.toLowerCase().includes(city.toLowerCase()))
+          : allVenues;
+
+        const countMap = new Map<string, number>();
+        for (const c of canchas) {
+          if (c.venue_id) countMap.set(c.venue_id, (countMap.get(c.venue_id) ?? 0) + 1);
+        }
+
+        if (viewMode === "map") {
+          return (
+            <div className="relative">
+              {geoStatus === "needs_permission" && (
+                <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-5">
+                  <div className="w-16 h-16 rounded-2xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center text-3xl">📍</div>
+                  <div>
+                    <p className="font-semibold text-foreground mb-1">¿Usamos tu ubicación?</p>
+                    <p className="text-sm text-muted-foreground">Así te mostramos los centros más cercanos en el mapa.</p>
+                  </div>
+                  <button onClick={doGetLocation} className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors">Permitir ubicación</button>
+                  <button onClick={() => setGeoStatus("idle")} className="text-xs text-muted-foreground underline underline-offset-2">Ver mapa sin ubicación</button>
+                </div>
+              )}
+              {geoStatus !== "needs_permission" && (
+                <Suspense fallback={<div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" /></div>}>
+                  <CanchasMap
+                    canchas={canchas}
+                    venues={filteredByCity}
+                    userLocation={userLocation}
+                    mode="venues"
+                    onCanchaSelect={(id) => navigate(`/canchas/${id}`)}
+                    onVenueSelect={(id) => navigate(`/venues/${id}`)}
+                    height={`calc(100dvh - 56px - ${filterBarHeight}px - 74px)`}
+                  />
+                </Suspense>
+              )}
+            </div>
+          );
+        }
+
+        // List mode
+        if (filteredByCity.length === 0) {
+          return (
+            <main className="container mx-auto px-4 py-4 max-w-2xl">
+              <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
+                  <Building2 className="size-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground mb-1">No hay centros disponibles</p>
+                  {city && <p className="text-sm text-muted-foreground">Probá buscar en otra ciudad o sin filtros.</p>}
+                </div>
+              </div>
+            </main>
+          );
+        }
+
+        return (
+          <main className="container mx-auto px-4 py-4 max-w-2xl">
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                {filteredByCity.length} {filteredByCity.length === 1 ? "centro deportivo" : "centros deportivos"}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {filteredByCity.map((v) => (
+                  <VenueCard key={v.id} venue={v} canchaCount={countMap.get(v.id) ?? 0} />
+                ))}
+              </div>
+            </div>
+          </main>
+        );
+      })()}
+
+      {contentMode === "canchas" && (loading ? (
         <div className="flex justify-center py-16">
           <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -583,9 +716,8 @@ export default function CanchasPage() {
         </main>
       )}
         </>
-      )}
+      ))}
 
-      <BottomNav />
-    </div>
+    </ScreenLayout>
   );
 }

@@ -8,7 +8,6 @@ import {
 } from "@/lib/teams/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
 import { initialsFromName } from "@/lib/format";
 import { SPORT_TYPE_LABELS } from "@/lib/types/db";
@@ -106,9 +105,9 @@ const POSITION_ABBR: Record<string, string> = {
 function computeOvr(p: TeamMemberWithProfile["profile"]): number {
   if (!p) return 50;
   const vals = [
-    (p as any).skill_pace ?? 50, (p as any).skill_shooting ?? 50,
-    (p as any).skill_passing ?? 50, (p as any).skill_dribbling ?? 50,
-    (p as any).skill_defending ?? 50, (p as any).skill_physical ?? 50,
+    p.skill_pace ?? 50, p.skill_shooting ?? 50,
+    p.skill_passing ?? 50, p.skill_dribbling ?? 50,
+    p.skill_defending ?? 50, p.skill_physical ?? 50,
   ];
   return Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
 }
@@ -131,18 +130,18 @@ function JerseyIcon({ color, size = 32 }: { color: string; size?: number }) {
 /* ── Mini member card ────────────────────────────────────────────── */
 function MemberCard({ member }: { member: TeamMemberWithProfile }) {
   const p = member.profile;
-  const level = ((p as any)?.primary_skill_level ?? "intermedio") as keyof typeof CARD_STYLES;
+  const level = ((p?.primary_skill_level ?? "intermedio")) as keyof typeof CARD_STYLES;
   const s = CARD_STYLES[level] ?? CARD_STYLES.intermedio;
   const ovr = computeOvr(p);
-  const initials = initialsFromName((p as any)?.full_name ?? (p as any)?.username);
-  const pos = POSITION_ABBR[(p as any)?.position ?? ""] ?? "JUG";
+  const initials = initialsFromName(p?.full_name ?? p?.username);
+  const pos = POSITION_ABBR[p?.position ?? ""] ?? "JUG";
   const isOwner = member.role === "owner";
   const isCaptain = member.role === "captain";
 
   const SKILL_DEFS: [string, number][] = [
-    ["PAC", (p as any)?.skill_pace ?? 50], ["TIR", (p as any)?.skill_shooting ?? 50],
-    ["PAS", (p as any)?.skill_passing ?? 50], ["REG", (p as any)?.skill_dribbling ?? 50],
-    ["DEF", (p as any)?.skill_defending ?? 50], ["FIS", (p as any)?.skill_physical ?? 50],
+    ["PAC", p?.skill_pace ?? 50], ["TIR", p?.skill_shooting ?? 50],
+    ["PAS", p?.skill_passing ?? 50], ["REG", p?.skill_dribbling ?? 50],
+    ["DEF", p?.skill_defending ?? 50], ["FIS", p?.skill_physical ?? 50],
   ];
 
   return (
@@ -164,7 +163,7 @@ function MemberCard({ member }: { member: TeamMemberWithProfile }) {
         <div className="flex justify-center flex-1 items-center py-1">
           <div className="relative inline-block">
             <Avatar className={`size-16 ring-[3px] ${s.ring} shadow-xl`}>
-              {(p as any)?.avatar_url && <AvatarImage src={(p as any).avatar_url} alt={(p as any).full_name ?? ""} className="object-cover" />}
+              {p?.avatar_url && <AvatarImage src={p!.avatar_url} alt={p?.full_name ?? ""} className="object-cover" />}
               <AvatarFallback className="bg-black/20 text-lg font-black">
                 <span className={s.text}>{initials}</span>
               </AvatarFallback>
@@ -180,7 +179,7 @@ function MemberCard({ member }: { member: TeamMemberWithProfile }) {
 
         <div className="text-center px-2 -mt-0.5">
           <p className={`text-[11px] font-black uppercase tracking-wide leading-tight truncate ${s.text} drop-shadow-sm`}>
-            {(p as any)?.full_name ?? (p as any)?.username ?? "Jugador"}
+            {p?.full_name ?? p?.username ?? "Jugador"}
           </p>
           <p className={`text-[8px] font-semibold mt-0.5 ${s.subtext}`}>{ROLE_LABELS[member.role]}</p>
         </div>
@@ -325,7 +324,6 @@ export default function TeamDetailPage() {
         <div className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
-        <BottomNav />
       </div>
     );
   }
@@ -342,7 +340,6 @@ export default function TeamDetailPage() {
             Volver a equipos
           </Button>
         </div>
-        <BottomNav />
       </div>
     );
   }
@@ -578,8 +575,6 @@ export default function TeamDetailPage() {
           </div>
         )}
       </main>
-
-      <BottomNav />
     </div>
   );
 }

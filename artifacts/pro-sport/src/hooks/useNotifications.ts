@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useNotifCount } from "@/context/NotifContext";
 import { toast } from "sonner";
 import {
@@ -10,9 +10,16 @@ import {
   respondToMatchInvitation,
   type FriendWithProfile,
 } from "@/lib/friends/api";
+import {
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  deleteNotification,
+  deleteReadNotifications,
+} from "@/lib/notifications/api";
+import { getProfilesByIds } from "@/lib/profiles/api";
+import { joinMatchDirect } from "@/lib/matches/api";
 import type { Notification, MatchInvitation, Profile } from "@/lib/types/db";
-
-const supabase = createClient();
 
 export type MatchInviteWithMatch = MatchInvitation & {
   matches: { title: string; starts_at: string } | null;
@@ -32,30 +39,28 @@ export function useNotifications(userId: string | undefined) {
     setLoading(true);
     try {
       const [notifRes, friendReqRes, matchInvRes] = await Promise.all([
-        supabase.from("notifications").select("*").eq("user_id", userId)
-          .order("created_at", { ascending: false }).limit(60),
+        getNotifications(supabase, userId),
         getPendingReceived(supabase, userId),
         getPendingMatchInvitations(supabase, userId),
       ]);
 
-      setNotifications((notifRes.data as Notification[]) || []);
+      setNotifications(notifRes.data ?? []);
       setFriendRequests(friendReqRes.data ?? []);
 
       const rawInvites = (matchInvRes.data ?? []) as MatchInviteWithMatch[];
       if (rawInvites.length > 0) {
-        const { data: profiles } = await supabase.from("profiles")
-          .select("id, full_name, avatar_url, username").in("id", rawInvites.map((i) => i.inviter_id));
+        const { data: profiles } = await getProfilesByIds(supabase, rawInvites.map((i) => i.inviter_id));
         const map = new Map(
-          ((profiles ?? []) as Profile[])
-            .map((p) => [p.id, p])
+          ((profiles ?? []) as Profile[]).map((p) => [p.id, p])
         );
         setMatchInvitations(rawInvites.map((inv) => ({ ...inv, inviterProfile: map.get(inv.inviter_id) })));
       } else {
         setMatchInvitations([]);
       }
-    } catch (error) {
-      console.error("Error loading notifications:", error);
-      toast.error("Error al cargar notificaciones");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      console.error("Error loading notifications:", err);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -68,41 +73,59 @@ export function useNotifications(userId: string | undefined) {
   // Realtime subscription
   useEffect(() => {
     if (!userId) return;
-    const channel = supabase.channel(`notif-page-${userId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-        (payload: { new: Notification }) => setNotifications((prev) => [payload.new, ...prev]))
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-        (payload: { new: Notification }) => setNotifications((prev) => prev.map((n) => n.id === payload.new.id ? payload.new : n)))
-      .subscribe();
+    const channel = supabase
+      .channel(`notif-page-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        (payload: { new: Notification }) => {
+          setNotifications((prev) => [payload.new, ...prev]);
+          // Omitir toast inicial si se cargan de a muchas (Realtime solo trae inserts de a 1)
+          toast("Nueva notificación", {
+            description: "Tienes una nueva actualización en tu campana.",
+            icon: "🔔",
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        (payload: { new: Notification }) =>
+          setNotifications((prev) => prev.map((n) => (n.id === payload.new.id ? payload.new : n)))
+      )
+      .subscribe((_status: string, err?: Error) => {
+        if (err) console.error("[notifications realtime]", err);
+      });
     return () => { supabase.removeChannel(channel); };
   }, [userId]);
 
   const markAllRead = async () => {
     if (!userId) return;
-    const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() })
-      .eq("user_id", userId).is("read_at", null);
-    
+    const { error } = await markAllNotificationsRead(supabase, userId);
     if (error) {
       toast.error("Error al marcar como leídas");
       return;
     }
-    
-    setNotifications((prev) => prev.map((n) => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
+    );
     clearCount();
   };
 
   const markOneRead = async (id: string) => {
-    const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+    const { error } = await markNotificationRead(supabase, id);
     if (error) {
       toast.error("Error al marcar como leída");
       return;
     }
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
+    );
   };
 
   const deleteOne = async (id: string) => {
     setDeletingId(id);
-    const { error } = await supabase.from("notifications").delete().eq("id", id);
+    const { error } = await deleteNotification(supabase, id);
     if (error) {
       toast.error("No se pudo eliminar.");
       setDeletingId(null);
@@ -115,8 +138,7 @@ export function useNotifications(userId: string | undefined) {
 
   const deleteAllRead = async () => {
     if (!userId) return;
-    const { error } = await supabase.from("notifications").delete()
-      .eq("user_id", userId).not("read_at", "is", null);
+    const { error } = await deleteReadNotifications(supabase, userId);
     if (error) {
       toast.error("Error al eliminar.");
       return;
@@ -140,9 +162,10 @@ export function useNotifications(userId: string | undefined) {
 
   const handleAcceptMatchInvite = async (invId: string, matchId: string) => {
     if (!userId) return;
-    const { error } = await respondToMatchInvitation(supabase, invId, "accepted");
-    if (error) { toast.error(error); return; }
-    await supabase.from("match_participants").insert({ match_id: matchId, user_id: userId, status: "joined" });
+    const { error: invErr } = await respondToMatchInvitation(supabase, invId, "accepted");
+    if (invErr) { toast.error(invErr); return; }
+    const { error: joinErr } = await joinMatchDirect(supabase, matchId, userId);
+    if (joinErr) { toast.error(joinErr); return; }
     setMatchInvitations((prev) => prev.filter((i) => i.id !== invId));
     toast.success("¡Te uniste al partido!");
   };

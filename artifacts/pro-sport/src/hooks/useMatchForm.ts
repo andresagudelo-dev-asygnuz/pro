@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { createMatch, updateMatch } from "@/lib/matches/api";
+import { createMatch, updateMatch, getRawMatchById } from "@/lib/matches/api";
+import { KEYS } from "@/lib/queryKeys";
 import { useAuth } from "@/context/AuthContext";
 import type { Match } from "@/lib/types/db";
 
@@ -48,11 +49,11 @@ export function useMatchForm({ mode, matchId }: UseMatchFormOptions) {
 
   // Load existing match for edit mode
   const { data: match, isLoading: loadingMatch } = useQuery<Match | null>({
-    queryKey: ["match", matchId],
+    queryKey: KEYS.match(matchId ?? ""),
     queryFn: async () => {
       if (!matchId) return null;
-      const { data } = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
-      return data as Match | null;
+      const { data } = await getRawMatchById(supabase, matchId);
+      return data;
     },
     enabled: mode === "edit" && !!matchId,
   });

@@ -11,7 +11,6 @@ import { listRegistrationsWithNames, type RegistrationWithNames } from "@/lib/to
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AppLayout } from "@/components/AppLayout";
 
 
 const eventLabels: Record<MatchEventType, string> = {
@@ -100,7 +99,7 @@ export default function TournamentMatchResultPage() {
   );
 
   return (
-    <AppLayout>
+    <>
     <div className="container py-8 max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -175,6 +174,6 @@ export default function TournamentMatchResultPage() {
         )}
       </section>
     </div>
-    </AppLayout>
+    </>
   );
 }

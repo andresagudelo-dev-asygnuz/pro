@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
+import { submitFeedback } from "@/lib/feedback/api";
 import { Button } from "@/components/ui/button";
 
 type Question = { id: string; text: string; type: "choice" | "open"; options?: string[] };
@@ -13,6 +15,7 @@ const questions: Question[] = [
 ];
 
 export default function FeedbackPage() {
+  const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -26,10 +29,9 @@ export default function FeedbackPage() {
 
   async function handleSubmit() {
     setSubmitting(true);
-    await supabase.from("feedback").insert({
-      answers,
-      submitted_at: new Date().toISOString(),
-    });
+    // Include user_id when logged in so feedback can be linked to real accounts
+    const payload = user ? { ...answers, _user_id: user.id } : answers;
+    await submitFeedback(supabase, payload);
     setSubmitting(false);
     setSubmitted(true);
   }

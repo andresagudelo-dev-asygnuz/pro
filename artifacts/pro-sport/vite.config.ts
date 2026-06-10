@@ -50,6 +50,15 @@ export default defineConfig({
         if (warning.code === "SOURCEMAP_ERROR") return;
         warn(warning);
       },
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'wouter'],
+          'vendor-supabase': ['@supabase/supabase-js', '@supabase/ssr'],
+          'vendor-leaflet': ['leaflet', 'react-leaflet'],
+          'vendor-charts': ['recharts'],
+          'vendor-query': ['@tanstack/react-query'],
+        }
+      }
     },
   },
   server: {

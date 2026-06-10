@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
-import { AppLayout } from "@/components/AppLayout";
+import { updateProfileFields } from "@/lib/profiles/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,9 +68,9 @@ export default function OwnerProfileEditPage() {
       updated_at:        new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);
+    const { error } = await updateProfileFields(supabase, user.id, updates);
     if (error) {
-      toast.error("Error al guardar: " + error.message);
+      toast.error("Error al guardar: " + error);
     } else {
       updateProfile(updates);
       toast.success("Perfil actualizado.");
@@ -80,7 +80,7 @@ export default function OwnerProfileEditPage() {
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="max-w-lg mx-auto px-4 py-6">
 
         {/* Header */}
@@ -248,6 +248,6 @@ export default function OwnerProfileEditPage() {
           </div>
         </form>
       </div>
-    </AppLayout>
+    </>
   );
 }

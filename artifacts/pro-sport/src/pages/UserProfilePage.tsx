@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { formatMatchDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { BottomNav } from "@/components/BottomNav";
 import { PlayerCard } from "@/components/PlayerCard";
 import {
   UserPlus, UserCheck, Clock, X, Check, ArrowLeft,
@@ -21,6 +20,9 @@ import {
   rejectFriendRequest,
   removeFriend,
 } from "@/lib/friends/api";
+import { getProfileById } from "@/lib/profiles/api";
+import { getSportById } from "@/lib/sports/api";
+import { getMyTeams } from "@/lib/teams/api";
 
 
 const LEVEL_CONFIG: Record<string, { label: string; glow: string; badge: string }> = {
@@ -57,16 +59,16 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     (async () => {
-      const { data: raw } = await supabase.from("profiles").select("*").eq("id", id).maybeSingle();
+      const { data: raw } = await getProfileById(supabase, id);
       if (!raw) { setError("Perfil no encontrado"); setLoading(false); return; }
-      const p = raw as Profile;
+      const p = raw;
       setProfile(p);
 
-      const [sportRes, teamMembersRes, matchPartsRes] = await Promise.all([
+      const [sportRes, teamsData, matchPartsRes] = await Promise.all([
         p.primary_sport_id
-          ? supabase.from("sports").select("*").eq("id", p.primary_sport_id).maybeSingle()
-          : Promise.resolve({ data: null }),
-        supabase.from("team_members").select("team_id").eq("user_id", p.id),
+          ? getSportById(supabase, p.primary_sport_id)
+          : Promise.resolve({ data: null, error: null }),
+        getMyTeams(p.id),
         supabase
           .from("match_participants")
           .select("match_id")
@@ -77,12 +79,7 @@ export default function UserProfilePage() {
       ]);
 
       setSport(sportRes.data as Sport | null);
-
-      const teamIds = (teamMembersRes.data ?? []).map((r: { team_id: string }) => r.team_id);
-      if (teamIds.length > 0) {
-        const { data: teamsData } = await supabase.from("teams").select("*").in("id", teamIds);
-        setTeams((teamsData ?? []) as Team[]);
-      }
+      setTeams(teamsData as Team[]);
 
       const matchIds = (matchPartsRes.data ?? []).map((r: { match_id: string }) => r.match_id);
       if (matchIds.length > 0) {
@@ -380,7 +377,6 @@ export default function UserProfilePage() {
 
       </main>
 
-      <BottomNav />
     </div>
   );
 }

@@ -240,7 +240,8 @@ export async function listMatchesWithNames(
 
   if (error) return { data: null, error: mapDbError(error, "matches_with_names") };
 
-  const rows: MatchWithNames[] = ((data ?? []) as any[]).map((m) => ({
+  type RawMatch = { id: string; tournament_id: string; round: number; group_code: string | null; fixture_order: number | null; home_registration_id: string | null; away_registration_id: string | null; scheduled_at: string | null; venue: string | null; home_score: number | null; away_score: number | null; status: string; correction_window_ends_at: string | null; created_at: string; updated_at: string; home: { team: { name: string } | null; profile: { full_name: string | null; username: string | null } | null } | null; away: { team: { name: string } | null; profile: { full_name: string | null; username: string | null } | null } | null };
+  const rows: MatchWithNames[] = ((data ?? []) as unknown as RawMatch[]).map((m) => ({
     id: m.id,
     tournament_id: m.tournament_id,
     round: m.round,
@@ -252,7 +253,7 @@ export async function listMatchesWithNames(
     venue: m.venue,
     home_score: m.home_score,
     away_score: m.away_score,
-    status: m.status,
+    status: m.status as MatchStatus,
     correction_window_ends_at: m.correction_window_ends_at,
     created_at: m.created_at,
     updated_at: m.updated_at,
