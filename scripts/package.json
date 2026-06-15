@@ -7,7 +7,8 @@
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "autonomous:discover": "tsx ./src/autonomous/discover-project.ts",
-    "autonomous:once": "tsx ./src/autonomous/pilot-once.ts"
+    "autonomous:once": "tsx ./src/autonomous/pilot-once.ts",
+    "autonomous:setup": "tsx ./src/autonomous/setup.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",

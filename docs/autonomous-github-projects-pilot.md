@@ -30,15 +30,14 @@ No implementation starts before those docs exist.
 
 ## 4. One-time setup
 
-1. Copy config:
-   - `cp scripts/config/autonomous-pilot.example.json scripts/config/autonomous-pilot.json`
-2. Confirm project IDs:
+1. Run bootstrap setup:
+   - `pnpm --filter @workspace/scripts run autonomous:setup`
+2. This command will:
+   - create/update required labels in GitHub (`autonomous-approved`, `needs-human`, `risk-high`)
+   - discover Project v2 IDs and status options
+   - write active config to `scripts/config/autonomous-pilot.json`
+3. Optional: inspect Project data manually:
    - `pnpm --filter @workspace/scripts run autonomous:discover`
-3. Edit `scripts/config/autonomous-pilot.json`:
-   - `projectId`
-   - `statusFieldId`
-   - status option IDs
-   - model routing for your available local models
 
 ## 5. Dry-run execution
 
@@ -78,3 +77,11 @@ Example:
 - ready status name: `Ready`
 - dry-run default: `true`
 - max issues/run: `1`
+
+## 9. Default model routing in generated config
+
+- analysis: `gpt-5.5`
+- definition: `gpt-5.5`
+- implementation (local): `qwen2.5:3b`
+- testing (local): `nemotron-3-nano:4b`
+- review: `gpt-5.4-mini`
