@@ -69,7 +69,11 @@ After validating one successful run:
 
 Example:
 
-- `*/5 8-20 * * * cd /Users/andres/.openclaw/workspace/pro && pnpm --filter @workspace/scripts run autonomous:once >> /tmp/pro-autonomous.log 2>&1`
+- `*/5 8-20 * * * cd /Users/andres/.openclaw/workspace/pro && ./scripts/autonomous-cron-once.sh >> /tmp/pro-autonomous.log 2>&1`
+
+If your cron shell cannot find pnpm, run this once to verify fallback:
+
+- `cd /Users/andres/.openclaw/workspace/pro && ./scripts/autonomous-cron-once.sh`
 
 ## 8. Safety defaults
 
@@ -85,3 +89,16 @@ Example:
 - implementation (local): `qwen2.5:3b`
 - testing (local): `nemotron-3-nano:4b`
 - review: `gpt-5.4-mini`
+
+## 10. Senior + specialist subagents
+
+The pilot now includes a Senior orchestrator and specialist subagents:
+
+- lead role: `senior_developer`
+- specialists: frontend, backend, db, supabase, ui, ux, architect, product, copy
+- evidence: issue comment includes assignment plan + local artifact in `artifacts/pro-sport/autonomous-runs/`
+
+Inspect role definitions:
+
+- `pnpm --filter @workspace/scripts run autonomous:subagents`
+- `docs/autonomous-subagents-definition.md`

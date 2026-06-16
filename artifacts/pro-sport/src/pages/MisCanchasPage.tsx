@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { SUPABASE_DB_SCHEMA } from "@/lib/supabase/schema";
 import { useAuth } from "@/context/AuthContext";
 import {
   getMyCanchas,
@@ -79,14 +80,14 @@ export default function MisCanchasPage() {
     const canchaIds = canchas.map((c) => c.id);
     const channel = supabase
       .channel(`owner-bookings-${user.id}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "cancha_bookings" },
+      .on("postgres_changes", { event: "INSERT", schema: SUPABASE_DB_SCHEMA, table: "cancha_bookings" },
         (payload: { new: { cancha_id: string; status: string } }) => {
           if (!canchaIds.includes(payload.new.cancha_id)) return;
           if (payload.new.status !== "pendiente") return;
           queryClient.invalidateQueries({ queryKey: ["owner-pending-bookings", user.id] });
           toast.info("¡Nueva reserva pendiente!", { icon: "🏟️" });
         })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "cancha_bookings" },
+      .on("postgres_changes", { event: "UPDATE", schema: SUPABASE_DB_SCHEMA, table: "cancha_bookings" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["owner-pending-bookings", user.id] });
         })

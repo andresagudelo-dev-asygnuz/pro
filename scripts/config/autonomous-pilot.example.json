@@ -14,8 +14,12 @@
     }
   },
   "filters": {
-    "requiredLabels": ["autonomous-approved"],
-    "readyStatusNames": ["Ready"]
+    "requiredLabels": [
+      "autonomous-approved"
+    ],
+    "readyStatusNames": [
+      "Ready"
+    ]
   },
   "execution": {
     "dryRun": true,
@@ -24,11 +28,31 @@
     "defaultBaseBranch": "release/mvp-v1"
   },
   "models": {
-    "analysis": { "provider": "openai", "model": "gpt-5.5", "thinking": "high" },
-    "definition": { "provider": "openai", "model": "gpt-5.5", "thinking": "high" },
-    "implementation": { "provider": "local", "model": "qwen2.5-coder", "thinking": "medium" },
-    "testing": { "provider": "local", "model": "llama3", "thinking": "low" },
-    "review": { "provider": "openai", "model": "gpt-5.4-mini", "thinking": "medium" }
+    "analysis": {
+      "provider": "openai",
+      "model": "gpt-5.5",
+      "thinking": "high"
+    },
+    "definition": {
+      "provider": "openai",
+      "model": "gpt-5.5",
+      "thinking": "high"
+    },
+    "implementation": {
+      "provider": "local",
+      "model": "qwen2.5-coder",
+      "thinking": "medium"
+    },
+    "testing": {
+      "provider": "local",
+      "model": "llama3",
+      "thinking": "low"
+    },
+    "review": {
+      "provider": "openai",
+      "model": "gpt-5.4-mini",
+      "thinking": "medium"
+    }
   },
   "gates": {
     "commands": [
@@ -37,5 +61,231 @@
     ],
     "maxAttemptsPerError": 3,
     "maxAttemptsPerIssue": 8
+  },
+  "orchestration": {
+    "leadRole": "senior_developer",
+    "maxParallelSpecialists": 3,
+    "subagents": {
+      "senior_developer": {
+        "role": "senior_developer",
+        "displayName": "Senior Developer Orchestrator",
+        "model": {
+          "provider": "openai",
+          "model": "gpt-5.5",
+          "thinking": "high"
+        },
+        "responsibilities": [
+          "Descomponer y asignar subtareas."
+        ],
+        "outputs": [
+          "plan-ejecucion.md"
+        ],
+        "skills": [
+          {
+            "name": "task-breakdown",
+            "purpose": "Divide trabajo en subtareas atomicas.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "architect_expert": {
+        "role": "architect_expert",
+        "displayName": "Software Architect Expert",
+        "model": {
+          "provider": "openai",
+          "model": "gpt-5.5",
+          "thinking": "high"
+        },
+        "responsibilities": [
+          "Definir arquitectura y contratos."
+        ],
+        "outputs": [
+          "architecture-decisions.md"
+        ],
+        "skills": [
+          {
+            "name": "architecture-review",
+            "purpose": "Tradeoffs de arquitectura.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "product_expert": {
+        "role": "product_expert",
+        "displayName": "Product Expert",
+        "model": {
+          "provider": "openai",
+          "model": "gpt-5.5",
+          "thinking": "high"
+        },
+        "responsibilities": [
+          "Definir alcance y criterios de aceptacion."
+        ],
+        "outputs": [
+          "scope.md"
+        ],
+        "skills": [
+          {
+            "name": "product-scoping",
+            "purpose": "Priorizacion de producto.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "frontend_expert": {
+        "role": "frontend_expert",
+        "displayName": "Frontend Expert",
+        "model": {
+          "provider": "local",
+          "model": "qwen2.5-coder",
+          "thinking": "medium"
+        },
+        "responsibilities": [
+          "Implementar cliente e integracion de APIs."
+        ],
+        "outputs": [
+          "frontend-diff.patch"
+        ],
+        "skills": [
+          {
+            "name": "frontend-delivery",
+            "purpose": "Entrega frontend.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "backend_expert": {
+        "role": "backend_expert",
+        "displayName": "Backend Expert",
+        "model": {
+          "provider": "local",
+          "model": "qwen2.5-coder",
+          "thinking": "medium"
+        },
+        "responsibilities": [
+          "Implementar servicios y APIs."
+        ],
+        "outputs": [
+          "backend-diff.patch"
+        ],
+        "skills": [
+          {
+            "name": "api-implementation",
+            "purpose": "Entrega backend.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "db_expert": {
+        "role": "db_expert",
+        "displayName": "Database Expert",
+        "model": {
+          "provider": "local",
+          "model": "qwen2.5-coder",
+          "thinking": "medium"
+        },
+        "responsibilities": [
+          "Migraciones e indices."
+        ],
+        "outputs": [
+          "migration.sql"
+        ],
+        "skills": [
+          {
+            "name": "db-design",
+            "purpose": "Modelo de datos.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "supabase_expert": {
+        "role": "supabase_expert",
+        "displayName": "Supabase Expert",
+        "model": {
+          "provider": "local",
+          "model": "qwen2.5-coder",
+          "thinking": "medium"
+        },
+        "responsibilities": [
+          "RLS, auth y funciones."
+        ],
+        "outputs": [
+          "supabase-rls.sql"
+        ],
+        "skills": [
+          {
+            "name": "supabase-ops",
+            "purpose": "Operacion en supabase.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "ui_expert": {
+        "role": "ui_expert",
+        "displayName": "UI Expert",
+        "model": {
+          "provider": "local",
+          "model": "qwen2.5-coder",
+          "thinking": "medium"
+        },
+        "responsibilities": [
+          "Consistencia visual y componentes."
+        ],
+        "outputs": [
+          "ui-guidelines.md"
+        ],
+        "skills": [
+          {
+            "name": "visual-system",
+            "purpose": "Sistema visual.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "ux_expert": {
+        "role": "ux_expert",
+        "displayName": "UX Expert",
+        "model": {
+          "provider": "openai",
+          "model": "gpt-5.5",
+          "thinking": "high"
+        },
+        "responsibilities": [
+          "Flujos y edge-cases."
+        ],
+        "outputs": [
+          "ux-flow.md"
+        ],
+        "skills": [
+          {
+            "name": "ux-flow-design",
+            "purpose": "Diseno de experiencia.",
+            "source": "local-defined"
+          }
+        ]
+      },
+      "copy_expert": {
+        "role": "copy_expert",
+        "displayName": "Copy Expert",
+        "model": {
+          "provider": "local",
+          "model": "llama3",
+          "thinking": "low"
+        },
+        "responsibilities": [
+          "Microcopy y tono."
+        ],
+        "outputs": [
+          "copy-strings.md"
+        ],
+        "skills": [
+          {
+            "name": "microcopy",
+            "purpose": "Textos de producto.",
+            "source": "local-defined"
+          }
+        ]
+      }
+    }
   }
 }

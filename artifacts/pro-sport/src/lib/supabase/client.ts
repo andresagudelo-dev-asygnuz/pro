@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { SUPABASE_DB_SCHEMA } from "./schema";
 
 let _client: ReturnType<typeof createBrowserClient> | null = null;
 
@@ -12,6 +13,9 @@ export function createClient() {
       import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     _client = createBrowserClient(url, key, {
+      db: {
+        schema: SUPABASE_DB_SCHEMA,
+      },
       cookies: {
         get(name: string) {
           try {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { SUPABASE_DB_SCHEMA } from "@/lib/supabase/schema";
 import { useAuth } from "@/context/AuthContext";
 import {
   getOwnerPendingBookings,
@@ -37,7 +38,7 @@ export default function OwnerPendingPage() {
     if (!user) return;
     const channel = supabase
       .channel(`owner-bookings-pending-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "cancha_bookings" },
+      .on("postgres_changes", { event: "*", schema: SUPABASE_DB_SCHEMA, table: "cancha_bookings" },
         async () => {
           const { data } = await getOwnerPendingBookings(supabase, user.id);
           if (data) setPending(data);

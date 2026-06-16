@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { SUPABASE_DB_SCHEMA } from "@/lib/supabase/schema";
 import type { Match, MatchParticipant, Profile, Sport, CanchaBooking, MatchInvitation, MatchWaitlist } from "@/lib/types/db";
 import { getMyMatchInvitation, getMatchInvitations } from "@/lib/friends/api";
 import {
@@ -148,7 +149,7 @@ export function useMatchDetailData(matchId: string, userId: string | undefined) 
       .channel(`match-chat-${matchId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${matchId}` },
+        { event: "INSERT", schema: SUPABASE_DB_SCHEMA, table: "messages", filter: `conversation_id=eq.${matchId}` },
         (payload: { new: ChatMessage }) => {
           setMessages((prev) => {
             if (prev.some((m) => m.id === payload.new.id)) return prev;
@@ -165,12 +166,12 @@ export function useMatchDetailData(matchId: string, userId: string | undefined) 
       .channel(`match-detail-${matchId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "matches", filter: `id=eq.${matchId}` },
+        { event: "*", schema: SUPABASE_DB_SCHEMA, table: "matches", filter: `id=eq.${matchId}` },
         () => load()
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "match_participants", filter: `match_id=eq.${matchId}` },
+        { event: "*", schema: SUPABASE_DB_SCHEMA, table: "match_participants", filter: `match_id=eq.${matchId}` },
         () => load()
       )
       .subscribe((_status: string, err?: Error) => {

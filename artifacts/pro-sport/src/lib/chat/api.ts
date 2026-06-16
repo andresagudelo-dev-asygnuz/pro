@@ -1,5 +1,6 @@
 import type { SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
 import { mapDbError } from "@/lib/errors/map-db-error";
+import { SUPABASE_DB_SCHEMA } from "@/lib/supabase/schema";
 
 export type ConversationType = "booking" | "match" | "tournament" | "friend" | "direct";
 
@@ -546,7 +547,7 @@ export function subscribeToConversation(
       "postgres_changes",
       {
         event: "INSERT",
-        schema: "public",
+        schema: SUPABASE_DB_SCHEMA,
         table: "messages",
         filter: `conversation_id=eq.${conversationId}`,
       },

@@ -8,7 +8,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "autonomous:discover": "tsx ./src/autonomous/discover-project.ts",
     "autonomous:once": "tsx ./src/autonomous/pilot-once.ts",
-    "autonomous:setup": "tsx ./src/autonomous/setup.ts"
+    "autonomous:setup": "tsx ./src/autonomous/setup.ts",
+    "autonomous:subagents": "tsx ./src/autonomous/show-subagents.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",

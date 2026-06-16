@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { SUPABASE_DB_SCHEMA } from "@/lib/supabase/schema";
 import { useAuth } from "./AuthContext";
 
 interface NotifContextValue {
@@ -104,7 +105,7 @@ export function NotifProvider({ children }: { children: React.ReactNode }) {
         "postgres_changes",
         {
           event: "INSERT",
-          schema: "public",
+          schema: SUPABASE_DB_SCHEMA,
           table: "notifications",
           filter: `user_id=eq.${user.id}`,
         },
@@ -119,7 +120,7 @@ export function NotifProvider({ children }: { children: React.ReactNode }) {
         "postgres_changes",
         {
           event: "UPDATE",
-          schema: "public",
+          schema: SUPABASE_DB_SCHEMA,
           table: "notifications",
           filter: `user_id=eq.${user.id}`,
         },

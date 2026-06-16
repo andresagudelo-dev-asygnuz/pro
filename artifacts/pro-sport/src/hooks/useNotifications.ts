@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { SUPABASE_DB_SCHEMA } from "@/lib/supabase/schema";
 import { useNotifCount } from "@/context/NotifContext";
 import { toast } from "sonner";
 import {
@@ -77,7 +78,7 @@ export function useNotifications(userId: string | undefined) {
       .channel(`notif-page-${userId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        { event: "INSERT", schema: SUPABASE_DB_SCHEMA, table: "notifications", filter: `user_id=eq.${userId}` },
         (payload: { new: Notification }) => {
           setNotifications((prev) => [payload.new, ...prev]);
           // Omitir toast inicial si se cargan de a muchas (Realtime solo trae inserts de a 1)
@@ -89,7 +90,7 @@ export function useNotifications(userId: string | undefined) {
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        { event: "UPDATE", schema: SUPABASE_DB_SCHEMA, table: "notifications", filter: `user_id=eq.${userId}` },
         (payload: { new: Notification }) =>
           setNotifications((prev) => prev.map((n) => (n.id === payload.new.id ? payload.new : n)))
       )

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { ghApiGraphql } from "./gh";
+import { defaultSubagents } from "./subagents";
 
 function run(cmd: string, args: string[]) {
   return execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -69,6 +70,14 @@ query($owner: String!, $number: Int!) {
     return option.id as string;
   };
 
+  const models = {
+    analysis: { provider: "openai", model: "gpt-5.5", thinking: "high" },
+    definition: { provider: "openai", model: "gpt-5.5", thinking: "high" },
+    implementation: { provider: "local", model: "qwen2.5:3b", thinking: "medium" },
+    testing: { provider: "local", model: "nemotron-3-nano:4b", thinking: "low" },
+    review: { provider: "openai", model: "gpt-5.4-mini", thinking: "medium" },
+  };
+
   const config = {
     github: {
       owner: "andresagudelo-dev-asygnuz",
@@ -94,13 +103,7 @@ query($owner: String!, $number: Int!) {
       branchPrefix: "auto",
       defaultBaseBranch: "release/mvp-v1",
     },
-    models: {
-      analysis: { provider: "openai", model: "gpt-5.5", thinking: "high" },
-      definition: { provider: "openai", model: "gpt-5.5", thinking: "high" },
-      implementation: { provider: "local", model: "qwen2.5:3b", thinking: "medium" },
-      testing: { provider: "local", model: "nemotron-3-nano:4b", thinking: "low" },
-      review: { provider: "openai", model: "gpt-5.4-mini", thinking: "medium" },
-    },
+    models,
     gates: {
       commands: [
         "pnpm -w run typecheck",
@@ -108,6 +111,11 @@ query($owner: String!, $number: Int!) {
       ],
       maxAttemptsPerError: 3,
       maxAttemptsPerIssue: 8,
+    },
+    orchestration: {
+      leadRole: "senior_developer",
+      maxParallelSpecialists: 3,
+      subagents: defaultSubagents({ models }),
     },
   };
 

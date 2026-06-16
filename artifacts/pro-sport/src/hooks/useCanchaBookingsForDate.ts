@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { SUPABASE_DB_SCHEMA } from "@/lib/supabase/schema";
 import { getCanchaBookingsForDate, updateBookingStatus, updateBookingPaymentStatus } from "@/lib/canchas/api";
 import { getProfilesByIds } from "@/lib/profiles/api";
 import { getOrCreateConversation } from "@/lib/chat/api";
@@ -72,7 +73,7 @@ export function useCanchaBookingsForDate({
       .channel(`agenda-bookings-${canchaId}`)
       .on("postgres_changes", {
         event: "INSERT",
-        schema: "public",
+        schema: SUPABASE_DB_SCHEMA,
         table: "cancha_bookings",
         filter: `cancha_id=eq.${canchaId}`,
       }, (payload: { new: { booking_date: string } }) => {
@@ -84,7 +85,7 @@ export function useCanchaBookingsForDate({
       })
       .on("postgres_changes", {
         event: "UPDATE",
-        schema: "public",
+        schema: SUPABASE_DB_SCHEMA,
         table: "cancha_bookings",
         filter: `cancha_id=eq.${canchaId}`,
       }, (payload: { new: { booking_date: string } }) => {
