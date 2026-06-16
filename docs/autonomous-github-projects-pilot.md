@@ -69,7 +69,11 @@ After validating one successful run:
 
 Example:
 
-- `*/5 8-20 * * * cd /Users/andres/.openclaw/workspace/pro && pnpm --filter @workspace/scripts run autonomous:once >> /tmp/pro-autonomous.log 2>&1`
+- `*/5 8-20 * * * cd /Users/andres/.openclaw/workspace/pro && ./scripts/autonomous-cron-once.sh >> /tmp/pro-autonomous.log 2>&1`
+
+If your cron shell cannot find pnpm, run this once to verify fallback:
+
+- `cd /Users/andres/.openclaw/workspace/pro && ./scripts/autonomous-cron-once.sh`
 
 ## 8. Safety defaults
 
