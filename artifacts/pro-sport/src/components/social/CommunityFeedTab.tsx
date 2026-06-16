@@ -108,7 +108,7 @@ export function CommunityFeedTab() {
   };
 
   const handlePublish = async () => {
-    if (!profile) {
+    if (!profile || !user) {
       toast.error("Configura tu perfil para poder publicar.");
       return;
     }

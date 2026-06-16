@@ -21,6 +21,10 @@ const PAYMENT_CONFIG: Record<PaymentStatus, { label: string; style: string }> = 
     label: "Pagado total ✓",
     style: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700",
   },
+  rechazado: {
+    label: "Comprobante rechazado",
+    style: "bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700",
+  },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; style: string }> = {

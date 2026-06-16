@@ -134,6 +134,7 @@ export function useCanchaBookingsForDate({
         sin_anticipo: "Sin anticipo",
         anticipo_pagado: "Anticipo registrado",
         pagado_total: "Pago total registrado",
+        rechazado: "Comprobante rechazado",
       };
       toast.success(LABELS[paymentStatus]);
       setBookings((prev) =>
