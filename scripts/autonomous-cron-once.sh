@@ -7,6 +7,14 @@ cd "$ROOT_DIR"
 # Cron usually runs with a minimal PATH.
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
+# Cron may not have access to interactive keychain context.
+if [[ -z "${GH_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
+  GH_TOKEN_FROM_GH="$(gh auth token 2>/dev/null || true)"
+  if [[ -n "$GH_TOKEN_FROM_GH" ]]; then
+    export GH_TOKEN="$GH_TOKEN_FROM_GH"
+  fi
+fi
+
 if command -v pnpm >/dev/null 2>&1; then
   PNPM_CMD=(pnpm)
 elif command -v corepack >/dev/null 2>&1; then

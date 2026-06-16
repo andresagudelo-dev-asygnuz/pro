@@ -81,6 +81,8 @@ If your cron shell cannot find pnpm, run this once to verify fallback:
 
 - `cd /Users/andres/.openclaw/workspace/pro && ./scripts/autonomous-cron-once.sh`
 
+The wrapper also exports `GH_TOKEN` from `gh auth token` when missing, so Project GraphQL calls work in non-interactive cron sessions.
+
 ## 8. Safety defaults
 
 - required label: `autonomous-approved`
