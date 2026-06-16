@@ -1,0 +1,41 @@
+{
+  "github": {
+    "owner": "andresagudelo-dev-asygnuz",
+    "repo": "pro",
+    "projectNumber": 1,
+    "projectId": "PVT_kwHOEFbiJM4BavnL",
+    "statusFieldId": "PVTSSF_lAHOEFbiJM4BavnLzhVk-Dg",
+    "status": {
+      "backlog": "f75ad846",
+      "ready": "61e4505c",
+      "inProgress": "47fc9ee4",
+      "inReview": "df73e18b",
+      "done": "98236657"
+    }
+  },
+  "filters": {
+    "requiredLabels": ["autonomous-approved"],
+    "readyStatusNames": ["Ready"]
+  },
+  "execution": {
+    "dryRun": true,
+    "maxIssuesPerRun": 1,
+    "branchPrefix": "auto",
+    "defaultBaseBranch": "release/mvp-v1"
+  },
+  "models": {
+    "analysis": { "provider": "openai", "model": "gpt-5.5", "thinking": "high" },
+    "definition": { "provider": "openai", "model": "gpt-5.5", "thinking": "high" },
+    "implementation": { "provider": "local", "model": "qwen2.5-coder", "thinking": "medium" },
+    "testing": { "provider": "local", "model": "llama3", "thinking": "low" },
+    "review": { "provider": "openai", "model": "gpt-5.4-mini", "thinking": "medium" }
+  },
+  "gates": {
+    "commands": [
+      "pnpm -w run typecheck",
+      "pnpm --filter @workspace/pro-sport run typecheck"
+    ],
+    "maxAttemptsPerError": 3,
+    "maxAttemptsPerIssue": 8
+  }
+}
