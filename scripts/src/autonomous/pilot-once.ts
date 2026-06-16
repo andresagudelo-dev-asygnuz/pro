@@ -6,6 +6,23 @@ import { ghCreatePr, ghFindPrUrlByHead, ghGetIssueDetails, ghRepoIssueComment } 
 import { getAllProjectIssues, getCandidateIssues, moveItemStatus } from "./project";
 import { PilotConfig, ProjectIssueItem } from "./types";
 
+function normalizeRepoRoot(): string {
+  const cwd = process.cwd();
+  const cwdHasGit = fs.existsSync(path.join(cwd, ".git"));
+  if (cwdHasGit) {
+    return cwd;
+  }
+  const parent = path.resolve(cwd, "..");
+  const parentHasGit = fs.existsSync(path.join(parent, ".git"));
+  if (parentHasGit) {
+    process.chdir(parent);
+    return parent;
+  }
+  throw new Error("Cannot locate repository root (.git).");
+}
+
+const REPO_ROOT = normalizeRepoRoot();
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -50,7 +67,7 @@ function diagnosticSnippet(raw: string): string {
 
 function ensureOpenSpec(issue: ProjectIssueItem, modelsSummary: string) {
   const changeDir = path.resolve(
-    process.cwd(),
+    REPO_ROOT,
     "artifacts/pro-sport/openspec/changes",
     "issue-" + String(issue.issueNumber),
   );
