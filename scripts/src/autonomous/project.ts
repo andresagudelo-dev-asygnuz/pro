@@ -96,6 +96,33 @@ export function getCandidateIssues(config: PilotConfig): ProjectIssueItem[] {
   return items;
 }
 
+export function getAllProjectIssues(config: PilotConfig): ProjectIssueItem[] {
+  const payload = ghApiGraphql(GET_PROJECT_ITEMS, {
+    owner: config.github.owner,
+    number: config.github.projectNumber,
+  });
+  const nodes = payload?.data?.user?.projectV2?.items?.nodes ?? [];
+  const items: ProjectIssueItem[] = [];
+  for (const node of nodes) {
+    const issue = node?.content;
+    if (!issue?.number) {
+      continue;
+    }
+    const labels = (issue.labels?.nodes ?? []).map((label: { name: string }) => label.name);
+    items.push({
+      itemId: node.id,
+      issueNodeId: issue.id,
+      issueNumber: issue.number,
+      title: issue.title,
+      url: issue.url,
+      repository: issue.repository.nameWithOwner,
+      labels,
+      statusName: node.fieldValueByName?.name ?? null,
+    });
+  }
+  return items;
+}
+
 export function moveItemStatus(config: PilotConfig, itemId: string, optionId: string) {
   ghApiGraphql(SET_ITEM_STATUS, {
     projectId: config.github.projectId,

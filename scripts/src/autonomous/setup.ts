@@ -82,6 +82,7 @@ query($owner: String!, $number: Int!) {
         inProgress: optionByName("In progress"),
         inReview: optionByName("In review"),
         done: optionByName("Done"),
+        blocked: (statusField.options ?? []).find((item: any) => item.name.toLowerCase() === "blocked")?.id,
       },
     },
     filters: {
@@ -93,6 +94,9 @@ query($owner: String!, $number: Int!) {
       maxIssuesPerRun: 1,
       branchPrefix: "auto",
       defaultBaseBranch: "release/mvp-v1",
+      workerCommands: [],
+      autoCreatePr: true,
+      autoMarkDoneFromMergedPr: true,
     },
     models: {
       analysis: { provider: "openai", model: "gpt-5.5", thinking: "high" },

@@ -31,6 +31,9 @@ export interface PilotConfig {
     maxIssuesPerRun: number;
     branchPrefix: string;
     defaultBaseBranch: string;
+    workerCommands?: string[];
+    autoCreatePr?: boolean;
+    autoMarkDoneFromMergedPr?: boolean;
   };
   models: Record<ModelStage, StageModel>;
   gates: {

@@ -21,7 +21,10 @@
     "dryRun": true,
     "maxIssuesPerRun": 1,
     "branchPrefix": "auto",
-    "defaultBaseBranch": "release/mvp-v1"
+    "defaultBaseBranch": "release/mvp-v1",
+    "workerCommands": [],
+    "autoCreatePr": true,
+    "autoMarkDoneFromMergedPr": true
   },
   "models": {
     "analysis": { "provider": "openai", "model": "gpt-5.5", "thinking": "high" },
