@@ -35,6 +35,14 @@ const PAYMENT_DOT: Record<PaymentStatus, string> = {
   sin_anticipo: "bg-red-400",
   anticipo_pagado: "bg-amber-400",
   pagado_total: "bg-emerald-400",
+  rechazado: "bg-rose-500",
+};
+
+const PAYMENT_TITLE: Record<PaymentStatus, string> = {
+  sin_anticipo: "Sin anticipo",
+  anticipo_pagado: "Anticipo pagado",
+  pagado_total: "Pagado total",
+  rechazado: "Comprobante rechazado",
 };
 
 interface AgendaBookingCardProps {
@@ -104,7 +112,7 @@ export function AgendaBookingCard({ item, onClick, isRecurring = false }: Agenda
           {item.kind === "adhoc" && !isEnValidacion && (
             <span
               className={cn("inline-block mt-0.5 size-2 rounded-full", PAYMENT_DOT[item.payment_status])}
-              title={item.payment_status === "sin_anticipo" ? "Sin anticipo" : item.payment_status === "anticipo_pagado" ? "Anticipo pagado" : "Pagado total"}
+              title={PAYMENT_TITLE[item.payment_status]}
             />
           )}
           {isEnValidacion && (
