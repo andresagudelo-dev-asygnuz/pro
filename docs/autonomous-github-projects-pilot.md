@@ -46,6 +46,7 @@ Run exactly one candidate issue scan:
 - `pnpm --filter @workspace/scripts run autonomous:once`
 
 Dry-run behavior:
+- sync checks for merged PRs (no status mutation in dry-run)
 - reads project items
 - filters by status + label
 - prints branch/model plan
@@ -56,8 +57,13 @@ Dry-run behavior:
 Set `execution.dryRun` to `false` in config and run again. Live mode will:
 
 - move the selected item to `In progress`
-- create a feature branch from `release/mvp-v1`
-- post a kickoff comment on the issue
+- create/reuse a feature branch from `release/mvp-v1`
+- generate missing OpenSpec files for the issue
+- run `execution.workerCommands` then gate commands with bounded retries
+- commit and push changes when files changed
+- create PR automatically (unless `execution.autoCreatePr=false`)
+- move item to `In review` when PR exists
+- on breaker/failure: move to `Blocked` (or `Ready` fallback) and post diagnostics
 
 ## 7. Suggested cron
 
@@ -89,3 +95,11 @@ If your cron shell cannot find pnpm, run this once to verify fallback:
 - implementation (local): `qwen2.5:3b`
 - testing (local): `nemotron-3-nano:4b`
 - review: `gpt-5.4-mini`
+
+## 10. Worker command hook
+
+The runner executes custom worker commands before gates:
+
+- `execution.workerCommands`: list of commands (optional)
+- `execution.autoCreatePr`: create PR when missing (default `true`)
+- `execution.autoMarkDoneFromMergedPr`: move `In progress/In review` to `Done` when issue is closed by a merged PR (default `true`)
