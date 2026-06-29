@@ -1,9 +1,9 @@
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ConditionalInput } from "@/lib/profiles/api";
 import type { VisibilityLevel } from "@/lib/types/db";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +25,7 @@ type ConditionalFormData = z.infer<typeof conditionalSchema>;
 
 interface Props {
   initial?: ConditionalInput & { visibility?: VisibilityLevel };
-  onSubmit: (data: ConditionalInput & { visibility: VisibilityLevel }) => Promise<void>;
+  onChange: (data: ConditionalInput & { visibility: VisibilityLevel }) => void;
   isLoading: boolean;
 }
 
@@ -48,10 +48,9 @@ function stringToTags(str: string): string[] {
     .filter(Boolean);
 }
 
-export function ConditionalForm({ initial, onSubmit, isLoading }: Props) {
+export function ConditionalForm({ initial, onChange, isLoading }: Props) {
   const {
     register,
-    handleSubmit,
     control,
     watch,
     formState: { errors },
@@ -70,22 +69,25 @@ export function ConditionalForm({ initial, onSubmit, isLoading }: Props) {
     },
   });
 
-  async function handleFormSubmit(data: ConditionalFormData) {
-    await onSubmit({
-      strength_tags: stringToTags(data.strength_tags ?? ""),
-      strength_notes: data.strength_notes ?? null,
-      speed_tags: stringToTags(data.speed_tags ?? ""),
-      speed_notes: data.speed_notes ?? null,
-      endurance_tags: stringToTags(data.endurance_tags ?? ""),
-      endurance_notes: data.endurance_notes ?? null,
-      flexibility_tags: stringToTags(data.flexibility_tags ?? ""),
-      flexibility_notes: data.flexibility_notes ?? null,
-      visibility: data.visibility,
+  useEffect(() => {
+    const subscription = watch((data) => {
+      onChange({
+        strength_tags: stringToTags(data.strength_tags ?? ""),
+        strength_notes: data.strength_notes ?? null,
+        speed_tags: stringToTags(data.speed_tags ?? ""),
+        speed_notes: data.speed_notes ?? null,
+        endurance_tags: stringToTags(data.endurance_tags ?? ""),
+        endurance_notes: data.endurance_notes ?? null,
+        flexibility_tags: stringToTags(data.flexibility_tags ?? ""),
+        flexibility_notes: data.flexibility_notes ?? null,
+        visibility: (data.visibility as VisibilityLevel) || "privado",
+      });
     });
-  }
+    return () => subscription.unsubscribe();
+  }, [watch, onChange]);
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
       {CATEGORIES.map(({ key, label }) => {
         const notesField = `${key}_notes` as const;
         const tagsField = `${key}_tags` as const;
@@ -102,6 +104,7 @@ export function ConditionalForm({ initial, onSubmit, isLoading }: Props) {
               <Input
                 id={`${key}_tags`}
                 placeholder="p.ej. explosivo, resistente"
+                disabled={isLoading}
                 {...register(tagsField)}
               />
             </div>
@@ -120,6 +123,7 @@ export function ConditionalForm({ initial, onSubmit, isLoading }: Props) {
                 rows={3}
                 maxLength={500}
                 placeholder={`Describe tu ${label.toLowerCase()}…`}
+                disabled={isLoading}
                 {...register(notesField)}
               />
               {errors[notesField] && (
@@ -141,14 +145,6 @@ export function ConditionalForm({ initial, onSubmit, isLoading }: Props) {
           />
         )}
       />
-
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="rounded-xl bg-violet-600 hover:bg-violet-700"
-      >
-        {isLoading ? "Guardando…" : "Guardar condición física"}
-      </Button>
-    </form>
+    </div>
   );
 }

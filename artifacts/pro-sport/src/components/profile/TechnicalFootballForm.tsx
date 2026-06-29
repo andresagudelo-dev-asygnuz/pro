@@ -1,9 +1,9 @@
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { TechnicalInput } from "@/lib/profiles/api";
 import type { VisibilityLevel } from "@/lib/types/db";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,7 +28,7 @@ type TechnicalFormData = z.infer<typeof technicalSchema>;
 
 interface Props {
   initial?: TechnicalInput & { visibility?: VisibilityLevel };
-  onSubmit: (data: TechnicalFormData) => Promise<void>;
+  onChange: (data: TechnicalFormData) => void;
   isLoading: boolean;
 }
 
@@ -45,10 +45,9 @@ const DOMINANT_FOOT_OPTIONS = [
   { value: "ambos", label: "Ambos" },
 ];
 
-export function TechnicalFootballForm({ initial, onSubmit, isLoading }: Props) {
+export function TechnicalFootballForm({ initial, onChange, isLoading }: Props) {
   const {
     register,
-    handleSubmit,
     control,
     watch,
     formState: { errors },
@@ -63,11 +62,18 @@ export function TechnicalFootballForm({ initial, onSubmit, isLoading }: Props) {
     },
   });
 
+  useEffect(() => {
+    const subscription = watch((value) => {
+      onChange(value as TechnicalFormData);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, onChange]);
+
   const performanceNotes = watch("performance_notes") ?? "";
   const tacticalRoleNotes = watch("tactical_role_notes") ?? "";
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label>Posición</Label>
@@ -78,6 +84,7 @@ export function TechnicalFootballForm({ initial, onSubmit, isLoading }: Props) {
               <Select
                 value={field.value ?? ""}
                 onValueChange={(v) => field.onChange(v || null)}
+                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccioná tu posición" />
@@ -106,6 +113,7 @@ export function TechnicalFootballForm({ initial, onSubmit, isLoading }: Props) {
               <Select
                 value={field.value ?? ""}
                 onValueChange={(v) => field.onChange(v || null)}
+                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pie dominante" />
@@ -138,6 +146,7 @@ export function TechnicalFootballForm({ initial, onSubmit, isLoading }: Props) {
           rows={3}
           maxLength={500}
           placeholder="Describe tu rendimiento en cancha…"
+          disabled={isLoading}
           {...register("performance_notes")}
         />
         {errors.performance_notes && (
@@ -157,6 +166,7 @@ export function TechnicalFootballForm({ initial, onSubmit, isLoading }: Props) {
           rows={3}
           maxLength={500}
           placeholder="Describe tu rol táctico preferido…"
+          disabled={isLoading}
           {...register("tactical_role_notes")}
         />
         {errors.tactical_role_notes && (
@@ -175,14 +185,6 @@ export function TechnicalFootballForm({ initial, onSubmit, isLoading }: Props) {
           />
         )}
       />
-
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="rounded-xl bg-violet-600 hover:bg-violet-700"
-      >
-        {isLoading ? "Guardando…" : "Guardar técnica"}
-      </Button>
-    </form>
+    </div>
   );
 }

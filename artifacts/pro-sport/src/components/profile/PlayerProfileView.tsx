@@ -126,7 +126,7 @@ export function PlayerProfileView({
         className="relative overflow-hidden rounded-b-[36px] pb-8"
         style={{
           background:
-            "linear-gradient(160deg, #2e1065 0%, #1e1b4b 35%, #312e81 65%, #1a1a2e 100%)",
+            "linear-gradient(160deg, #c79a2e 0%, #a67b1e 35%, #e8c35a 65%, #8f6511 100%)",
         }}
       >
         {/* Ambient glow */}
@@ -134,28 +134,8 @@ export function PlayerProfileView({
           <div className={`w-96 h-96 rounded-full blur-[120px] opacity-30 ${lvlCfg.glow}`} />
         </div>
 
-        {/* Stats row */}
-        <div className="relative z-10 px-4 pt-5 pb-4">
-          <div className="grid grid-cols-4 divide-x divide-white/10 bg-white/15 rounded-2xl border border-white/15 overflow-hidden">
-            {[
-              { value: ovr,                                     label: "OVR",      icon: <Star className="size-3" />,   color: "text-violet-200" },
-              { value: profile?.matches_played ?? 0,            label: "Partidos", icon: <Zap className="size-3" />,   color: "text-white" },
-              { value: profile?.rating_avg?.toFixed(1) ?? "—",  label: "Rating",   icon: <Flame className="size-3" />, color: "text-amber-300" },
-              { value: profile?.tournament_goals ?? 0,          label: "Goles",    icon: <Target className="size-3" />,color: "text-emerald-300" },
-            ].map(({ value, label, icon, color }) => (
-              <div key={label} className="flex flex-col items-center py-3 px-1 gap-0.5">
-                <p className={`text-xl font-black tabular-nums ${color}`}>{value}</p>
-                <div className={`${color} opacity-60`}>{icon}</div>
-                <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider mt-0.5">
-                  {label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Player card */}
-        <div className="relative z-10">
+        {/* ── Player card ── */}
+        <div className="relative z-10 pt-6">
           <PlayerCard
             profile={profile}
             onPhotoClick={() => fileInputRef.current?.click()}
@@ -171,25 +151,28 @@ export function PlayerProfileView({
           />
         </div>
 
-        {/* Level + Position badges */}
-        <div className="flex justify-center gap-2 mt-5 z-10 relative flex-wrap px-4">
-          <span
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest ${lvlCfg.badge}`}
-          >
-            <span className="size-1.5 rounded-full bg-current opacity-70" />
-            {lvlCfg.label}
-          </span>
-          {positionInfo && (
-            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-white text-xs font-bold uppercase tracking-widest">
-              <span className="text-white/50 text-[10px] font-black">{positionInfo.abbr}</span>
-              {positionInfo.label}
-            </span>
-          )}
-        </div>
+
       </div>
 
       {/* ══ CONTENT ═════════════════════════════════════════════════════════ */}
       <main className="px-4 py-4 max-w-2xl mx-auto space-y-3 mt-2">
+
+        {/* ── UBICACIÓN ── */}
+        {profile?.city && (
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-border/40 shadow-sm overflow-hidden px-5 py-4 flex items-center gap-3">
+            <div className="size-10 rounded-full bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center shrink-0">
+              <MapPin className="size-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Ubicación
+              </p>
+              <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                {profile.city}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── HABILIDADES ── */}
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-border/40 shadow-sm overflow-hidden">
@@ -260,54 +243,42 @@ export function PlayerProfileView({
                     Morfología
                   </p>
                   <div className="px-5 pb-5 grid grid-cols-3 gap-4">
-                    {blocks.morpho.height_m != null && (
-                      <div className="flex flex-col items-center gap-1">
-                        <Ruler className="size-4 text-violet-500" />
-                        <span className="text-base font-black text-zinc-900 dark:text-white">
-                          {blocks.morpho.height_m}m
-                        </span>
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                          Altura
-                        </span>
-                      </div>
-                    )}
-                    {blocks.morpho.weight_kg != null && (
-                      <div className="flex flex-col items-center gap-1">
-                        <Weight className="size-4 text-violet-500" />
-                        <span className="text-base font-black text-zinc-900 dark:text-white">
-                          {blocks.morpho.weight_kg}kg
-                        </span>
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                          Peso
-                        </span>
-                      </div>
-                    )}
-                    {blocks.morpho.wingspan_m != null && (
-                      <div className="flex flex-col items-center gap-1">
-                        <Activity className="size-4 text-violet-500" />
-                        <span className="text-base font-black text-zinc-900 dark:text-white">
-                          {blocks.morpho.wingspan_m}m
-                        </span>
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                          Envergadura
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {(blocks.morpho.laterality || blocks.morpho.somatotype) && (
-                    <div className="border-t border-border/40 px-5 py-3 flex gap-3">
-                      {blocks.morpho.laterality && (
-                        <span className="text-xs bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 px-2.5 py-1 rounded-full capitalize">
-                          {blocks.morpho.laterality}
-                        </span>
-                      )}
-                      {blocks.morpho.somatotype && (
-                        <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2.5 py-1 rounded-full capitalize">
-                          {blocks.morpho.somatotype}
-                        </span>
-                      )}
+                    <div className="flex flex-col items-center gap-1">
+                      <Ruler className="size-4 text-violet-500" />
+                      <span className="text-base font-black text-zinc-900 dark:text-white">
+                        {blocks.morpho.height_m != null ? `${blocks.morpho.height_m}m` : "-"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                        Altura
+                      </span>
                     </div>
-                  )}
+                    <div className="flex flex-col items-center gap-1">
+                      <Weight className="size-4 text-violet-500" />
+                      <span className="text-base font-black text-zinc-900 dark:text-white">
+                        {blocks.morpho.weight_kg != null ? `${blocks.morpho.weight_kg}kg` : "-"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                        Peso
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <Activity className="size-4 text-violet-500" />
+                      <span className="text-base font-black text-zinc-900 dark:text-white">
+                        {blocks.morpho.wingspan_m != null ? `${blocks.morpho.wingspan_m}m` : "-"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                        Envergadura
+                      </span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border/40 px-5 py-3 flex gap-3">
+                    <span className="text-xs bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 px-2.5 py-1 rounded-full capitalize">
+                      {blocks.morpho.laterality || "Sin especificar"}
+                    </span>
+                    <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2.5 py-1 rounded-full capitalize">
+                      {blocks.morpho.somatotype || "Sin especificar"}
+                    </span>
+                  </div>
                 </div>
               )}
 
@@ -342,13 +313,12 @@ export function PlayerProfileView({
                         },
                       ] as const
                     )
-                      .filter(({ tags, notes }) => (tags && tags.length > 0) || notes)
                       .map(({ label, tags, notes }) => (
                         <div key={label}>
                           <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5">
                             {label}
                           </p>
-                          {tags && tags.length > 0 && (
+                          {tags && tags.length > 0 ? (
                             <div className="flex flex-wrap gap-1.5 mb-1">
                               {tags.map((tag) => (
                                 <span
@@ -359,6 +329,8 @@ export function PlayerProfileView({
                                 </span>
                               ))}
                             </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic mb-1">Sin información</p>
                           )}
                           {notes && (
                             <p className="text-xs text-muted-foreground italic">"{notes}"</p>
@@ -376,23 +348,23 @@ export function PlayerProfileView({
                     Técnica
                   </p>
                   <div className="px-5 pb-5 flex flex-col gap-2">
-                    {blocks.technical.position && (
-                      <p className="text-sm text-zinc-800 dark:text-zinc-200">
-                        <span className="text-muted-foreground mr-1">Posición:</span>
-                        <span className="capitalize font-medium">{blocks.technical.position}</span>
-                      </p>
-                    )}
-                    {blocks.technical.dominant_foot && (
-                      <p className="text-sm text-zinc-800 dark:text-zinc-200">
-                        <span className="text-muted-foreground mr-1">Pie dominante:</span>
-                        <span className="capitalize font-medium">
-                          {blocks.technical.dominant_foot}
-                        </span>
-                      </p>
-                    )}
-                    {blocks.technical.performance_notes && (
+                    <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                      <span className="text-muted-foreground mr-1">Posición:</span>
+                      <span className="capitalize font-medium">{blocks.technical.position || "-"}</span>
+                    </p>
+                    <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                      <span className="text-muted-foreground mr-1">Pie dominante:</span>
+                      <span className="capitalize font-medium">
+                        {blocks.technical.dominant_foot || "-"}
+                      </span>
+                    </p>
+                    {blocks.technical.performance_notes ? (
                       <p className="text-xs text-muted-foreground mt-1 italic">
                         "{blocks.technical.performance_notes}"
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1 italic">
+                        Sin notas de rendimiento.
                       </p>
                     )}
                   </div>

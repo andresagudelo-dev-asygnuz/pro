@@ -1,9 +1,9 @@
+import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { MorphoInput } from "@/lib/profiles/api";
 import type { VisibilityLevel } from "@/lib/types/db";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,7 +28,7 @@ type MorphoFormData = z.infer<typeof morphoSchema>;
 
 interface Props {
   initial?: MorphoInput & { visibility?: VisibilityLevel };
-  onSubmit: (data: MorphoFormData) => Promise<void>;
+  onChange: (data: MorphoFormData) => void;
   isLoading: boolean;
 }
 
@@ -45,11 +45,11 @@ const SOMATOTYPE_OPTIONS = [
   { value: "mixto", label: "Mixto" },
 ];
 
-export function MorphoForm({ initial, onSubmit, isLoading }: Props) {
+export function MorphoForm({ initial, onChange, isLoading }: Props) {
   const {
     register,
-    handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = useForm<MorphoFormData>({
     resolver: zodResolver(morphoSchema),
@@ -63,8 +63,17 @@ export function MorphoForm({ initial, onSubmit, isLoading }: Props) {
     },
   });
 
+  useEffect(() => {
+    const subscription = watch((value) => {
+      // Cast is safe here because watch returns Partial<MorphoFormData> but we know
+      // all fields are either optional or have defaults.
+      onChange(value as MorphoFormData);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, onChange]);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="height_m">Altura (m)</Label>
@@ -73,6 +82,7 @@ export function MorphoForm({ initial, onSubmit, isLoading }: Props) {
             type="number"
             step="0.01"
             placeholder="1.75"
+            disabled={isLoading}
             {...register("height_m", {
               setValueAs: (v) => (v === "" || v === null ? null : parseFloat(v)),
             })}
@@ -89,6 +99,7 @@ export function MorphoForm({ initial, onSubmit, isLoading }: Props) {
             type="number"
             step="0.01"
             placeholder="70"
+            disabled={isLoading}
             {...register("weight_kg", {
               setValueAs: (v) => (v === "" || v === null ? null : parseFloat(v)),
             })}
@@ -105,6 +116,7 @@ export function MorphoForm({ initial, onSubmit, isLoading }: Props) {
             type="number"
             step="0.01"
             placeholder="1.80"
+            disabled={isLoading}
             {...register("wingspan_m", {
               setValueAs: (v) => (v === "" || v === null ? null : parseFloat(v)),
             })}
@@ -125,6 +137,7 @@ export function MorphoForm({ initial, onSubmit, isLoading }: Props) {
               <Select
                 value={field.value ?? ""}
                 onValueChange={(v) => field.onChange(v || null)}
+                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Elegí tu lateralidad" />
@@ -153,6 +166,7 @@ export function MorphoForm({ initial, onSubmit, isLoading }: Props) {
               <Select
                 value={field.value ?? ""}
                 onValueChange={(v) => field.onChange(v || null)}
+                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Elegí tu somatotipo" />
@@ -184,14 +198,6 @@ export function MorphoForm({ initial, onSubmit, isLoading }: Props) {
           />
         )}
       />
-
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="rounded-xl bg-violet-600 hover:bg-violet-700"
-      >
-        {isLoading ? "Guardando…" : "Guardar morfología"}
-      </Button>
-    </form>
+    </div>
   );
 }

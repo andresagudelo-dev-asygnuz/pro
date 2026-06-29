@@ -11,11 +11,11 @@ interface Props {
   conditional: ProfileConditional | null;
   technical: ProfileTechnicalFootball | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onUpdateMorpho: (data: MorphoInput & { visibility: VisibilityLevel }) => Promise<any>;
+  onChangeMorpho: (data: MorphoInput & { visibility: VisibilityLevel }) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onUpdateConditional: (data: ConditionalInput & { visibility: VisibilityLevel }) => Promise<any>;
+  onChangeConditional: (data: ConditionalInput & { visibility: VisibilityLevel }) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onUpdateTechnical: (data: TechnicalInput & { visibility: VisibilityLevel }) => Promise<any>;
+  onChangeTechnical: (data: TechnicalInput & { visibility: VisibilityLevel }) => void;
   isLoading: boolean;
 }
 
@@ -23,9 +23,9 @@ export function ProfileBlocksTabs({
   morpho,
   conditional,
   technical,
-  onUpdateMorpho,
-  onUpdateConditional,
-  onUpdateTechnical,
+  onChangeMorpho,
+  onChangeConditional,
+  onChangeTechnical,
   isLoading,
 }: Props) {
   return (
@@ -39,7 +39,7 @@ export function ProfileBlocksTabs({
       <TabsContent value="morpho" className="mt-4">
         <MorphoForm
           initial={morpho ?? undefined}
-          onSubmit={onUpdateMorpho}
+          onChange={onChangeMorpho}
           isLoading={isLoading}
         />
       </TabsContent>
@@ -47,7 +47,7 @@ export function ProfileBlocksTabs({
       <TabsContent value="conditional" className="mt-4">
         <ConditionalForm
           initial={conditional ?? undefined}
-          onSubmit={onUpdateConditional}
+          onChange={onChangeConditional}
           isLoading={isLoading}
         />
       </TabsContent>
@@ -55,7 +55,7 @@ export function ProfileBlocksTabs({
       <TabsContent value="technical" className="mt-4">
         <TechnicalFootballForm
           initial={technical ?? undefined}
-          onSubmit={onUpdateTechnical}
+          onChange={onChangeTechnical}
           isLoading={isLoading}
         />
       </TabsContent>

@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadFile } from "@/lib/storage/api";
 import { upsertPlayerProfile } from "@/lib/profiles/api";
+import type { MorphoInput, ConditionalInput, TechnicalInput } from "@/lib/profiles/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SKILL_LEVELS, PLAYER_POSITIONS, PREFERRED_FOOT_OPTIONS } from "@/lib/types/db";
-import type { Profile, SkillLevel, PlayerPosition, DominantFoot } from "@/lib/types/db";
+import type { Profile, SkillLevel, PlayerPosition, DominantFoot, VisibilityLevel } from "@/lib/types/db";
 import { initialsFromName } from "@/lib/format";
 import { toast } from "sonner";
 import { Camera, Loader2 } from "lucide-react";
@@ -67,6 +68,11 @@ export default function ProfileEditPage() {
     skill_defending: 50,
     skill_physical: 50,
   });
+
+  const [morphoData, setMorphoData] = useState<(MorphoInput & { visibility: VisibilityLevel }) | null>(null);
+  const [conditionalData, setConditionalData] = useState<(ConditionalInput & { visibility: VisibilityLevel }) | null>(null);
+  const [technicalData, setTechnicalData] = useState<(TechnicalInput & { visibility: VisibilityLevel }) | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { blocks, isLoading: blocksLoading, updateMorpho, updateConditional, updateTechnicalFootball, isSaving } = useProfileBlocks(user?.id ?? "");
 
@@ -154,6 +160,28 @@ export default function ProfileEditPage() {
       ...skills,
     });
 
+    let hasBlockErrors = false;
+    if (!roles?.is_cancha) {
+      if (morphoData) {
+        try { 
+          const res = await updateMorpho(morphoData); 
+          if (res.error) hasBlockErrors = true;
+        } catch (e) { hasBlockErrors = true; }
+      }
+      if (conditionalData) {
+        try { 
+          const res = await updateConditional(conditionalData);
+          if (res.error) hasBlockErrors = true;
+        } catch (e) { hasBlockErrors = true; }
+      }
+      if (technicalData) {
+        try { 
+          const res = await updateTechnicalFootball(technicalData);
+          if (res.error) hasBlockErrors = true;
+        } catch (e) { hasBlockErrors = true; }
+      }
+    }
+
     if (err) {
       if (err.includes("unique") || err.includes("23505")) {
         setFieldErrors({ username: "Ese username ya está en uso." });
@@ -171,8 +199,12 @@ export default function ProfileEditPage() {
         preferred_foot: (preferredFoot as DominantFoot) || null,
         ...skills,
       });
-      toast.success("Perfil actualizado.");
-      setLocation("/perfil");
+      if (!hasBlockErrors) {
+        toast.success("Perfil y características guardadas.");
+        setLocation("/perfil");
+      } else {
+        toast.warning("Perfil guardado, pero hubo un error con tus características deportivas.");
+      }
     }
     setPending(false);
   }
