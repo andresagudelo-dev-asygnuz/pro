@@ -507,7 +507,7 @@ export default function CanchasPage() {
                     mode="venues"
                     onCanchaSelect={(id) => navigate(`/canchas/${id}`)}
                     onVenueSelect={(id) => navigate(`/venues/${id}`)}
-                    height={`calc(100dvh - 56px - ${filterBarHeight}px - ${isDesktop ? 0 : 74}px)`}
+                    height={`calc(100dvh - 56px - ${filterBarHeight}px - ${isDesktop ? 0 : 62}px)`}
                   />
                 </Suspense>
               )}
@@ -629,7 +629,7 @@ export default function CanchasPage() {
               venues={allVenues}
               userLocation={userLocation}
               onCanchaSelect={(id) => navigate(`/canchas/${id}`)}
-              height={`calc(100dvh - 56px - ${filterBarHeight}px - ${isDesktop ? 0 : 74}px)`}
+              height={`calc(100dvh - 56px - ${filterBarHeight}px - ${isDesktop ? 0 : 62}px)`}
             />
           </Suspense>
         </div>
