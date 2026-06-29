@@ -26,6 +26,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+function FeedImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse" />}
+      <img
+        src={src}
+        alt={alt}
+        className={cn(className, !loaded && "opacity-0", "transition-opacity duration-300")}
+        onLoad={() => setLoaded(true)}
+      />
+    </>
+  );
+}
+
 interface PostCardProps {
   post: PostWithDetails;
   currentUserId?: string;
@@ -102,10 +117,10 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, on
 
       {/* Media Gallery */}
       {post.media_urls && post.media_urls.length > 0 && (
-        <div className="w-full relative bg-zinc-900 border-y sm:border-y-0 border-border/50">
+        <div className="w-full relative border-y sm:border-y-0 border-border/50">
           {post.media_urls.length === 1 ? (
-            <div className="aspect-square sm:aspect-video flex items-center justify-center overflow-hidden">
-              <img 
+            <div className="aspect-square sm:aspect-video flex items-center justify-center overflow-hidden relative">
+              <FeedImage 
                 src={post.media_urls[0]} 
                 alt="Post image" 
                 className="w-full h-full object-cover"
@@ -117,7 +132,7 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, on
                 {post.media_urls.map((url, i) => (
                   <CarouselItem key={i}>
                     <div className="w-full aspect-square sm:aspect-video flex items-center justify-center overflow-hidden relative">
-                      <img 
+                      <FeedImage 
                         src={url} 
                         alt={`Post image ${i + 1}`} 
                         className="w-full h-full object-cover pointer-events-none"

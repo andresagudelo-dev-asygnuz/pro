@@ -18,7 +18,7 @@ export function MessageComposer({ onSend, isLoading, value, onChange }: MessageC
 
   const handleSend = () => {
     const content = value.trim();
-    if (!content || isLoading) return;
+    if (!content) return;
     onSend(content);
     onChange("");
     if (textareaRef.current) {
@@ -56,7 +56,7 @@ export function MessageComposer({ onSend, isLoading, value, onChange }: MessageC
         {/* Send button */}
         <button
           onClick={handleSend}
-          disabled={!value.trim() || isLoading}
+          disabled={!value.trim()}
           className="shrink-0 w-12 h-12 rounded-[22px] bg-brand-primary hover:bg-brand-primary/90 active:bg-brand-primary/80 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center transition-all active:scale-90 shadow-xl shadow-brand-primary/20 self-end mb-0.5"
         >
           {isLoading ? (
