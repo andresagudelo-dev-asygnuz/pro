@@ -61,12 +61,8 @@ export default function JugadoresPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Jugadores</h1>
-      </div>
-
       {/* Filter bar */}
-      <div className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-border/50 px-4 py-3">
+      <div className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-border/50 px-4 py-2">
         <div className="flex items-center gap-2 max-w-2xl mx-auto overflow-x-auto scrollbar-none">
           <Select value={filterCity} onValueChange={(v) => setFilterCity(v === "all" ? "" : v)}>
             <SelectTrigger className="h-8 text-xs rounded-full min-w-[100px] shrink-0">
@@ -115,7 +111,7 @@ export default function JugadoresPage() {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-5 max-w-2xl">
+      <main className="container mx-auto px-4 pt-3 pb-24 max-w-2xl">
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (

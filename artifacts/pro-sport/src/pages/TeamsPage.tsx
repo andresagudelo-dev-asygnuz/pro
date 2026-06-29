@@ -72,7 +72,7 @@ export default function TeamsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+      <div className="container mx-auto px-4 pt-4 pb-1 max-w-2xl flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Equipos</h1>
         <Link href="/equipos/nuevo">
           <Button size="sm" className="gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700">
@@ -81,7 +81,7 @@ export default function TeamsPage() {
         </Link>
       </div>
 
-      <main className="container mx-auto px-4 py-5 max-w-2xl space-y-5">
+      <main className="container mx-auto px-4 pt-2 pb-24 max-w-2xl space-y-4">
         {!teamsSupported ? (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-5 text-center">
             <Shield className="size-8 text-amber-500 mx-auto mb-2" />
