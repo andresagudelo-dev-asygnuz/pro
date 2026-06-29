@@ -13,8 +13,9 @@ import { BottomNav } from "@/components/BottomNav";
 import { PlayerCard } from "@/components/PlayerCard";
 import { initialsFromName } from "@/lib/format";
 import { SPORT_TYPE_LABELS } from "@/lib/types/db";
-import { Users, MapPin, LogOut, Trash2, Lock, Globe, Camera, Loader2, Palette, Check, X, ArrowLeft, UserPlus } from "lucide-react";
+import { Users, MapPin, LogOut, Trash2, Lock, Globe, Camera, Loader2, Palette, Check, X, ArrowLeft, UserPlus, Edit3 } from "lucide-react";
 import { toast } from "sonner";
+import { TeamEditModal } from "@/components/teams/TeamEditModal";
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 function resizeToDataUrl(file: File, maxPx = 512, quality = 0.88): Promise<string> {
@@ -89,6 +90,7 @@ export default function TeamDetailPage() {
 
   /* ── Color personalization state ── */
   const [showColorPanel, setShowColorPanel] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [draftHeader, setDraftHeader] = useState(DEFAULT_HEADER);
   const [draftJersey, setDraftJersey] = useState(DEFAULT_JERSEY);
   const [savingColors, setSavingColors] = useState(false);
@@ -285,6 +287,13 @@ export default function TeamDetailPage() {
                 title="Personalizar colores"
               >
                 <Palette className="size-4" />
+              </button>
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                title="Editar equipo"
+              >
+                <Edit3 className="size-4" />
               </button>
               <button
                 onClick={handleDelete}
@@ -501,6 +510,16 @@ export default function TeamDetailPage() {
         )}
       </main>
       <BottomNav />
+
+      {/* Edit Modal */}
+      {team && isOwner && (
+        <TeamEditModal
+          isOpen={showEditModal}
+          onOpenChange={setShowEditModal}
+          team={team}
+          onUpdate={(updatedTeam) => setTeam(updatedTeam)}
+        />
+      )}
     </div>
   );
 }

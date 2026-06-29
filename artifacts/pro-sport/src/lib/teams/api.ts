@@ -136,6 +136,20 @@ export async function createTeam(payload: {
   return data as Team;
 }
 
+export async function updateTeam(teamId: string, payload: {
+  name: string;
+  description: string | null;
+  sport_type: string;
+  city: string;
+  max_members: number;
+}): Promise<void> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
 export async function joinTeam(teamId: string, userId: string): Promise<void> {
   const { error } = await supabase.from("team_members").insert({ team_id: teamId, user_id: userId, role: "player" });
   if (error) throw new Error(friendlyError(error));
