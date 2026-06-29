@@ -16,6 +16,7 @@ import { SPORT_TYPE_LABELS } from "@/lib/types/db";
 import { Users, MapPin, LogOut, Trash2, Lock, Globe, Camera, Loader2, Palette, Check, X, ArrowLeft, UserPlus, Edit3 } from "lucide-react";
 import { toast } from "sonner";
 import { TeamEditModal } from "@/components/teams/TeamEditModal";
+import { TeamInviteModal } from "@/components/teams/TeamInviteModal";
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 function resizeToDataUrl(file: File, maxPx = 512, quality = 0.88): Promise<string> {
@@ -91,6 +92,7 @@ export default function TeamDetailPage() {
   /* ── Color personalization state ── */
   const [showColorPanel, setShowColorPanel] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [draftHeader, setDraftHeader] = useState(DEFAULT_HEADER);
   const [draftJersey, setDraftJersey] = useState(DEFAULT_JERSEY);
   const [savingColors, setSavingColors] = useState(false);
@@ -103,25 +105,8 @@ export default function TeamDetailPage() {
   const isOwner = myMembership?.role === "owner";
   const isMember = !!myMembership;
 
-  async function handleInvite() {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `¡Únete a mi equipo ${team?.name} en PRO.!`,
-          text: `Te invito a formar parte de mi equipo. Haz clic en el enlace para unirte.`,
-          url: url,
-        });
-        toast.success("Invitación compartida");
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
-          toast.error("No se pudo compartir la invitación");
-        }
-      }
-    } else {
-      navigator.clipboard.writeText(url);
-      toast.success("Enlace de invitación copiado al portapapeles");
-    }
+  function handleInvite() {
+    setShowInviteModal(true);
   }
 
   useEffect(() => {
@@ -512,13 +497,26 @@ export default function TeamDetailPage() {
       <BottomNav />
 
       {/* Edit Modal */}
-      {team && isOwner && (
-        <TeamEditModal
-          isOpen={showEditModal}
-          onOpenChange={setShowEditModal}
-          team={team}
-          onUpdate={(updatedTeam) => setTeam(updatedTeam)}
-        />
+      {/* Modals */}
+      {team && (
+        <>
+          {isOwner && (
+            <TeamEditModal
+              isOpen={showEditModal}
+              onOpenChange={setShowEditModal}
+              team={team}
+              onUpdate={setTeam}
+            />
+          )}
+          {(isOwner || isMember) && (
+            <TeamInviteModal
+              isOpen={showInviteModal}
+              onOpenChange={setShowInviteModal}
+              team={team}
+              onUpdate={() => { if (id) getTeamById(id).then(setTeam); }}
+            />
+          )}
+        </>
       )}
     </div>
   );
