@@ -17,6 +17,8 @@ import type { Profile } from "@/lib/types/db";
 import { FriendsTabAmigos } from "@/components/friends/FriendsTabAmigos";
 import { FriendsTabSolicitudes } from "@/components/friends/FriendsTabSolicitudes";
 import { FriendsTabBuscar } from "@/components/friends/FriendsTabBuscar";
+import { AppNav } from "@/components/AppNav";
+import { BottomNav } from "@/components/BottomNav";
 import { toast } from "sonner";
 import { getOrCreateConversation } from "@/lib/chat/api";
 
@@ -125,13 +127,10 @@ export default function FriendsPage() {
   const pendingCount = received.length;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Amigos</h1>
-      </div>
-
+    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+      <AppNav />
       <div className="sticky top-14 z-40 bg-white dark:bg-zinc-900 border-b border-border">
-        <div className="container mx-auto px-4">
+        <div className="w-full max-w-2xl mx-auto px-4">
           <div className="flex">
             {(
               [
@@ -168,7 +167,7 @@ export default function FriendsPage() {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-6 max-w-2xl">
+      <main className="flex-1 w-full max-w-2xl mx-auto pt-1 pb-24 space-y-3">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
@@ -211,7 +210,7 @@ export default function FriendsPage() {
           </>
         )}
       </main>
-
+      <BottomNav />
     </div>
   );
 }

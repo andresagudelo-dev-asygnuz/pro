@@ -33,14 +33,14 @@ export function FriendsTabSolicitudes({
     <>
       {received.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-4">
             Recibidas
           </p>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-y border-border/60">
             {received.map((f) => (
               <div
                 key={f.id}
-                className="flex items-center gap-3 rounded-xl border bg-white dark:bg-zinc-900 p-4"
+                className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40"
               >
                 <Link href={`/profile/${f.requester_id}`}>
                   <Avatar className="size-10 cursor-pointer">
@@ -80,14 +80,14 @@ export function FriendsTabSolicitudes({
 
       {sent.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-4">
             Enviadas
           </p>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-y border-border/60">
             {sent.map((f) => (
               <div
                 key={f.id}
-                className="flex items-center gap-3 rounded-xl border bg-white dark:bg-zinc-900 p-4"
+                className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40"
               >
                 <Link href={`/profile/${f.addressee_id}`}>
                   <Avatar className="size-10 cursor-pointer">

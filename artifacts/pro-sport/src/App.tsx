@@ -253,7 +253,7 @@ function Router() {
         </Route>
 
         <Route path="/amigos">
-          <ErrorBoundary><ProtectedRoute component={FriendsPage} layout="player" /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={FriendsPage} layout="none" /></ErrorBoundary>
         </Route>
 
         <Route path="/equipos/nuevo">
