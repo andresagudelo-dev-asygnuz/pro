@@ -101,7 +101,7 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
   return (
     <>
       <div 
-        className="fixed bottom-0 left-0 right-0 h-28 z-40 pointer-events-none"
+        className="fixed bottom-0 left-0 right-0 h-28 z-40 pointer-events-none md:hidden"
         style={{
           backdropFilter: "blur(12px)",
           WebkitBackdropFilter: "blur(12px)",
@@ -109,7 +109,7 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
           maskImage: "linear-gradient(to top, black 40%, transparent 100%)"
         }}
       />
-      <nav className="fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
+      <nav className="fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none md:hidden">
         <div className="bg-white/95 dark:bg-zinc-900/95 border border-zinc-200/80 dark:border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.12)] rounded-[32px] w-full max-w-[400px] pointer-events-auto">
         <div className="flex items-center justify-between h-[68px] px-2">
           {navItems.map((item) => {
