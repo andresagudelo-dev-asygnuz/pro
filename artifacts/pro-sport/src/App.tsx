@@ -267,7 +267,7 @@ function Router() {
         </Route>
 
         <Route path="/profile/:id">
-          <ErrorBoundary><ProtectedRoute component={UserProfilePage} layout="player" /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={UserProfilePage} layout="none" /></ErrorBoundary>
         </Route>
 
         <Route path="/admin/venues">
