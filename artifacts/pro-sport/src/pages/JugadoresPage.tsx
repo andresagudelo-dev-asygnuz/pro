@@ -65,9 +65,9 @@ export default function JugadoresPage() {
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
       <AppNav />
       {/* Filter bar */}
-      <div className="sticky top-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-border/50 px-4 py-2">
+      <div className="sticky top-[56px] z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-border/50 px-4 py-2">
         <div className="flex items-center gap-2 max-w-2xl mx-auto overflow-x-auto scrollbar-none">
-          <Select value={filterCity} onValueChange={(v) => setFilterCity(v === "all" ? "" : v)}>
+          <Select value={filterCity || undefined} onValueChange={(v) => setFilterCity(v === "all" ? "" : v)}>
             <SelectTrigger className="h-8 text-xs rounded-full min-w-[100px] shrink-0">
               <SelectValue placeholder="Ciudad" />
             </SelectTrigger>
@@ -79,7 +79,7 @@ export default function JugadoresPage() {
             </SelectContent>
           </Select>
 
-          <Select value={filterLevel} onValueChange={(v) => setFilterLevel(v === "all" ? "" : v)}>
+          <Select value={filterLevel || undefined} onValueChange={(v) => setFilterLevel(v === "all" ? "" : v)}>
             <SelectTrigger className="h-8 text-xs rounded-full min-w-[110px] shrink-0">
               <SelectValue placeholder="Nivel" />
             </SelectTrigger>
@@ -91,7 +91,7 @@ export default function JugadoresPage() {
             </SelectContent>
           </Select>
 
-          <Select value={filterPos} onValueChange={(v) => setFilterPos(v === "all" ? "" : v)}>
+          <Select value={filterPos || undefined} onValueChange={(v) => setFilterPos(v === "all" ? "" : v)}>
             <SelectTrigger className="h-8 text-xs rounded-full min-w-[120px] shrink-0">
               <SelectValue placeholder="Posición" />
             </SelectTrigger>

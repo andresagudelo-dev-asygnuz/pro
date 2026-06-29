@@ -98,22 +98,11 @@ export async function searchPlayers(
 ): Promise<PaginatedResult<Profile[]>> {
   const limit = options.limit ?? 20;
 
-  const { data: playerRoles, error: rolesErr } = await supabase
-    .from("user_roles")
-    .select("user_id")
-    .eq("is_player", true);
-
-  if (rolesErr) return { data: null, error: mapDbError(rolesErr, "search_players_roles"), nextCursor: null };
-
-  const playerIds = (playerRoles ?? []).map((r: { user_id: string }) => r.user_id);
-  if (playerIds.length === 0) return { data: [], error: null, nextCursor: null };
-
   let query = supabase
     .from("profiles")
     .select(
       "id, username, full_name, avatar_url, city, primary_sport_id, primary_skill_level, position, preferred_foot, rating_avg, rating_count, matches_played, skill_pace, skill_shooting, skill_passing, skill_dribbling, skill_defending, skill_physical, created_at, updated_at, banner_url, bio, tournament_goals, tournament_matches, business_name, business_phone, business_whatsapp, business_website"
     )
-    .in("id", playerIds)
     .order("matches_played", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
