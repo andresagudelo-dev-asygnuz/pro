@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import {
-  getTeamById, joinTeam, leaveTeam, deleteTeam, updateTeamLogo, updateTeamColors,
+  getTeamById, joinTeam, leaveTeam, deleteTeam, updateTeamLogo, updateTeamColors, updateTeamPrivacy,
   getLocalTeamPrefs, setLocalTeamPrefs,
   type TeamWithMembers, type TeamMemberWithProfile,
 } from "@/lib/teams/api";
@@ -212,6 +212,20 @@ export default function TeamDetailPage() {
     setActionPending(false);
   }
 
+  async function handleTogglePrivacy() {
+    if (!id || !isOwner || !team) return;
+    setActionPending(true);
+    try {
+      const newStatus = !team.is_public;
+      await updateTeamPrivacy(id, newStatus);
+      setTeam((prev) => prev ? { ...prev, is_public: newStatus } : prev);
+      toast.success(newStatus ? "El equipo ahora es público" : "El equipo ahora es privado");
+    } catch {
+      toast.error("Error al actualizar la privacidad");
+    }
+    setActionPending(false);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 pb-24 flex flex-col">
@@ -396,9 +410,15 @@ export default function TeamDetailPage() {
             <span className="text-xs font-semibold bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-3 py-1 rounded-full border border-border/50 shadow-sm">
               {sportLabel}
             </span>
-            {team.is_public
-              ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><Globe className="size-3" /> Público</span>
-              : <span className="flex items-center gap-1 text-xs text-muted-foreground"><Lock className="size-3" /> Privado</span>}
+          {team.is_public ? (
+            <button onClick={isOwner ? handleTogglePrivacy : undefined} disabled={actionPending || !isOwner} className={`flex items-center gap-1 text-xs text-muted-foreground ${isOwner ? 'hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer' : 'cursor-default'}`}>
+              <Globe className="size-3" /> Público
+            </button>
+          ) : (
+            <button onClick={isOwner ? handleTogglePrivacy : undefined} disabled={actionPending || !isOwner} className={`flex items-center gap-1 text-xs text-muted-foreground ${isOwner ? 'hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer' : 'cursor-default'}`}>
+              <Lock className="size-3" /> Privado
+            </button>
+          )}
             {/* Jersey color swatch */}
             <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-800 rounded-full px-2 py-1 border border-border/50 shadow-sm">
               <JerseyIcon color={resolvedJersey} size={16} />

@@ -167,6 +167,14 @@ export async function updateTeamColors(teamId: string, headerColor: string, jers
   if (error) throw new Error(friendlyError(error));
 }
 
+export async function updateTeamPrivacy(teamId: string, isPublic: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ is_public: isPublic, updated_at: new Date().toISOString() })
+    .eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
 /* ── localStorage helpers (used as fallback before DB migration) ── */
 const PREFS_KEY = (id: string) => `team_prefs_${id}`;
 
