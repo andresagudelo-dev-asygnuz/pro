@@ -301,16 +301,46 @@ export default function NewMatchPage() {
   // ── render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 md:pb-0">
       <header className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-2">
-          <NavDrawer />
-          {step === 1
-            ? <Link href="/feed"><Button variant="ghost" size="icon"><ArrowLeft className="size-4" /></Button></Link>
-            : <Button variant="ghost" size="icon" onClick={() => { setStep((s) => (s - 1) as 1 | 2 | 3); setFieldErrors({}); }}><ArrowLeft className="size-4" /></Button>
-          }
-          <h1 className="text-lg font-bold flex-1">Crear partido</h1>
-          <div className="flex items-center gap-1.5 shrink-0">
+        <div className="container mx-auto px-4 h-14 flex items-center justify-between relative">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <NavDrawer />
+            {step === 1
+              ? <Link href="/feed"><Button variant="ghost" size="icon" className="shrink-0"><ArrowLeft className="size-4" /></Button></Link>
+              : <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setStep((s) => (s - 1) as 1 | 2 | 3); setFieldErrors({}); }}><ArrowLeft className="size-4" /></Button>
+            }
+            <h1 className="text-lg font-bold truncate">Crear partido</h1>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center justify-center absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <nav className="flex items-center gap-2">
+              <Link href="/feed">
+                <button className="p-2 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </button>
+              </Link>
+              <Link href="/chat">
+                <button className="p-2 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                </button>
+              </Link>
+              <Link href="/canchas">
+                <button className="p-2 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+                </button>
+              </Link>
+              <div className="w-px h-6 bg-border mx-1" />
+              <Link href="/matches/new">
+                <button className="p-2 rounded-lg flex items-center justify-center bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                </button>
+              </Link>
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 flex-1 justify-end">
             <Link href="/notificaciones">
               <button className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
                 <Bell className="size-4" />
@@ -397,7 +427,9 @@ export default function NewMatchPage() {
           )}
         </div>
       </main>
-      <BottomNav />
+      <div className="md:hidden">
+        <BottomNav />
+      </div>
     </div>
   );
 }

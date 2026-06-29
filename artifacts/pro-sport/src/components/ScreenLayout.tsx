@@ -17,7 +17,7 @@ export function ScreenLayout({ title, backHref, actions, children, className }: 
   const isOwnerContext = location.startsWith("/mis-canchas") || location.startsWith("/canchas/");
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24 md:pb-0">
       <PageHeader title={title} backHref={backHref} actions={actions} />
       {className ? (
         <div className={className}>{children}</div>

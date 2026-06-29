@@ -170,9 +170,15 @@ export default function CanchasPage() {
     () => (localStorage.getItem("canchas_view") as "list" | "map") ?? "map"
   );
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
-  // idle → checking → needs_permission | loading → ready | denied
   const [geoStatus, setGeoStatus] = useState<"idle" | "checking" | "needs_permission" | "loading" | "ready" | "denied">("idle");
   const [geoSkipped, setGeoSkipped] = useState(() => localStorage.getItem("geo_skipped") === "1");
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const venueMap = new Map<string, Venue>(allVenues.map((v): [string, Venue] => [v.id, v]));
 
@@ -501,7 +507,7 @@ export default function CanchasPage() {
                     mode="venues"
                     onCanchaSelect={(id) => navigate(`/canchas/${id}`)}
                     onVenueSelect={(id) => navigate(`/venues/${id}`)}
-                    height={`calc(100dvh - 56px - ${filterBarHeight}px - 74px)`}
+                    height={`calc(100dvh - 56px - ${filterBarHeight}px - ${isDesktop ? 0 : 74}px)`}
                   />
                 </Suspense>
               )}
@@ -623,7 +629,7 @@ export default function CanchasPage() {
               venues={allVenues}
               userLocation={userLocation}
               onCanchaSelect={(id) => navigate(`/canchas/${id}`)}
-              height={`calc(100dvh - 56px - ${filterBarHeight}px - 74px)`}
+              height={`calc(100dvh - 56px - ${filterBarHeight}px - ${isDesktop ? 0 : 74}px)`}
             />
           </Suspense>
         </div>
