@@ -56,7 +56,7 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, on
   return (
     <div className="bg-card border-y sm:border rounded-none sm:rounded-xl border-border/50 overflow-hidden flex flex-col shadow-sm mx-0">
       {/* Header */}
-      <div className="flex items-center justify-between p-4">
+      <div className="flex items-center justify-between p-4 pb-2">
         <div className="flex items-center gap-3">
           <Link href={`/profile/${post.author_id}`}>
             <Avatar className="size-10 border border-border/50 cursor-pointer hover:opacity-80 transition-opacity">
@@ -115,6 +115,15 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, on
         )}
       </div>
 
+      {/* Text Content (Always below header, before media) */}
+      {post.content && (
+        <div className="px-4 pb-3 pt-0">
+          <p className="text-[15px] text-foreground whitespace-pre-wrap leading-snug">
+            {post.content}
+          </p>
+        </div>
+      )}
+
       {/* Media Gallery */}
       {post.media_urls && post.media_urls.length > 0 && (
         <div className="w-full relative border-y sm:border-y-0 border-border/50">
@@ -153,14 +162,6 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, on
 
       {/* Content & Actions */}
       <div className="p-4 pt-3 flex flex-col gap-3">
-        
-        {/* Text Content for TEXT-ONLY posts (rendered above actions) */}
-        {(!post.media_urls || post.media_urls.length === 0) && post.content && (
-          <p className="text-[15px] text-foreground whitespace-pre-wrap leading-snug">
-            {post.content}
-          </p>
-        )}
-
         {/* Actions */}
         <div className="flex items-center gap-4">
           <FistBumpButton 
@@ -176,16 +177,6 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, on
             <span className="text-sm font-bold">{post.comments_count > 0 ? post.comments_count : "Comentar"}</span>
           </button>
         </div>
-
-        {/* Text Content for posts WITH MEDIA (rendered below actions) */}
-        {post.media_urls && post.media_urls.length > 0 && post.content && (
-          <p className="text-sm text-foreground whitespace-pre-wrap">
-            <Link href={`/profile/${post.author_id}`}>
-              <span className="font-bold mr-2 hover:underline cursor-pointer">{post.author.username || post.author.full_name?.split(" ")[0]}</span>
-            </Link>
-            {post.content}
-          </p>
-        )}
       </div>
 
       {showComments && (
