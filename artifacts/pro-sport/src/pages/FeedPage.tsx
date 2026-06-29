@@ -328,7 +328,7 @@ export default function FeedPage() {
         )}
       </header>
 
-      <main className={`w-full mx-auto px-0 sm:px-4 max-w-2xl ${activeTab === "noticias" ? "py-0" : "py-0 sm:py-4"}`}>
+      <main className={`w-full mx-auto ${activeTab === "noticias" ? "px-0 py-0 max-w-full" : "px-0 sm:px-4 py-0 sm:py-4 max-w-2xl"}`}>
         {activeTab === "noticias" ? (
           <CommunityFeedTab />
         ) : (
