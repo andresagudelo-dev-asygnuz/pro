@@ -187,7 +187,7 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-border/50">
+      <header className={`sticky top-0 z-50 bg-white dark:bg-zinc-900 ${activeTab === "eventos" ? "border-b border-border/50" : ""}`}>
         <div className="container mx-auto px-4 h-14 flex items-center justify-between relative">
           <div className="flex items-center gap-3">
             <NavDrawer />
@@ -264,7 +264,7 @@ export default function FeedPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border-b border-border/50 py-2 px-4 shadow-sm z-40 relative">
+        <div className={`bg-white dark:bg-zinc-900 py-2 px-4 z-40 relative ${activeTab === "eventos" ? "border-b border-border/50 shadow-sm" : ""}`}>
           <div className="flex bg-muted p-1 rounded-xl w-full mx-auto">
             <button 
               onClick={() => setActiveTab("noticias")}
@@ -328,7 +328,7 @@ export default function FeedPage() {
         )}
       </header>
 
-      <main className="w-full mx-auto px-0 sm:px-4 py-0 sm:py-4 max-w-2xl">
+      <main className={`w-full mx-auto px-0 sm:px-4 max-w-2xl ${activeTab === "noticias" ? "py-0" : "py-0 sm:py-4"}`}>
         {activeTab === "noticias" ? (
           <CommunityFeedTab />
         ) : (

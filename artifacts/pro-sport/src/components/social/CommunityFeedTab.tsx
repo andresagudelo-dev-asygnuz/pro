@@ -178,11 +178,11 @@ export function CommunityFeedTab() {
   };
 
   return (
-    <div className="pt-0 sm:pt-2 px-0 sm:px-4">
+    <div className="pt-0 px-0 sm:px-4">
       {/* Sticky top container for the publish box */}
-      <div className="sticky top-[96px] sm:top-[96px] z-30 bg-zinc-50 dark:bg-zinc-950 pt-0 sm:pt-2 pb-3 px-0">
-        <div className="max-w-xl mx-auto">
-          <div className="bg-card border-y sm:border border-border p-3 sm:p-3 rounded-none sm:rounded-xl shadow-sm">
+      <div className="sticky top-[112px] z-30 bg-white dark:bg-zinc-900 pb-3 px-4 border-b border-border/50 shadow-sm mb-2 sm:mb-4">
+        <div className="w-full mx-auto sm:max-w-xl">
+          <div className="bg-white dark:bg-zinc-900 p-0">
             <div className="flex items-center gap-2 sm:gap-3">
               <Avatar className="size-9 shrink-0">
                 <AvatarImage src={profile?.avatar_url || ""} />
