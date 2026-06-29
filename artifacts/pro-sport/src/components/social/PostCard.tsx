@@ -153,6 +153,14 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, on
 
       {/* Content & Actions */}
       <div className="p-4 pt-3 flex flex-col gap-3">
+        
+        {/* Text Content for TEXT-ONLY posts (rendered above actions) */}
+        {(!post.media_urls || post.media_urls.length === 0) && post.content && (
+          <p className="text-[15px] text-foreground whitespace-pre-wrap leading-snug">
+            {post.content}
+          </p>
+        )}
+
         {/* Actions */}
         <div className="flex items-center gap-4">
           <FistBumpButton 
@@ -169,8 +177,8 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, on
           </button>
         </div>
 
-        {/* Text Content */}
-        {post.content && (
+        {/* Text Content for posts WITH MEDIA (rendered below actions) */}
+        {post.media_urls && post.media_urls.length > 0 && post.content && (
           <p className="text-sm text-foreground whitespace-pre-wrap">
             <Link href={`/profile/${post.author_id}`}>
               <span className="font-bold mr-2 hover:underline cursor-pointer">{post.author.username || post.author.full_name?.split(" ")[0]}</span>
