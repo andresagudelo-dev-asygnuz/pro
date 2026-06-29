@@ -30,11 +30,11 @@ function FeedImage({ src, alt, className }: { src: string; alt: string; classNam
   const [loaded, setLoaded] = useState(false);
   return (
     <>
-      {!loaded && <div className="absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse" />}
+      <div className={cn("absolute inset-0 bg-zinc-200 dark:bg-zinc-800 animate-pulse transition-opacity duration-300", loaded && "opacity-0")} />
       <img
         src={src}
         alt={alt}
-        className={cn(className, !loaded && "opacity-0", "transition-opacity duration-300")}
+        className={cn(className, !loaded && "opacity-0", "transition-opacity duration-300 relative z-10")}
         onLoad={() => setLoaded(true)}
       />
     </>
