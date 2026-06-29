@@ -40,13 +40,13 @@ export function FriendsTabAmigos({
   }
 
   return (
-    <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-y border-border/60">
+    <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border border-border/60 rounded-2xl overflow-hidden shadow-sm">
       {friends.map((f) => {
         const friendId = f.requester_id === currentUserId ? f.addressee_id : f.requester_id;
         return (
           <div
             key={f.id}
-            className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40"
+            className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
           >
             <Link href={`/profile/${friendId}`}>
               <Avatar className="size-10 cursor-pointer">

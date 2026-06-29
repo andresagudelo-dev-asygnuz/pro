@@ -167,7 +167,7 @@ export default function FriendsPage() {
         </div>
       </div>
 
-      <main className="flex-1 w-full max-w-2xl mx-auto pt-1 pb-24 space-y-3">
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-4 pb-24 space-y-4">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />

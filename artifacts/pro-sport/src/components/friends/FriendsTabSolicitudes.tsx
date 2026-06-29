@@ -32,15 +32,15 @@ export function FriendsTabSolicitudes({
   return (
     <>
       {received.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-4">
+        <div className="border border-border/60 rounded-2xl">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-4 pt-4">
             Recibidas
           </p>
-          <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-y border-border/60">
+          <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-t border-border/60 overflow-hidden shadow-sm">
             {received.map((f) => (
               <div
                 key={f.id}
-                className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40"
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
               >
                 <Link href={`/profile/${f.requester_id}`}>
                   <Avatar className="size-10 cursor-pointer">
@@ -79,15 +79,15 @@ export function FriendsTabSolicitudes({
       )}
 
       {sent.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-4">
+        <div className="border border-border/60 rounded-2xl mt-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-4 pt-4">
             Enviadas
           </p>
-          <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-y border-border/60">
+          <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-t border-border/60 overflow-hidden shadow-sm">
             {sent.map((f) => (
               <div
                 key={f.id}
-                className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/40"
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
               >
                 <Link href={`/profile/${f.addressee_id}`}>
                   <Avatar className="size-10 cursor-pointer">
