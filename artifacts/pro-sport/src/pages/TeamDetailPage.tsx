@@ -250,7 +250,7 @@ export default function TeamDetailPage() {
 
       {/* ══ HERO ════════════════════════════════════════════════════════ */}
       <div
-        className="relative overflow-hidden rounded-b-[36px] transition-all duration-500 pb-6"
+        className="relative overflow-hidden rounded-b-[36px] transition-all duration-500 h-36"
         style={{ background: heroGradient(resolvedHeader) }}
       >
         {/* Top bar: back + owner actions */}
@@ -286,73 +286,74 @@ export default function TeamDetailPage() {
 
         {/* Ambient glow */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
-          <div className="w-72 h-72 rounded-full blur-[100px] opacity-20" style={{ backgroundColor: resolvedHeader }} />
+          <div className="w-72 h-72 rounded-full blur-[100px] opacity-30" style={{ backgroundColor: resolvedHeader }} />
         </div>
+      </div>
 
-        <div className="relative z-10 flex flex-col items-center pt-2 pb-6 px-5">
+      <div className="relative z-10 flex flex-col items-center px-5 -mt-12">
 
-          {/* ── Color picker panel ── */}
-          {showColorPanel && isOwner && (
-            <div className="w-full max-w-xs mb-5 bg-black/30 backdrop-blur-md rounded-2xl border border-white/15 p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-3 text-center">Personalizar equipo</p>
+        {/* ── Color picker panel ── */}
+        {showColorPanel && isOwner && (
+          <div className="w-full max-w-xs mb-5 bg-white dark:bg-zinc-900 shadow-xl rounded-2xl border border-border/50 p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 text-center">Personalizar equipo</p>
 
-              <div className="space-y-3">
-                {/* Header color */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg border border-white/20 overflow-hidden cursor-pointer shadow-md relative">
-                      <input
-                        type="color"
-                        value={draftHeader}
-                        onChange={(e) => setDraftHeader(e.target.value)}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <div className="w-full h-full rounded-lg" style={{ backgroundColor: draftHeader }} />
-                    </div>
-                    <span className="text-xs font-semibold text-white/80">Color del header</span>
+            <div className="space-y-3">
+              {/* Header color */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg border border-border/50 overflow-hidden cursor-pointer shadow-sm relative">
+                    <input
+                      type="color"
+                      value={draftHeader}
+                      onChange={(e) => setDraftHeader(e.target.value)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="w-full h-full rounded-lg" style={{ backgroundColor: draftHeader }} />
                   </div>
-                  <span className="text-[10px] font-mono text-white/40">{draftHeader}</span>
+                  <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Color del header</span>
                 </div>
-
-                {/* Jersey color */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg border border-white/20 overflow-hidden cursor-pointer shadow-md relative">
-                      <input
-                        type="color"
-                        value={draftJersey}
-                        onChange={(e) => setDraftJersey(e.target.value)}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <div className="w-full h-full rounded-lg" style={{ backgroundColor: draftJersey }} />
-                    </div>
-                    <span className="text-xs font-semibold text-white/80">Color de camiseta</span>
-                  </div>
-                  <JerseyIcon color={draftJersey} size={28} />
-                </div>
-
-                {/* Preview hint */}
-                <div className="rounded-lg overflow-hidden h-3" style={{ background: heroGradient(draftHeader) }} />
+                <span className="text-[10px] font-mono text-muted-foreground">{draftHeader}</span>
               </div>
 
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => setShowColorPanel(false)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/10 text-white/70 text-xs font-semibold hover:bg-white/15 transition-colors"
-                >
-                  <X className="size-3.5" /> Cancelar
-                </button>
-                <button
-                  onClick={handleSaveColors}
-                  disabled={savingColors}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/20 text-white text-xs font-bold hover:bg-white/30 transition-colors"
-                >
-                  {savingColors ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-                  Guardar
-                </button>
+              {/* Jersey color */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg border border-border/50 overflow-hidden cursor-pointer shadow-sm relative">
+                    <input
+                      type="color"
+                      value={draftJersey}
+                      onChange={(e) => setDraftJersey(e.target.value)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="w-full h-full rounded-lg" style={{ backgroundColor: draftJersey }} />
+                  </div>
+                  <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Color de camiseta</span>
+                </div>
+                <JerseyIcon color={draftJersey} size={28} />
               </div>
+
+              {/* Preview hint */}
+              <div className="rounded-lg overflow-hidden h-3" style={{ background: heroGradient(draftHeader) }} />
             </div>
-          )}
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setShowColorPanel(false)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-xs font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                <X className="size-3.5" /> Cancelar
+              </button>
+              <button
+                onClick={handleSaveColors}
+                disabled={savingColors}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold hover:bg-violet-700 transition-colors"
+              >
+                {savingColors ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                Guardar
+              </button>
+            </div>
+          </div>
+        )}
 
           {/* ── Team logo ── */}
           {isOwner ? (
@@ -360,7 +361,7 @@ export default function TeamDetailPage() {
               type="button"
               onClick={() => logoInputRef.current?.click()}
               disabled={uploadingLogo}
-              className="group relative w-24 h-24 rounded-[24px] shadow-2xl border-2 border-white/15 mb-4 overflow-hidden outline-none"
+              className="group relative w-24 h-24 rounded-[24px] shadow-lg border-4 border-white dark:border-zinc-950 mb-4 overflow-hidden outline-none bg-zinc-100 dark:bg-zinc-900"
             >
               {team.logo_url ? (
                 <img src={team.logo_url} alt="Logo" className="w-full h-full object-cover" />
@@ -370,12 +371,12 @@ export default function TeamDetailPage() {
                   {sportEmoji}
                 </div>
               )}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-[22px]">
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-[20px]">
                 {uploadingLogo ? <Loader2 className="size-7 text-white animate-spin" /> : <Camera className="size-7 text-white" />}
               </div>
             </button>
           ) : (
-            <div className="w-24 h-24 rounded-[24px] shadow-2xl border-2 border-white/15 mb-4 overflow-hidden">
+            <div className="w-24 h-24 rounded-[24px] shadow-lg border-4 border-white dark:border-zinc-950 mb-4 overflow-hidden bg-zinc-100 dark:bg-zinc-900">
               {team.logo_url ? (
                 <img src={team.logo_url} alt="Logo" className="w-full h-full object-cover" />
               ) : (
@@ -388,46 +389,46 @@ export default function TeamDetailPage() {
           )}
           <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
 
-          <h1 className="text-2xl font-black text-white text-center leading-tight mb-1">{team.name}</h1>
+          <h1 className="text-2xl font-black text-zinc-900 dark:text-white text-center leading-tight mb-1">{team.name}</h1>
 
           {/* Sport + visibility + jersey */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap justify-center">
-            <span className="text-xs font-semibold bg-white/15 text-white/90 px-3 py-1 rounded-full border border-white/20 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-4 flex-wrap justify-center">
+            <span className="text-xs font-semibold bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-3 py-1 rounded-full border border-border/50 shadow-sm">
               {sportLabel}
             </span>
             {team.is_public
-              ? <span className="flex items-center gap-1 text-xs text-white/50"><Globe className="size-3" /> Público</span>
-              : <span className="flex items-center gap-1 text-xs text-white/50"><Lock className="size-3" /> Privado</span>}
+              ? <span className="flex items-center gap-1 text-xs text-muted-foreground"><Globe className="size-3" /> Público</span>
+              : <span className="flex items-center gap-1 text-xs text-muted-foreground"><Lock className="size-3" /> Privado</span>}
             {/* Jersey color swatch */}
-            <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-2 py-1 border border-white/15">
+            <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-800 rounded-full px-2 py-1 border border-border/50 shadow-sm">
               <JerseyIcon color={resolvedJersey} size={16} />
-              <div className="w-3 h-3 rounded-full border border-white/30" style={{ backgroundColor: resolvedJersey }} />
+              <div className="w-3 h-3 rounded-full border border-black/10 dark:border-white/10 shadow-inner" style={{ backgroundColor: resolvedJersey }} />
             </div>
           </div>
 
           {/* Stats bar */}
-          <div className="w-full max-w-xs grid grid-cols-3 divide-x divide-white/10 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 overflow-hidden mb-4">
+          <div className="w-full max-w-xs grid grid-cols-3 divide-x divide-border/40 bg-white dark:bg-zinc-900 rounded-2xl border border-border/40 shadow-sm overflow-hidden mb-5">
             {[
-              { value: team.team_members.length, label: "Jugadores", color: "text-white" },
-              { value: team.max_members,          label: "Máx",       color: "text-white" },
-              { value: spotsLeft,                 label: "Lugares",   color: isFull ? "text-red-400" : "text-emerald-400" },
+              { value: team.team_members.length, label: "Jugadores", color: "text-zinc-900 dark:text-white" },
+              { value: team.max_members,          label: "Máx",       color: "text-zinc-900 dark:text-white" },
+              { value: spotsLeft,                 label: "Lugares",   color: isFull ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400" },
             ].map(({ value, label, color }) => (
               <div key={label} className="flex flex-col items-center py-2.5 px-1 gap-0.5">
                 <p className={`text-lg font-black ${color}`}>{value}</p>
-                <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider">{label}</p>
+                <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
               </div>
             ))}
           </div>
 
           {/* City */}
-          <div className="flex items-center gap-1.5 text-white/60 text-xs mb-4">
+          <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-4">
             <MapPin className="size-3.5" />
             <span>{team.city}</span>
           </div>
 
           {/* Description */}
           {team.description && (
-            <p className="text-sm text-white/70 text-center leading-relaxed max-w-xs mb-4">{team.description}</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center leading-relaxed max-w-xs mb-5">{team.description}</p>
           )}
 
           {/* Action button */}
@@ -435,7 +436,7 @@ export default function TeamDetailPage() {
             isMember ? (
               !isOwner && (
                 <Button variant="outline" size="sm"
-                  className="rounded-xl gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                  className="rounded-xl gap-2 mb-2 bg-white dark:bg-zinc-900 border-border/40 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                   onClick={handleLeave} disabled={actionPending}>
                   <LogOut className="size-3.5" />
                   {actionPending ? "Saliendo…" : "Salir del equipo"}
@@ -454,8 +455,6 @@ export default function TeamDetailPage() {
             )
           )}
         </div>
-      </div>
-
       {/* ══ MEMBERS ══════════════════════════════════════════════════════ */}
       <main className="px-4 py-5 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-3">
@@ -476,7 +475,7 @@ export default function TeamDetailPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {team.team_members.map((member) => (
-              <PlayerCard key={member.user_id} profile={member.profile} editable={false} showSkills={false} />
+              <PlayerCard key={member.user_id} profile={member.profile} editable={false} showSkills={false} size="sm" />
             ))}
           </div>
         )}

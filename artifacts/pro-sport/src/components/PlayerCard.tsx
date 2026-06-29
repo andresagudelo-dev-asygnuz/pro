@@ -114,18 +114,25 @@ interface CardStyleConfig {
     bottomPadding: string;
     ovrSize: string;
     posSize: string;
+    nameSize: string;
+    ballSize: string;
+    proSize: string;
   };
   bgFilter?: string;
 }
 
-function getCardConfig(ovr: number): CardStyleConfig {
+function getCardConfig(ovr: number, size: "default" | "sm" = "default"): CardStyleConfig {
+  const isSm = size === "sm";
   const commonLayout = {
     topPadding: "px-[16%] pt-[22%]",
     avatarMargin: "-mt-[6%]",
     avatarSize: "w-[45%]",
     bottomPadding: "pb-[16%]",
-    ovrSize: "text-[56px]",
-    posSize: "text-[12px]",
+    ovrSize: isSm ? "text-[38px]" : "text-[56px]",
+    posSize: isSm ? "text-[8px]" : "text-[12px]",
+    nameSize: isSm ? "text-[14px]" : "text-[20px]",
+    ballSize: isSm ? "text-[16px]" : "text-[24px]",
+    proSize: isSm ? "text-[6px]" : "text-[8px]",
   };
 
   if (ovr < 50) {
@@ -171,13 +178,14 @@ interface PlayerCardProps {
   uploading?:  boolean;
   editable?:   boolean;
   showSkills?: boolean;
+  size?:       "default" | "sm";
 }
 
-export function PlayerCard({ profile, onPhotoClick, uploading = false, editable = false, showSkills = true }: PlayerCardProps) {
+export function PlayerCard({ profile, onPhotoClick, uploading = false, editable = false, showSkills = true, size = "default" }: PlayerCardProps) {
   const ovr     = computeOvr(profile);
   const initials = initialsFromName(profile?.full_name ?? profile?.username);
   const position = POSITION_ABBR[profile?.position ?? "mediocampista"] ?? "MED";
-  const cfg = getCardConfig(ovr);
+  const cfg = getCardConfig(ovr, size);
 
   /* ─── 3D Interaction Hooks ────────────────────────────────────────────── */
   const ref = useRef<HTMLDivElement>(null);
@@ -273,8 +281,8 @@ export function PlayerCard({ profile, onPhotoClick, uploading = false, editable 
               <p className={`${cfg.layout.posSize} font-black uppercase tracking-[0.4em] mt-1 ${cfg.subtext}`}>{position}</p>
             </div>
             <div className="flex flex-col items-center pt-1 gap-1">
-              <span className="text-[24px] leading-none drop-shadow-sm">⚽</span>
-              <span className={`text-[8px] font-black uppercase tracking-widest ${cfg.subtext}`}>PRO.</span>
+              <span className={`${cfg.layout.ballSize} leading-none drop-shadow-sm`}>⚽</span>
+              <span className={`${cfg.layout.proSize} font-black uppercase tracking-widest ${cfg.subtext}`}>PRO.</span>
             </div>
           </div>
 
@@ -321,7 +329,7 @@ export function PlayerCard({ profile, onPhotoClick, uploading = false, editable 
 
           {/* ── Name & City ── */}
           <div className="text-center px-[12%] mt-[6%] relative z-10 w-full overflow-hidden">
-            <p className={`text-[20px] font-black uppercase tracking-widest leading-tight truncate ${cfg.text} drop-shadow-sm`}>
+            <p className={`${cfg.layout.nameSize} font-black uppercase tracking-widest leading-tight truncate ${cfg.text} drop-shadow-sm`}>
               {profile?.full_name ?? "Jugador"}
             </p>
           </div>
