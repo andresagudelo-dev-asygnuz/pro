@@ -23,6 +23,8 @@ import {
 import { getProfileById } from "@/lib/profiles/api";
 import { getSportById } from "@/lib/sports/api";
 import { getMyTeams } from "@/lib/teams/api";
+import { AppNav } from "@/components/AppNav";
+import { BottomNav } from "@/components/BottomNav";
 
 
 const LEVEL_CONFIG: Record<string, { label: string; glow: string; badge: string }> = {
@@ -190,6 +192,7 @@ export default function UserProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
+      <AppNav />
 
       {/* ══ HERO ══════════════════════════════════════════════════════════ */}
       <div
@@ -342,6 +345,7 @@ export default function UserProfilePage() {
 
       </main>
 
+      <BottomNav />
     </div>
   );
 }
