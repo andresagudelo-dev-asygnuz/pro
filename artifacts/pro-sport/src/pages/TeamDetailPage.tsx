@@ -8,10 +8,12 @@ import {
 } from "@/lib/teams/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/PageHeader";
+import { AppNav } from "@/components/AppNav";
+import { BottomNav } from "@/components/BottomNav";
+import { PlayerCard } from "@/components/PlayerCard";
 import { initialsFromName } from "@/lib/format";
 import { SPORT_TYPE_LABELS } from "@/lib/types/db";
-import { Users, MapPin, LogOut, Trash2, Lock, Globe, Camera, Loader2, Palette, Check, X } from "lucide-react";
+import { Users, MapPin, LogOut, Trash2, Lock, Globe, Camera, Loader2, Palette, Check, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -58,59 +60,6 @@ const SPORT_EMOJIS: Record<string, string> = {
   padel: "🎾", tenis: "🎾", basket: "🏀", voleibol: "🏐", otro: "🏟️",
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Capitán", captain: "Capitán", player: "Jugador",
-};
-
-/* ── Card styles per skill level ─────────────────────────────────── */
-const CARD_STYLES = {
-  principiante: {
-    bg: "from-amber-600 via-orange-700 to-amber-950",
-    shimmer: "from-amber-300/30 via-orange-300/10 to-transparent",
-    highlight: "from-amber-300/20 to-transparent",
-    text: "text-amber-50", subtext: "text-amber-200/80",
-    border: "border-amber-300/30", ring: "ring-amber-300/40",
-    divider: "border-amber-300/20", barBg: "bg-amber-900/40", barFill: "bg-amber-200",
-  },
-  intermedio: {
-    bg: "from-slate-300 via-slate-400 to-slate-600",
-    shimmer: "from-white/35 via-white/10 to-transparent",
-    highlight: "from-white/25 to-transparent",
-    text: "text-zinc-900", subtext: "text-zinc-700",
-    border: "border-white/50", ring: "ring-white/50",
-    divider: "border-zinc-500/40", barBg: "bg-zinc-500/30", barFill: "bg-zinc-800",
-  },
-  avanzado: {
-    bg: "from-yellow-300 via-amber-400 to-yellow-700",
-    shimmer: "from-yellow-100/35 via-yellow-100/10 to-transparent",
-    highlight: "from-yellow-100/25 to-transparent",
-    text: "text-amber-950", subtext: "text-amber-800",
-    border: "border-yellow-100/50", ring: "ring-yellow-200/60",
-    divider: "border-amber-700/30", barBg: "bg-amber-700/30", barFill: "bg-amber-950",
-  },
-  pro: {
-    bg: "from-violet-400 via-violet-700 to-purple-950",
-    shimmer: "from-violet-200/30 via-violet-300/10 to-transparent",
-    highlight: "from-violet-200/20 to-transparent",
-    text: "text-white", subtext: "text-violet-200/90",
-    border: "border-violet-300/30", ring: "ring-violet-300/40",
-    divider: "border-violet-300/20", barBg: "bg-violet-900/40", barFill: "bg-violet-100",
-  },
-} as const;
-
-const POSITION_ABBR: Record<string, string> = {
-  arquero: "POR", defensa: "DEF", mediocampista: "MED", delantero: "DEL",
-};
-
-function computeOvr(p: TeamMemberWithProfile["profile"]): number {
-  if (!p) return 50;
-  const vals = [
-    p.skill_pace ?? 50, p.skill_shooting ?? 50,
-    p.skill_passing ?? 50, p.skill_dribbling ?? 50,
-    p.skill_defending ?? 50, p.skill_physical ?? 50,
-  ];
-  return Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
-}
 
 /* ── Jersey SVG icon ─────────────────────────────────────────────── */
 function JerseyIcon({ color, size = 32 }: { color: string; size?: number }) {
@@ -124,81 +73,6 @@ function JerseyIcon({ color, size = 32 }: { color: string; size?: number }) {
         strokeLinejoin="round"
       />
     </svg>
-  );
-}
-
-/* ── Mini member card ────────────────────────────────────────────── */
-function MemberCard({ member }: { member: TeamMemberWithProfile }) {
-  const p = member.profile;
-  const level = ((p?.primary_skill_level ?? "intermedio")) as keyof typeof CARD_STYLES;
-  const s = CARD_STYLES[level] ?? CARD_STYLES.intermedio;
-  const ovr = computeOvr(p);
-  const initials = initialsFromName(p?.full_name ?? p?.username);
-  const pos = POSITION_ABBR[p?.position ?? ""] ?? "JUG";
-  const isOwner = member.role === "owner";
-  const isCaptain = member.role === "captain";
-
-  const SKILL_DEFS: [string, number][] = [
-    ["PAC", p?.skill_pace ?? 50], ["TIR", p?.skill_shooting ?? 50],
-    ["PAS", p?.skill_passing ?? 50], ["REG", p?.skill_dribbling ?? 50],
-    ["DEF", p?.skill_defending ?? 50], ["FIS", p?.skill_physical ?? 50],
-  ];
-
-  return (
-    <div className={`relative bg-gradient-to-br ${s.bg} rounded-[22px] shadow-xl overflow-hidden select-none`}
-      style={{ aspectRatio: "5/7" }}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${s.shimmer} pointer-events-none`} />
-      <div className={`absolute top-0 left-0 right-0 h-2/5 bg-gradient-to-b ${s.highlight} pointer-events-none`} />
-      <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
-
-      <div className={`absolute inset-[6px] rounded-[17px] border ${s.border} flex flex-col`}>
-        <div className="flex items-start justify-between px-2.5 pt-2.5">
-          <div>
-            <p className={`text-[38px] font-black leading-none tracking-tight ${s.text}`}>{ovr}</p>
-            <p className={`text-[8px] font-black uppercase tracking-[0.25em] -mt-0.5 ${s.subtext}`}>{pos}</p>
-          </div>
-          <span className="text-[16px] leading-none drop-shadow-md">⚽</span>
-        </div>
-
-        <div className="flex justify-center flex-1 items-center py-1">
-          <div className="relative inline-block">
-            <Avatar className={`size-16 ring-[3px] ${s.ring} shadow-xl`}>
-              {p?.avatar_url && <AvatarImage src={p!.avatar_url} alt={p?.full_name ?? ""} className="object-cover" />}
-              <AvatarFallback className="bg-black/20 text-lg font-black">
-                <span className={s.text}>{initials}</span>
-              </AvatarFallback>
-            </Avatar>
-            {(isOwner || isCaptain) && (
-              <span className={`absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-black border shadow-md
-                ${isOwner ? "bg-amber-400 text-amber-950 border-amber-200" : "bg-violet-500 text-white border-violet-300"}`}>
-                C
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="text-center px-2 -mt-0.5">
-          <p className={`text-[11px] font-black uppercase tracking-wide leading-tight truncate ${s.text} drop-shadow-sm`}>
-            {p?.full_name ?? p?.username ?? "Jugador"}
-          </p>
-          <p className={`text-[8px] font-semibold mt-0.5 ${s.subtext}`}>{ROLE_LABELS[member.role]}</p>
-        </div>
-
-        <div className={`mx-3 mt-1.5 border-t ${s.divider}`} />
-
-        <div className="px-2.5 py-1.5 grid grid-cols-2 gap-x-2 gap-y-1">
-          {SKILL_DEFS.map(([label, val]) => (
-            <div key={label} className="flex items-center gap-0.5">
-              <span className={`text-[10px] font-black w-5 leading-none tabular-nums ${s.text}`}>{val}</span>
-              <span className={`text-[7px] font-black uppercase tracking-widest w-4 ${s.subtext}`}>{label}</span>
-              <div className={`flex-1 h-[2px] rounded-full ${s.barBg}`}>
-                <div className={`h-full rounded-full ${s.barFill}`} style={{ width: `${val}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -320,7 +194,7 @@ export default function TeamDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 pb-24 flex flex-col">
-        <PageHeader title="Equipo" backHref="/equipos" />
+        <AppNav />
         <div className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -331,7 +205,7 @@ export default function TeamDetailPage() {
   if (!team) {
     return (
       <div className="min-h-screen bg-zinc-950 pb-24 flex flex-col">
-        <PageHeader title="Equipo" backHref="/equipos" />
+        <AppNav />
         <div className="flex-1 flex flex-col items-center justify-center py-16 gap-3 text-center px-4">
           <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center text-3xl mb-2">🏟️</div>
           <p className="font-semibold text-white">Equipo no encontrado</p>
@@ -351,39 +225,43 @@ export default function TeamDetailPage() {
 
   return (
     <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 pb-24">
+      <AppNav />
 
       {/* ══ HERO ════════════════════════════════════════════════════════ */}
       <div
-        className="relative overflow-hidden rounded-b-[36px] transition-all duration-500"
+        className="relative overflow-hidden rounded-b-[36px] transition-all duration-500 pb-6"
         style={{ background: heroGradient(resolvedHeader) }}
       >
         {/* Top bar: back + owner actions */}
-        <PageHeader
-          title=""
-          backHref="/equipos"
-          actions={
-            isOwner ? (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => { setShowColorPanel((v) => !v); setDraftHeader(resolvedHeader); setDraftJersey(resolvedJersey); }}
-                  className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors
-                    ${showColorPanel ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/60 hover:text-white"}`}
-                  title="Personalizar colores"
-                >
-                  <Palette className="size-4" />
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={actionPending}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-red-500/20 transition-colors text-white/60 hover:text-red-400"
-                  title="Eliminar equipo"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
-            ) : undefined
-          }
-        />
+        <div className="relative z-10 flex items-center justify-between px-4 pt-4 pb-2">
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors rounded-xl px-2 py-1.5 hover:bg-white/10"
+          >
+            <ArrowLeft className="size-4" /> Volver
+          </button>
+          
+          {isOwner && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => { setShowColorPanel((v) => !v); setDraftHeader(resolvedHeader); setDraftJersey(resolvedJersey); }}
+                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors
+                  ${showColorPanel ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/60 hover:text-white"}`}
+                title="Personalizar colores"
+              >
+                <Palette className="size-4" />
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={actionPending}
+                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-red-500/20 transition-colors text-white/60 hover:text-red-400"
+                title="Eliminar equipo"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Ambient glow */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
@@ -570,11 +448,12 @@ export default function TeamDetailPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {team.team_members.map((member) => (
-              <MemberCard key={member.user_id} member={member} />
+              <PlayerCard key={member.user_id} profile={member.profile} editable={false} />
             ))}
           </div>
         )}
       </main>
+      <BottomNav />
     </div>
   );
 }

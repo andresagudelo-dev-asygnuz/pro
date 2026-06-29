@@ -260,7 +260,7 @@ function Router() {
           <ErrorBoundary><ProtectedRoute component={NewTeamPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/equipos/:id">
-          <ErrorBoundary><ProtectedRoute component={TeamDetailPage} layout="player" /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TeamDetailPage} layout="none" /></ErrorBoundary>
         </Route>
         <Route path="/equipos">
           <ErrorBoundary><ProtectedRoute component={TeamsPage} layout="none" /></ErrorBoundary>
