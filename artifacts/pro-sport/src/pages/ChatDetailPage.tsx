@@ -22,8 +22,9 @@ import { supabase } from "@/lib/supabase";
 import { Info } from "lucide-react";
 import { toast } from "sonner";
 
-export default function ChatDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export default function ChatDetailPage({ id: propId, isDesktopSplit }: { id?: string, isDesktopSplit?: boolean }) {
+  const { id: paramId } = useParams<{ id: string }>();
+  const id = propId || paramId;
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [text, setText] = useState("");
@@ -112,7 +113,7 @@ export default function ChatDetailPage() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-zinc-100 dark:bg-zinc-950 overflow-hidden">
+    <div className={`flex flex-col bg-zinc-100 dark:bg-zinc-950 overflow-hidden ${isDesktopSplit ? "h-full" : "h-[100dvh]"}`}>
       <ChatHeader
         title={displayName}
         subtitle={conversation?.subtitle ?? conversation?.title}
@@ -121,6 +122,7 @@ export default function ChatDetailPage() {
         hasVerifiedUser={!!otherProfile}
         onInfo={conversation ? handleInfo : undefined}
         onDelete={conversation ? () => setShowDeleteDialog(true) : undefined}
+        hideBackButton={isDesktopSplit}
       />
 
       <div className="flex-1 overflow-y-auto overscroll-contain">

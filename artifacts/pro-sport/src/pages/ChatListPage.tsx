@@ -56,7 +56,7 @@ function formatRelativeTime(dateStr: string | null): string {
   return new Date(dateStr).toLocaleDateString("es-CO", { day: "numeric", month: "short" });
 }
 
-export default function ChatListPage() {
+export default function ChatListPage({ isDesktopSplit }: { isDesktopSplit?: boolean }) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [filter, setFilter] = useState<Filter>("all");
@@ -126,23 +126,23 @@ export default function ChatListPage() {
 
   const totalUnread = conversations.reduce((acc, c) => acc + (c.unread_count ?? 0), 0);
 
-  return (
-    <ScreenLayout
-      title={
-        <div className="flex items-center gap-2">
-          <span className="font-black italic tracking-tighter uppercase">Chat</span>
+  const innerContent = (
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      {/* Header if desktop split */}
+      {isDesktopSplit && (
+        <div className="flex items-center gap-2 p-4 border-b border-border/50 shrink-0">
+          <span className="font-black italic tracking-tighter uppercase text-lg">Mensajes</span>
           {totalUnread > 0 && (
-            <span className="text-[10px] font-black bg-brand-primary text-white px-1.5 py-0.5 rounded-full animate-pulse">
+            <span className="text-[10px] font-black bg-brand-primary text-white px-1.5 py-0.5 rounded-full">
               {totalUnread}
             </span>
           )}
         </div>
-      }
-    >
+      )}
 
-      <main className="container mx-auto px-4 py-4 max-w-2xl space-y-3">
+      <main className="flex-1 overflow-y-auto overscroll-contain py-4 space-y-3">
         {/* Buscador + botón nuevo chat */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0 px-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <input
@@ -164,7 +164,7 @@ export default function ChatListPage() {
 
         {/* Filtros */}
         {conversations.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex gap-2 overflow-x-auto pb-1 px-4 scrollbar-none">
             {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => {
               const count = countFor(f);
               if (f !== "all" && count === 0) return null;
@@ -209,7 +209,7 @@ export default function ChatListPage() {
           </div>
         ) : (
           <>
-            <div className="flex flex-col border border-border/40 rounded-3xl overflow-hidden bg-white dark:bg-zinc-900 shadow-xl shadow-black/5 divide-y divide-border/30">
+            <div className="flex flex-col">
               <AnimatePresence initial={false}>
                 {filtered.map((c, index) => {
                   const hasUnread = (c.unread_count ?? 0) > 0;
@@ -226,7 +226,7 @@ export default function ChatListPage() {
                       transition={{ delay: index * 0.05 }}
                       onClick={() => setLocation(`/chat/${c.id}`)}
                       className={cn(
-                        "flex items-center gap-4 px-5 py-4 text-left transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50 group",
+                        "flex items-center gap-4 px-4 py-3.5 text-left transition-all hover:bg-zinc-50 dark:hover:bg-zinc-800/50 group",
                         hasUnread && "bg-brand-primary/5 dark:bg-brand-primary/10"
                       )}
                     >
@@ -286,8 +286,6 @@ export default function ChatListPage() {
                           )}
                         </div>
                       </div>
-
-                      <ChevronRight className="size-4 text-muted-foreground/20 group-hover:text-brand-primary/40 transition-colors shrink-0" />
                     </motion.button>
                   );
                 })}
@@ -382,6 +380,27 @@ export default function ChatListPage() {
           </div>
         </SheetContent>
       </Sheet>
+    </div>
+  );
+
+  if (isDesktopSplit) {
+    return innerContent;
+  }
+
+  return (
+    <ScreenLayout
+      title={
+        <div className="flex items-center gap-2">
+          <span className="font-black italic tracking-tighter uppercase">Chat</span>
+          {totalUnread > 0 && (
+            <span className="text-[10px] font-black bg-brand-primary text-white px-1.5 py-0.5 rounded-full animate-pulse">
+              {totalUnread}
+            </span>
+          )}
+        </div>
+      }
+    >
+      {innerContent}
     </ScreenLayout>
   );
 }

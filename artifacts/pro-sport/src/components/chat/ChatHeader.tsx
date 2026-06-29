@@ -29,6 +29,7 @@ interface ChatHeaderProps {
   backPath?: string;
   onInfo?: () => void;
   onDelete?: () => void;
+  hideBackButton?: boolean;
 }
 
 export function ChatHeader({
@@ -40,18 +41,21 @@ export function ChatHeader({
   backPath = "/chat",
   onInfo,
   onDelete,
+  hideBackButton,
 }: ChatHeaderProps) {
   const [, setLocation] = useLocation();
 
   return (
     <div className="shrink-0 bg-white dark:bg-zinc-900 border-b border-border/50 shadow-xl z-30">
       <div className="flex items-center gap-4 px-4 py-3 max-w-2xl mx-auto">
-        <button
-          onClick={() => setLocation(backPath)}
-          className="w-10 h-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
+        {!hideBackButton && (
+          <button
+            onClick={() => setLocation(backPath)}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all shrink-0"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
+        )}
 
         {/* Avatar with type badge */}
         <div className="relative shrink-0">

@@ -24,7 +24,9 @@ export function ScreenLayout({ title, backHref, actions, children, className }: 
       ) : (
         children
       )}
-      {isOwnerContext ? <OwnerBottomNav /> : <BottomNav />}
+      <div className="md:hidden">
+        {isOwnerContext ? <OwnerBottomNav /> : <BottomNav />}
+      </div>
     </div>
   );
 }

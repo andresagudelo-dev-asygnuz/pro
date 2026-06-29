@@ -7,8 +7,11 @@ import { supabase } from "@/lib/supabase";
 import { uploadFile } from "@/lib/storage/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ImageIcon, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { initialsFromName } from "@/lib/format";
+import { ImageIcon, X, Send } from "lucide-react";
 
 export function CommunityFeedTab() {
   const { user, profile } = useAuth();
@@ -19,8 +22,8 @@ export function CommunityFeedTab() {
   const [isPublishing, setIsPublishing] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const loadFeed = async () => {
     if (!profile) {
@@ -96,22 +99,43 @@ export function CommunityFeedTab() {
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (selectedImages.length + files.length > 4) {
+      toast.error("Máximo 4 fotos por publicación");
+      return;
+    }
+
+    const validFiles = files.filter((file) => {
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("La imagen no debe superar los 10MB");
-        return;
+        toast.error(`La imagen ${file.name} supera los 10MB`);
+        return false;
       }
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      setSelectedImages((prev) => [...prev, ...validFiles]);
+      validFiles.forEach((file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews((prev) => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
-  const clearImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
+  const removeImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const clearImages = () => {
+    setSelectedImages([]);
+    setImagePreviews([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -120,27 +144,30 @@ export function CommunityFeedTab() {
       toast.error("Configura tu perfil para poder publicar.");
       return;
     }
-    if (!newPostContent.trim() && !selectedImage) return;
+    if (!newPostContent.trim() && selectedImages.length === 0) return;
     
     try {
       setIsPublishing(true);
       let mediaUrls: string[] = [];
 
-      if (selectedImage) {
-        const fileExt = selectedImage.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      if (selectedImages.length > 0) {
+        const uploadPromises = selectedImages.map(async (file) => {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const { url: publicUrl, error: uploadError } = await uploadFile(supabase, "post_media", fileName, file);
+          if (uploadError) throw new Error(uploadError);
+          return publicUrl;
+        });
 
-        const { url: publicUrl, error: uploadError } = await uploadFile(supabase, "post_media", fileName, selectedImage);
-
-        if (uploadError) throw new Error(uploadError);
-        if (publicUrl) mediaUrls.push(publicUrl);
+        const urls = await Promise.all(uploadPromises);
+        mediaUrls = urls.filter((url): url is string => !!url);
       }
 
       await createPost(user.id, newPostContent.trim(), mediaUrls);
       toast.success("¡Publicado en el Tercer Tiempo! ⚡");
       
       setNewPostContent("");
-      clearImage();
+      clearImages();
       loadFeed();
     } catch (err) {
       console.error("Publish error", err);
@@ -151,58 +178,77 @@ export function CommunityFeedTab() {
   };
 
   return (
-    <div className="pt-4 px-4 sm:px-0">
-      <div className="max-w-xl mx-auto mb-4">
-        <h2 className="font-black text-xl text-foreground mb-4">El Tercer Tiempo</h2>
-        
-        <div className="bg-card border border-border p-4 rounded-xl mb-6 shadow-sm">
-          <Textarea 
-            placeholder="¿Qué pasó en la cancha hoy? ⚽🔥" 
-            className="mb-3 resize-none bg-background border-border"
-            rows={3}
-            value={newPostContent}
-            onChange={(e) => setNewPostContent(e.target.value)}
-          />
-          
-          {imagePreview && (
-            <div className="relative mb-3 rounded-lg overflow-hidden border border-border max-w-sm">
-              <img src={imagePreview} alt="Preview" className="w-full h-auto object-cover max-h-64" />
-              <button 
-                onClick={clearImage}
-                className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          <div className="flex justify-between items-center mt-2">
-            <div>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImageSelect} 
-                accept="image/*" 
-                className="hidden" 
+    <div className="pt-0 sm:pt-2 px-0 sm:px-4">
+      {/* Sticky top container for the publish box */}
+      <div className="sticky top-[96px] sm:top-[96px] z-30 bg-zinc-50 dark:bg-zinc-950 pt-0 sm:pt-2 pb-3 px-0">
+        <div className="max-w-xl mx-auto">
+          <div className="bg-card border-y sm:border border-border p-3 sm:p-3 rounded-none sm:rounded-xl shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Avatar className="size-9 shrink-0">
+                <AvatarImage src={profile?.avatar_url || ""} />
+                <AvatarFallback>{initialsFromName(profile?.full_name || profile?.username || "U")}</AvatarFallback>
+              </Avatar>
+              
+              <Input 
+                placeholder={`¿Qué pasó hoy en la cancha, ${profile?.full_name?.split(" ")[0] || "Crack"}?`}
+                className="flex-1 rounded-full bg-muted border-none h-10 px-4 text-sm focus-visible:ring-1"
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handlePublish();
+                  }
+                }}
               />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-muted-foreground hover:text-primary px-2"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <ImageIcon className="w-5 h-5 mr-1" />
-                <span className="text-sm">Foto</span>
-              </Button>
+
+              <div className="flex items-center shrink-0 pr-1">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleImageSelect} 
+                  accept="image/*" 
+                  multiple
+                  className="hidden" 
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={selectedImages.length >= 4}
+                  className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-950 rounded-full transition-colors disabled:opacity-50"
+                  title="Añadir fotos"
+                >
+                  <ImageIcon className="w-6 h-6" />
+                </button>
+
+                {(newPostContent.trim() || selectedImages.length > 0) && (
+                  <button 
+                    onClick={handlePublish}
+                    disabled={isPublishing}
+                    className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors ml-1"
+                    title="Publicar"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
             </div>
-            
-            <Button 
-              onClick={handlePublish} 
-              disabled={(!newPostContent.trim() && !selectedImage) || isPublishing}
-              className="bg-primary hover:bg-primary/90 font-bold"
-            >
-              {isPublishing ? "Publicando..." : "Publicar ⚡"}
-            </Button>
+
+            {/* Image Previews */}
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 mt-3 px-2 pb-2">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative rounded-lg overflow-hidden border border-border aspect-square sm:aspect-video">
+                    <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                    <button 
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-black/60 backdrop-blur-sm text-white p-1 rounded-full hover:bg-black/80 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

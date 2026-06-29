@@ -64,8 +64,7 @@ const OwnerProfilePage           = lazy(() => import("@/pages/OwnerProfilePage")
 const OwnerProfileEditPage       = lazy(() => import("@/pages/OwnerProfileEditPage"));
 const MisReservasPage            = lazy(() => import("@/pages/MisReservasPage"));
 
-const ChatListPage               = lazy(() => import("@/pages/ChatListPage"));
-const ChatDetailPage             = lazy(() => import("@/pages/ChatDetailPage"));
+const ChatPage                   = lazy(() => import("@/pages/ChatPage"));
 
 const FriendsPage                = lazy(() => import("@/pages/FriendsPage"));
 const JugadoresPage              = lazy(() => import("@/pages/JugadoresPage"));
@@ -243,10 +242,10 @@ function Router() {
 
         {/* Chat */}
         <Route path="/chat/:id">
-          <ErrorBoundary><ProtectedRoute component={ChatDetailPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={ChatPage} /></ErrorBoundary>
         </Route>
         <Route path="/chat">
-          <ErrorBoundary><ProtectedRoute component={ChatListPage} /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={ChatPage} /></ErrorBoundary>
         </Route>
 
         <Route path="/jugadores">

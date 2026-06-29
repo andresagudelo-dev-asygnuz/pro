@@ -12,9 +12,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { InfiniteScrollSentinel } from "@/components/ui/InfiniteScrollSentinel";
 import { toast } from "sonner";
-import { Calendar, MapPin, Bell, Plus, SlidersHorizontal, X, Clock, Users, Flame, ChevronRight, Lock, Send, Loader2 } from "lucide-react";
+import { Calendar, MapPin, Bell, Plus, SlidersHorizontal, X, Clock, Users, Flame, ChevronRight, Lock, Send, Loader2, Home, MessageCircle, Building2 } from "lucide-react";
 import { NavDrawer } from "@/components/NavDrawer";
 import type { Sport } from "@/lib/types/db";
 import { checkMatchConflict } from "@/lib/matches/conflicts";
@@ -61,9 +62,11 @@ function relTime(iso: string) {
 import { CommunityFeedTab } from "@/components/social/CommunityFeedTab";
 
 export default function FeedPage() {
-  const { profile, user } = useAuth();
+  const { profile, user, roles } = useAuth();
   const { unreadCount } = useNotifCount();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+
+  const getCanchasHref = () => roles?.is_cancha ? "/mis-canchas" : "/canchas";
 
   const [activeTab, setActiveTab] = useState<"noticias" | "eventos">("noticias");
 
@@ -185,12 +188,66 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
       <header className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-border/50">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="container mx-auto px-4 h-14 flex items-center justify-between relative">
           <div className="flex items-center gap-3">
             <NavDrawer />
             <span className="text-xl font-black italic tracking-tighter text-zinc-900 dark:text-white">PRO<span className="text-violet-600">.</span></span>
             {firstName && <span className="text-sm text-muted-foreground hidden sm:block">Hola, {firstName}</span>}
           </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center justify-center absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <nav className="flex items-center gap-2">
+              <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/feed">
+                    <button className={`p-2 rounded-lg flex items-center justify-center transition-colors ${location === "/feed" ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" : "text-muted-foreground hover:bg-muted"}`}>
+                      <Home className="size-5" />
+                    </button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>Inicio</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/chat">
+                    <button className={`p-2 rounded-lg flex items-center justify-center transition-colors ${location.startsWith("/chat") ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" : "text-muted-foreground hover:bg-muted"}`}>
+                      <MessageCircle className="size-5" />
+                    </button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>Chat</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href={getCanchasHref()}>
+                    <button className={`p-2 rounded-lg flex items-center justify-center transition-colors ${location.startsWith(getCanchasHref()) ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300" : "text-muted-foreground hover:bg-muted"}`}>
+                      <Building2 className="size-5" />
+                    </button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>Canchas</TooltipContent>
+              </Tooltip>
+
+              <div className="w-px h-6 bg-border mx-1" />
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/matches/new">
+                    <button className="p-2 rounded-lg flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                      <Plus className="size-5" />
+                    </button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>Crear Partido</TooltipContent>
+              </Tooltip>
+              </TooltipProvider>
+            </nav>
+          </div>
+
           <div className="flex items-center gap-2">
             <Link href="/notificaciones">
               <button className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
@@ -207,19 +264,21 @@ export default function FeedPage() {
           </div>
         </div>
 
-        <div className="flex border-b border-border">
-          <button 
-            onClick={() => setActiveTab("noticias")}
-            className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "noticias" ? "border-violet-600 text-violet-600" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          >
-            Noticias
-          </button>
-          <button 
-            onClick={() => setActiveTab("eventos")}
-            className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "eventos" ? "border-violet-600 text-violet-600" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          >
-            Eventos
-          </button>
+        <div className="bg-white dark:bg-zinc-900 border-b border-border/50 py-2 px-4 shadow-sm z-40 relative">
+          <div className="flex bg-muted p-1 rounded-xl w-full mx-auto">
+            <button 
+              onClick={() => setActiveTab("noticias")}
+              className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-all ${activeTab === "noticias" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Noticias
+            </button>
+            <button 
+              onClick={() => setActiveTab("eventos")}
+              className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-all ${activeTab === "eventos" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Eventos
+            </button>
+          </div>
         </div>
 
         {activeTab === "eventos" && (
@@ -269,11 +328,11 @@ export default function FeedPage() {
         )}
       </header>
 
-      <main className="container mx-auto px-4 py-4 max-w-2xl">
+      <main className="w-full mx-auto px-0 sm:px-4 py-0 sm:py-4 max-w-2xl">
         {activeTab === "noticias" ? (
           <CommunityFeedTab />
         ) : (
-          <>
+          <div className="px-4 py-4 sm:px-0 sm:py-0">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-black text-zinc-900 dark:text-white">Partidos</h1>
@@ -373,10 +432,12 @@ export default function FeedPage() {
             )}
           </div>
         )}
-          </>
+          </div>
         )}
       </main>
-      <BottomNav />
+      <div className="md:hidden">
+        <BottomNav />
+      </div>
     </div>
   );
 }

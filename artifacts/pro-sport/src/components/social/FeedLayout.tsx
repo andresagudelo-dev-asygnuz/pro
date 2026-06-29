@@ -34,7 +34,7 @@ export function FeedLayout({ posts, currentUserId, isLoading, onLikeToggle, onCo
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto pb-20">
+    <div className="w-full max-w-xl mx-auto pb-20 flex flex-col gap-3 sm:gap-4">
       {posts.map(post => (
         <PostCard 
           key={post.id} 
