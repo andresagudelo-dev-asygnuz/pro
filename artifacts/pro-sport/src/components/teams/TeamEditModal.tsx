@@ -9,10 +9,14 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
 } from "@/components/ui/sheet";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
+} from "@/components/ui/dialog";
 import { CANCHAS_SPORT_OPTIONS, ENABLED_CITIES } from "@/lib/types/db";
 import { updateTeam, type TeamWithMembers } from "@/lib/teams/api";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TeamEditModalProps {
   isOpen: boolean;
@@ -22,6 +26,7 @@ interface TeamEditModalProps {
 }
 
 export function TeamEditModal({ isOpen, onOpenChange, team, onUpdate }: TeamEditModalProps) {
+  const isMobile = useIsMobile();
   const [pending, setPending] = useState(false);
   const [name, setName] = useState(team.name);
   const [description, setDescription] = useState(team.description || "");
@@ -63,99 +68,124 @@ export function TeamEditModal({ isOpen, onOpenChange, team, onUpdate }: TeamEdit
     }
   }
 
+  const formContent = (
+    <form id="edit-team-form" onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-1.5">
+        <Label htmlFor="name">Nombre del equipo *</Label>
+        <Input
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Los Cracks FC"
+          required
+          maxLength={60}
+          className="bg-white dark:bg-zinc-900"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="description">Descripción</Label>
+        <Textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Un poco sobre el equipo…"
+          rows={3}
+          maxLength={300}
+          className="bg-white dark:bg-zinc-900"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Deporte</Label>
+          <Select value={sportType} onValueChange={setSportType}>
+            <SelectTrigger className="rounded-xl bg-white dark:bg-zinc-900">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CANCHAS_SPORT_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Ciudad *</Label>
+          <Select value={city} onValueChange={setCity}>
+            <SelectTrigger className="rounded-xl bg-white dark:bg-zinc-900">
+              <SelectValue placeholder="Elegí…" />
+            </SelectTrigger>
+            <SelectContent>
+              {ENABLED_CITIES.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="max">Máx. miembros (capacidad)</Label>
+        <Input
+          id="max"
+          type="number"
+          min={2}
+          max={50}
+          value={maxMembers}
+          onChange={(e) => setMaxMembers(Number(e.target.value))}
+          className="rounded-xl bg-white dark:bg-zinc-900"
+        />
+      </div>
+    </form>
+  );
+
+  const submitButton = (
+    <Button 
+      type="submit" 
+      form="edit-team-form" 
+      className="w-full rounded-2xl h-12 text-base font-bold bg-violet-600 hover:bg-violet-700 text-white" 
+      disabled={pending}
+    >
+      {pending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+      {pending ? "Guardando..." : "Guardar Cambios"}
+    </Button>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="rounded-t-[36px] bg-zinc-50 dark:bg-zinc-950 border-none p-0 max-h-[90vh] overflow-hidden flex flex-col">
+          <SheetHeader className="px-6 pt-8 pb-4 text-left border-b border-border/40 shrink-0 bg-white dark:bg-zinc-900">
+            <SheetTitle className="text-xl font-bold">Editar Equipo</SheetTitle>
+            <SheetDescription>Actualiza la información de tu equipo.</SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            {formContent}
+          </div>
+          <div className="p-4 border-t border-border/40 bg-white dark:bg-zinc-900 shrink-0">
+            {submitButton}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-[36px] bg-zinc-50 dark:bg-zinc-950 border-none p-0 max-h-[90vh] overflow-hidden flex flex-col">
-        <SheetHeader className="px-6 pt-8 pb-4 text-left border-b border-border/40 shrink-0 bg-white dark:bg-zinc-900">
-          <SheetTitle className="text-xl font-bold">Editar Equipo</SheetTitle>
-          <SheetDescription>Actualiza la información de tu equipo.</SheetDescription>
-        </SheetHeader>
-        
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <form id="edit-team-form" onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Nombre del equipo *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Los Cracks FC"
-                required
-                maxLength={60}
-                className="bg-white dark:bg-zinc-900"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="description">Descripción</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Un poco sobre el equipo…"
-                rows={3}
-                maxLength={300}
-                className="bg-white dark:bg-zinc-900"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Deporte</Label>
-                <Select value={sportType} onValueChange={setSportType}>
-                  <SelectTrigger className="rounded-xl bg-white dark:bg-zinc-900">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CANCHAS_SPORT_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Ciudad *</Label>
-                <Select value={city} onValueChange={setCity}>
-                  <SelectTrigger className="rounded-xl bg-white dark:bg-zinc-900">
-                    <SelectValue placeholder="Elegí…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ENABLED_CITIES.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="max">Máx. miembros (capacidad)</Label>
-              <Input
-                id="max"
-                type="number"
-                min={2}
-                max={50}
-                value={maxMembers}
-                onChange={(e) => setMaxMembers(Number(e.target.value))}
-                className="rounded-xl bg-white dark:bg-zinc-900"
-              />
-            </div>
-          </form>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px] bg-zinc-50 dark:bg-zinc-950 p-0 overflow-hidden border-border/40">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40 bg-white dark:bg-zinc-900">
+          <DialogTitle className="text-xl font-bold">Editar Equipo</DialogTitle>
+          <DialogDescription>Actualiza la información de tu equipo.</DialogDescription>
+        </DialogHeader>
+        <div className="px-6 py-6 max-h-[70vh] overflow-y-auto">
+          {formContent}
         </div>
-
-        <div className="p-4 border-t border-border/40 bg-white dark:bg-zinc-900 shrink-0">
-          <Button 
-            type="submit" 
-            form="edit-team-form" 
-            className="w-full rounded-2xl h-12 text-base font-bold bg-violet-600 hover:bg-violet-700 text-white" 
-            disabled={pending}
-          >
-            {pending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-            {pending ? "Guardando..." : "Guardar Cambios"}
-          </Button>
+        <div className="p-4 border-t border-border/40 bg-white dark:bg-zinc-900">
+          {submitButton}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
