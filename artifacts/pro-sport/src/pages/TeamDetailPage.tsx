@@ -13,7 +13,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PlayerCard } from "@/components/PlayerCard";
 import { initialsFromName } from "@/lib/format";
 import { SPORT_TYPE_LABELS } from "@/lib/types/db";
-import { Users, MapPin, LogOut, Trash2, Lock, Globe, Camera, Loader2, Palette, Check, X, ArrowLeft } from "lucide-react";
+import { Users, MapPin, LogOut, Trash2, Lock, Globe, Camera, Loader2, Palette, Check, X, ArrowLeft, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -100,6 +100,27 @@ export default function TeamDetailPage() {
   const myMembership = team?.team_members.find((m) => m.user_id === user?.id);
   const isOwner = myMembership?.role === "owner";
   const isMember = !!myMembership;
+
+  async function handleInvite() {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `¡Únete a mi equipo ${team?.name} en PRO.!`,
+          text: `Te invito a formar parte de mi equipo. Haz clic en el enlace para unirte.`,
+          url: url,
+        });
+        toast.success("Invitación compartida");
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          toast.error("No se pudo compartir la invitación");
+        }
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      toast.success("Enlace de invitación copiado al portapapeles");
+    }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -437,9 +458,16 @@ export default function TeamDetailPage() {
 
       {/* ══ MEMBERS ══════════════════════════════════════════════════════ */}
       <main className="px-4 py-5 max-w-2xl mx-auto">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
-          Integrantes · {team.team_members.length}
-        </p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Integrantes · {team.team_members.length}
+          </p>
+          {(isOwner || isMember) && (
+            <Button size="sm" variant="outline" className="h-7 text-xs rounded-xl gap-1.5" onClick={handleInvite}>
+              <UserPlus className="size-3.5" /> Invitar
+            </Button>
+          )}
+        </div>
         {team.team_members.length === 0 ? (
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-border/40 shadow-sm p-8 text-center">
             <Users className="size-10 text-muted-foreground/30 mx-auto mb-3" />
@@ -448,7 +476,7 @@ export default function TeamDetailPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {team.team_members.map((member) => (
-              <PlayerCard key={member.user_id} profile={member.profile} editable={false} />
+              <PlayerCard key={member.user_id} profile={member.profile} editable={false} showSkills={false} />
             ))}
           </div>
         )}

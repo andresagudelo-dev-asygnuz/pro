@@ -165,15 +165,15 @@ function getCardConfig(ovr: number): CardStyleConfig {
   }
 }
 
-/* ─── Props ─────────────────────────────────────────────────────────────── */
 interface PlayerCardProps {
   profile:     Profile | null;
   onPhotoClick?: () => void;
   uploading?:  boolean;
   editable?:   boolean;
+  showSkills?: boolean;
 }
 
-export function PlayerCard({ profile, onPhotoClick, uploading = false, editable = false }: PlayerCardProps) {
+export function PlayerCard({ profile, onPhotoClick, uploading = false, editable = false, showSkills = true }: PlayerCardProps) {
   const ovr     = computeOvr(profile);
   const initials = initialsFromName(profile?.full_name ?? profile?.username);
   const position = POSITION_ABBR[profile?.position ?? "mediocampista"] ?? "MED";
@@ -327,26 +327,28 @@ export function PlayerCard({ profile, onPhotoClick, uploading = false, editable 
           </div>
 
           {/* ── Skills grid ── */}
-          <div className={`px-[15%] py-[1%] mt-[2%] grid grid-cols-2 gap-x-[5%] gap-y-[2%] ${cfg.layout.bottomPadding} relative z-10`}>
-            {[
-              ["PAC", profile?.skill_pace      ?? 50],
-              ["TIR", profile?.skill_shooting  ?? 50],
-              ["PAS", profile?.skill_passing   ?? 50],
-              ["REG", profile?.skill_dribbling ?? 50],
-              ["DEF", profile?.skill_defending ?? 50],
-              ["FIS", profile?.skill_physical  ?? 50],
-            ].map(([label, val]) => (
-              <SkillRow
-                key={label}
-                label={label}
-                value={val}
-                barBg={cfg.barBg}
-                barFill={cfg.barFill}
-                text={cfg.text}
-                subtext={cfg.subtext}
-              />
-            ))}
-          </div>
+          {showSkills && (
+            <div className={`px-[15%] py-[1%] mt-[2%] grid grid-cols-2 gap-x-[5%] gap-y-[2%] ${cfg.layout.bottomPadding} relative z-10`}>
+              {[
+                ["PAC", profile?.skill_pace      ?? 50],
+                ["TIR", profile?.skill_shooting  ?? 50],
+                ["PAS", profile?.skill_passing   ?? 50],
+                ["REG", profile?.skill_dribbling ?? 50],
+                ["DEF", profile?.skill_defending ?? 50],
+                ["FIS", profile?.skill_physical  ?? 50],
+              ].map(([label, val]) => (
+                <SkillRow
+                  key={label}
+                  label={label}
+                  value={val}
+                  barBg={cfg.barBg}
+                  barFill={cfg.barFill}
+                  text={cfg.text}
+                  subtext={cfg.subtext}
+                />
+              ))}
+            </div>
+          )}
 
         </div>
       </motion.div>
