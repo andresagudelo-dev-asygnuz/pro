@@ -99,9 +99,9 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50">
-      <div className="bg-white dark:bg-zinc-950 border-t border-border/50 shadow-[0_-2px_20px_rgba(0,0,0,0.06)]">
-        <div className="flex items-end justify-around h-[62px] max-w-lg mx-auto px-1 pb-1">
+    <nav className="fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
+      <div className="bg-white/95 backdrop-blur-md dark:bg-zinc-900/95 border border-zinc-200/80 dark:border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.12)] rounded-[32px] w-full max-w-[400px] pointer-events-auto">
+        <div className="flex items-center justify-between h-[68px] px-2">
           {navItems.map((item) => {
             const { href, label, Icon, isAction } = item;
             const active = isActive(item);
@@ -111,48 +111,54 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
 
             if (isAction) {
               return (
-                <Link key={href} href={href}>
-                  <div className="flex flex-col items-center gap-0.5 -mt-3">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-lg shadow-violet-500/35 flex items-center justify-center transition-all duration-150 active:scale-95">
-                      <Icon className="size-[22px] text-white" strokeWidth={2.5} />
-                    </div>
-                    <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
+                <Link key={href} href={href} className="px-1">
+                  <div className="w-12 h-12 rounded-full bg-brand-primary shadow-lg shadow-brand-primary/30 flex items-center justify-center transition-transform duration-150 active:scale-95">
+                    <Icon className="size-[22px] text-white" strokeWidth={2.5} />
                   </div>
                 </Link>
               );
             }
 
             return (
-              <Link key={href} href={href}>
-                <div
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 ${active ? "text-violet-600 dark:text-violet-400" : "text-muted-foreground hover:text-foreground"
+              <Link key={href} href={href} className="flex-1 max-w-[80px]">
+                <div className="flex justify-center">
+                  <div
+                    className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-300 min-w-[64px] ${
+                      active
+                        ? "bg-zinc-100 dark:bg-zinc-800 text-brand-primary"
+                        : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                     }`}
-                >
-                  <div className="relative flex items-center justify-center w-8 h-8 transition-colors duration-200">
-                    <Icon
-                      className={`transition-all duration-200 ${active ? "size-[19px]" : "size-[18px]"}`}
-                      strokeWidth={active ? 2.5 : 2}
-                    />
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <Icon
+                        className={`transition-all duration-300 ${active ? "size-5" : "size-[22px]"}`}
+                        strokeWidth={active ? 2.5 : 2}
+                      />
 
-                    {isPerfil && unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </span>
-                    )}
-                    {isChat && unreadMessages > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
-                        {unreadMessages > 99 ? "99+" : unreadMessages}
-                      </span>
-                    )}
-                    {isCanchas && roles?.is_cancha && pendingBookings > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none">
-                        {pendingBookings > 99 ? "99+" : pendingBookings}
-                      </span>
-                    )}
+                      {isPerfil && unreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm border border-white dark:border-zinc-900">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                      {isChat && unreadMessages > 0 && (
+                        <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full bg-brand-primary text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm border border-white dark:border-zinc-900">
+                          {unreadMessages > 99 ? "99+" : unreadMessages}
+                        </span>
+                      )}
+                      {isCanchas && roles?.is_cancha && pendingBookings > 0 && (
+                        <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center px-0.5 leading-none shadow-sm border border-white dark:border-zinc-900">
+                          {pendingBookings > 99 ? "99+" : pendingBookings}
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className={`text-[10px] transition-all duration-300 ${
+                        active ? "font-bold" : "font-medium"
+                      }`}
+                    >
+                      {label}
+                    </span>
                   </div>
-                  <span className={`text-[10px] transition-all ${active ? "font-semibold" : "font-medium"}`}>
-                    {label}
-                  </span>
                 </div>
               </Link>
             );
