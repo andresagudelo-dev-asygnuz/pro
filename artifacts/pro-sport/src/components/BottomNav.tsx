@@ -99,8 +99,10 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
   }
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
-      <div className="bg-white/95 backdrop-blur-md dark:bg-zinc-900/95 border border-zinc-200/80 dark:border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.12)] rounded-[32px] w-full max-w-[400px] pointer-events-auto">
+    <>
+      <div className="fixed bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-zinc-50 via-zinc-50/80 to-transparent dark:from-zinc-950 dark:via-zinc-950/80 pointer-events-none z-40" />
+      <nav className="fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
+        <div className="bg-white/95 backdrop-blur-md dark:bg-zinc-900/95 border border-zinc-200/80 dark:border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.12)] rounded-[32px] w-full max-w-[400px] pointer-events-auto">
         <div className="flex items-center justify-between h-[68px] px-2">
           {navItems.map((item) => {
             const { href, label, Icon, isAction } = item;
@@ -166,5 +168,6 @@ export function BottomNav({ pendingBookings = 0 }: { pendingBookings?: number })
         </div>
       </div>
     </nav>
+    </>
   );
 }
