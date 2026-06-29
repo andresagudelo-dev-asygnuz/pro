@@ -310,7 +310,6 @@ export default function NewMatchPage() {
             : <Button variant="ghost" size="icon" onClick={() => { setStep((s) => (s - 1) as 1 | 2 | 3); setFieldErrors({}); }}><ArrowLeft className="size-4" /></Button>
           }
           <h1 className="text-lg font-bold flex-1">Crear partido</h1>
-          <WizardStepIndicator step={step} />
           <div className="flex items-center gap-1.5 shrink-0">
             <Link href="/notificaciones">
               <button className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
@@ -337,7 +336,10 @@ export default function NewMatchPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-lg">
+      <main className="container mx-auto px-4 py-6 max-w-lg">
+        <div className="flex justify-center mb-6">
+          <WizardStepIndicator step={step} />
+        </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border shadow-sm p-6">
           {step === 1 && (
             <StepMatchDetails
