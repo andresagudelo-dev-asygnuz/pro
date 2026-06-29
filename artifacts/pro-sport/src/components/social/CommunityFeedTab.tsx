@@ -44,6 +44,27 @@ export function CommunityFeedTab() {
 
   useEffect(() => {
     loadFeed();
+
+    const channel = supabase.channel('feed_realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'post_likes' }, (payload) => {
+        const newLike = payload.new as { post_id: string, user_id: string };
+        if (newLike.user_id === profile?.id) return; // Handled optimistically
+        setPosts(current => current.map(p => p.id === newLike.post_id ? { ...p, likes_count: p.likes_count + 1 } : p));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'post_likes' }, (payload) => {
+        // NOTE: payload.old only has the id by default, so we might not be able to decrement perfectly 
+        // without fetching the post. We'll leave it for now (optimistic updates handle current user's unlikes).
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'post_comments' }, (payload) => {
+        const newComment = payload.new as { post_id: string, author_id: string };
+        if (newComment.author_id === profile?.id) return; // Handled optimistically
+        setPosts(current => current.map(p => p.id === newComment.post_id ? { ...p, comments_count: p.comments_count + 1 } : p));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [profile]);
 
   const handleLikeToggle = async (postId: string) => {

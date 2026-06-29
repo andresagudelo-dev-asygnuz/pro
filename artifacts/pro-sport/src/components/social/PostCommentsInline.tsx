@@ -5,6 +5,7 @@ import { initialsFromName, formatRelativeTime } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Loader2, Send } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface PostCommentsInlineProps {
   post: PostWithDetails;
@@ -23,7 +24,19 @@ export function PostCommentsInline({ post, onCommentAdded }: PostCommentsInlineP
 
   useEffect(() => {
     loadComments(post.id);
-  }, [post.id]);
+
+    const channel = supabase.channel(`public:post_comments:${post.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'post_comments', filter: `post_id=eq.${post.id}` }, (payload) => {
+        const newComment = payload.new as any;
+        if (newComment.author_id === user?.id) return; // Handled optimistically
+        loadComments(post.id); // Reload to fetch the full comment data with profile
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [post.id, user?.id]);
 
   useEffect(() => {
     // Auto-scroll when new comments arrive
