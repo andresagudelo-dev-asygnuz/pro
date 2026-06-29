@@ -44,24 +44,22 @@ export function AppNav() {
         </div>
 
         {/* Desktop Centered Nav */}
-        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-2">
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-3">
           {desktopNavItems.map((item) => {
             const active = isActive(item);
             if (item.isAction) {
               return (
-                <Link key={item.href} href={item.href} className="px-2">
-                  <div className="h-8 px-4 rounded-full bg-brand-primary flex items-center justify-center text-white text-xs font-semibold shadow-sm hover:scale-105 transition-transform">
-                    <item.Icon className="size-4 mr-1.5" />
-                    {item.label}
+                <Link key={item.href} href={item.href} className="px-1">
+                  <div className="size-9 rounded-full bg-brand-primary flex items-center justify-center text-white shadow-sm hover:scale-105 transition-transform">
+                    <item.Icon className="size-5" />
                   </div>
                 </Link>
               );
             }
             return (
               <Link key={item.href} href={item.href}>
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${active ? "bg-zinc-100 dark:bg-zinc-800 text-brand-primary font-semibold" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"}`}>
-                  <item.Icon className={`size-4 ${active ? "stroke-[2.5px]" : "stroke-2"}`} />
-                  <span className="text-sm">{item.label}</span>
+                <div className={`flex items-center justify-center size-9 rounded-full transition-colors hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 ${active ? "text-brand-primary" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"}`}>
+                  <item.Icon className={`size-5 ${active ? "stroke-[2.5px]" : "stroke-2"}`} />
                 </div>
               </Link>
             );
