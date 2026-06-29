@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, User } from "lucide-react";
 import { initialsFromName } from "@/lib/format";
 import type { Profile } from "@/lib/types/db";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
@@ -291,34 +291,36 @@ export function PlayerCard({ profile, onPhotoClick, uploading = false, editable 
                 className="relative group outline-none"
                 aria-label="Cambiar foto"
               >
-                <Avatar className={`${cfg.layout.avatarSize} h-auto aspect-square shadow-2xl bg-transparent overflow-hidden mx-auto ring-4 ${cfg.avatarRing}`}>
-                  {profile?.avatar_url && (
-                    <AvatarImage src={profile.avatar_url} alt="Avatar" className="object-cover" />
+                <div className={`${cfg.layout.avatarSize} h-auto aspect-square mx-auto relative overflow-hidden rounded-2xl`}>
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover object-bottom" />
+                  ) : (
+                    <div className="w-full h-full bg-black/10 flex items-center justify-center">
+                       <User className={`w-1/2 h-1/2 ${cfg.text} opacity-20`} />
+                    </div>
                   )}
-                  <AvatarFallback className="bg-black/10 text-5xl font-black">
-                    <span className={cfg.text}>{initials}</span>
-                  </AvatarFallback>
-                </Avatar>
-                <div className={`absolute inset-0 rounded-full bg-black/55 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity ${cfg.layout.avatarSize} mx-auto`}>
+                </div>
+                <div className={`absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity ${cfg.layout.avatarSize} mx-auto`}>
                   {uploading
                     ? <Loader2 className="size-10 text-white animate-spin" />
                     : <Camera className="size-10 text-white drop-shadow-md" />}
                 </div>
               </button>
             ) : (
-              <Avatar className={`${cfg.layout.avatarSize} h-auto aspect-square shadow-2xl bg-transparent overflow-hidden mx-auto ring-4 ${cfg.avatarRing}`}>
-                {profile?.avatar_url && (
-                  <AvatarImage src={profile.avatar_url} alt="Avatar" className="object-cover" />
+              <div className={`${cfg.layout.avatarSize} h-auto aspect-square mx-auto relative overflow-hidden rounded-2xl`}>
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover object-bottom" />
+                ) : (
+                  <div className="w-full h-full bg-black/10 flex items-center justify-center">
+                     <User className={`w-1/2 h-1/2 ${cfg.text} opacity-20`} />
+                  </div>
                 )}
-                <AvatarFallback className="bg-black/10 text-5xl font-black">
-                  <span className={cfg.text}>{initials}</span>
-                </AvatarFallback>
-              </Avatar>
+              </div>
             )}
           </div>
 
           {/* ── Name & City ── */}
-          <div className="text-center px-[5%] mt-[6%] relative z-10">
+          <div className="text-center px-[12%] mt-[6%] relative z-10 w-full overflow-hidden">
             <p className={`text-[20px] font-black uppercase tracking-widest leading-tight truncate ${cfg.text} drop-shadow-sm`}>
               {profile?.full_name ?? "Jugador"}
             </p>
