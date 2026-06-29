@@ -7,7 +7,6 @@ import { ChallengeSection } from "@/components/landing/ChallengeSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { LocalFocusSection } from "@/components/landing/LocalFocusSection";
-import { RegistrationForm } from "@/components/landing/RegistrationForm";
 import { LaunchBanner } from "@/components/landing/LaunchBanner";
 
 export default function LandingPage() {
@@ -32,7 +31,6 @@ export default function LandingPage() {
       <SolutionSection />
       <FeaturesSection />
       <LocalFocusSection />
-      <RegistrationForm />
 
       <footer className="bg-zinc-100 dark:bg-zinc-950 py-16 border-t border-zinc-200 dark:border-white/5 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-30" />

@@ -1,15 +1,9 @@
 import { VideoBackground } from "./VideoBackground";
 import { FloatingBlob } from "./FloatingBlob";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import { trackEvent } from "@/lib/analytics";
+import { Link } from "wouter";
 
 export function HeroSection() {
-  const handleJoinClick = () => {
-    trackEvent("join_waitlist_click", { location: "hero" });
-    document.getElementById("registration-form")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
     <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
       <VideoBackground src="" poster="/multisport-bg.png" />
@@ -37,23 +31,24 @@ export function HeroSection() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-          <Button
-            id="hero-cta-button"
-            size="lg"
-            onClick={handleJoinClick}
-            className="h-16 px-10 text-sm font-black bg-white text-zinc-950 hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 shadow-[0_0_40px_rgba(255,255,255,0.2)] relative group overflow-hidden rounded-xl border-2 border-brand-primary uppercase tracking-widest"
-          >
-            <span className="relative z-10 flex items-center gap-3">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-primary"></span>
-              </span>
-              Unirse a la lista de espera
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-primary/5 to-transparent -translate-x-full animate-shimmer" />
-          </Button>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-sm mx-auto sm:max-w-none">
+          <Link href="/registro" className="w-full sm:w-auto">
+            <Button
+              size="lg"
+              className="w-full h-14 px-8 text-sm font-black bg-brand-primary text-white hover:bg-brand-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 shadow-[0_0_20px_rgba(124,58,237,0.3)] rounded-xl uppercase tracking-widest border-none"
+            >
+              Registrarse
+            </Button>
+          </Link>
+          <Link href="/login" className="w-full sm:w-auto">
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full h-14 px-8 text-sm font-black bg-white/10 text-white border-white/20 hover:bg-white/20 hover:text-white hover:border-white/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 rounded-xl uppercase tracking-widest backdrop-blur-sm"
+            >
+              Iniciar Sesión
+            </Button>
+          </Link>
         </div>
       </div>
 
