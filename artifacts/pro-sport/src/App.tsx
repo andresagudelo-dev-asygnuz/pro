@@ -249,7 +249,7 @@ function Router() {
         </Route>
 
         <Route path="/jugadores">
-          <ErrorBoundary><ProtectedRoute component={JugadoresPage} layout="player" /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={JugadoresPage} layout="none" /></ErrorBoundary>
         </Route>
 
         <Route path="/amigos">
@@ -263,7 +263,7 @@ function Router() {
           <ErrorBoundary><ProtectedRoute component={TeamDetailPage} layout="player" /></ErrorBoundary>
         </Route>
         <Route path="/equipos">
-          <ErrorBoundary><ProtectedRoute component={TeamsPage} layout="player" /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={TeamsPage} layout="none" /></ErrorBoundary>
         </Route>
 
         <Route path="/profile/:id">
