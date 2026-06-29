@@ -182,7 +182,7 @@ export default function NotificationsPage() {
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
       <AppNav />
-      <div className="w-full max-w-2xl mx-auto px-4 pt-5 pb-2 flex items-center justify-between gap-3">
+      <div className="w-full max-w-2xl mx-auto px-4 pt-4 pb-1 flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
           Notificaciones
           {unreadCount > 0 && (
@@ -199,7 +199,7 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      <main className="flex-1 w-full max-w-2xl mx-auto py-2 space-y-4 pb-24">
+      <main className="flex-1 w-full max-w-2xl mx-auto pt-1 pb-24 space-y-3">
         {/* Filtros */}
         {notifications.length > 0 && (
           <div className="flex items-center gap-2 px-4">
