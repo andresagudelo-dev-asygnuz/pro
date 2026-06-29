@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { NotificationItem } from "@/components/ui/NotificationItem";
 import { Button } from "@/components/ui/button";
+import { AppNav } from "@/components/AppNav";
+import { BottomNav } from "@/components/BottomNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import { toast } from "sonner";
@@ -178,7 +180,8 @@ export default function NotificationsPage() {
   const hasActionable = friendRequests.length > 0 || matchInvitations.length > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+      <AppNav />
       <div className="w-full max-w-2xl mx-auto px-4 pt-5 pb-2 flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
           Notificaciones
@@ -196,7 +199,7 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      <main className="w-full max-w-2xl mx-auto py-2 space-y-4">
+      <main className="flex-1 w-full max-w-2xl mx-auto py-2 space-y-4 pb-24">
         {/* Filtros */}
         {notifications.length > 0 && (
           <div className="flex items-center gap-2 px-4">
@@ -355,7 +358,7 @@ export default function NotificationsPage() {
           </>
         )}
       </main>
-
+      <BottomNav />
     </div>
   );
 }

@@ -130,7 +130,7 @@ function Router() {
           <ErrorBoundary><ProtectedRoute component={OnboardingPage} /></ErrorBoundary>
         </Route>
         <Route path="/notificaciones">
-          <ErrorBoundary><ProtectedRoute component={NotificationsPage} layout="player" /></ErrorBoundary>
+          <ErrorBoundary><ProtectedRoute component={NotificationsPage} layout="none" /></ErrorBoundary>
         </Route>
         <Route path="/verificacion">
           <ErrorBoundary><ProtectedRoute component={VerificationPage} layout="player" /></ErrorBoundary>
