@@ -66,8 +66,16 @@ export function CommunityFeedTab() {
     }
   };
 
-  const handleCommentClick = (post: PostWithDetails) => {
-    toast.info("Próximamente: Comentarios completos");
+  const handleCommentAdded = (postId: string) => {
+    setPosts(current => current.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          comments_count: p.comments_count + 1
+        };
+      }
+      return p;
+    }));
   };
 
   const handleLocationClick = (canchaId: string) => {
@@ -204,7 +212,7 @@ export function CommunityFeedTab() {
         currentUserId={user?.id}
         isLoading={isLoading}
         onLikeToggle={handleLikeToggle}
-        onCommentClick={handleCommentClick}
+        onCommentAdded={handleCommentAdded}
         onLocationClick={handleLocationClick}
         onDeleteClick={handleDeletePost}
       />

@@ -11,6 +11,7 @@ import {
   cancelMatchById,
   acceptParticipantRequest,
   rejectParticipantRequest,
+  updateParticipantAttendance,
   joinWaitlist as joinWaitlistDal,
   leaveWaitlist as leaveWaitlistDal,
 } from "@/lib/matches/api";
@@ -199,6 +200,19 @@ export function useMatchDetailActions(
     }
   };
 
+  const updateAttendance = async (participantUserId: string, status: "attended" | "no_show") => {
+    if (!matchId) return;
+    try {
+      const { error } = await updateParticipantAttendance(supabase, matchId, participantUserId, status);
+      if (error) throw new Error(error);
+      toast.success("Asistencia actualizada");
+      onRefresh();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error inesperado";
+      toast.error(msg || "Error al actualizar asistencia");
+    }
+  };
+
   return {
     sendingMsg,
     sendMessage,
@@ -211,5 +225,6 @@ export function useMatchDetailActions(
     acceptJoinRequest,
     rejectJoinRequest,
     respondInvitation,
+    updateAttendance,
   };
 }

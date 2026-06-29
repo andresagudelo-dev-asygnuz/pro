@@ -19,6 +19,7 @@ interface Props {
   spotsLeft: number;
   isOrganizer: boolean;
   matchPassed: boolean;
+  isCompleted: boolean;
   canJoinWaitlist: boolean;
   isOnWaitlist: boolean;
   myWaitPosition: number | null;
@@ -33,14 +34,15 @@ interface Props {
   onToggleFriend: (id: string) => void;
   onSendInvites: () => void;
   onJoinWaitlist: () => void;
+  onUpdateAttendance?: (uid: string, status: "attended" | "no_show") => void;
 }
 
 export function MatchPlayersSection({
   match, joinedParts, waitlist, profilesById, userId,
-  canInvite, isFull, spotsLeft, isOrganizer, matchPassed, canJoinWaitlist,
+  canInvite, isFull, spotsLeft, isOrganizer, matchPassed, isCompleted, canJoinWaitlist,
   isOnWaitlist, myWaitPosition, joiningWaitlist,
   showInvitePanel, friends, friendsLoaded, selectedFriendIds, sendingInvites,
-  onOpenInvitePanel, onCloseInvitePanel, onToggleFriend, onSendInvites, onJoinWaitlist,
+  onOpenInvitePanel, onCloseInvitePanel, onToggleFriend, onSendInvites, onJoinWaitlist, onUpdateAttendance,
 }: Props) {
   return (
     <>
@@ -104,6 +106,8 @@ export function MatchPlayersSection({
               const pp = profilesById.get(p.user_id);
               if (!pp) return null;
               const isOrgRow = p.user_id === match.organizer_id;
+              const hasAttendanceMarked = p.status === "attended" || p.status === "no_show";
+
               return (
                 <li key={p.user_id} className="flex items-center justify-between px-5 py-3">
                   <Link href={`/profile/${pp.id}`} className="flex items-center gap-3 flex-1 hover:opacity-80 transition-opacity">
@@ -124,10 +128,33 @@ export function MatchPlayersSection({
                       )}
                     </div>
                   </Link>
-                  {p.confirmed_at
-                    ? <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full"><CheckCircle2 className="size-3" /> Confirmado</span>
-                    : <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full"><Clock className="size-3" /> Pendiente</span>
-                  }
+                  
+                  {/* Final attendance status */}
+                  {isCompleted && hasAttendanceMarked && (
+                    <span className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      p.status === "attended" 
+                        ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30"
+                        : "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30"
+                    }`}>
+                      {p.status === "attended" ? <><CheckCircle2 className="size-3" /> Asistió</> : <><X className="size-3" /> Faltó</>}
+                    </span>
+                  )}
+
+                  {/* Marking attendance UI for Organizer */}
+                  {isCompleted && !hasAttendanceMarked && isOrganizer && (
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => onUpdateAttendance?.(p.user_id, "attended")} className="h-7 rounded-lg text-[10px] px-2 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800">Asistió</Button>
+                      <Button size="sm" variant="outline" onClick={() => onUpdateAttendance?.(p.user_id, "no_show")} className="h-7 rounded-lg text-[10px] px-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800">Faltó</Button>
+                    </div>
+                  )}
+
+                  {/* Default confirmation status before match ends */}
+                  {!isCompleted && p.confirmed_at && (
+                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full"><CheckCircle2 className="size-3" /> Confirmado</span>
+                  )}
+                  {!isCompleted && !p.confirmed_at && (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full"><Clock className="size-3" /> Pendiente</span>
+                  )}
                 </li>
               );
             })}

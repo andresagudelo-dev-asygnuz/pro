@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { initialsFromName } from "@/lib/format";
+import { usePwaInstall } from "@/hooks/usePwaInstall";
 import {
   Menu,
   Rss,
@@ -23,6 +24,7 @@ import {
   RefreshCcw,
   ChevronRight,
   ListChecks,
+  Download,
 } from "lucide-react";
 
 
@@ -45,6 +47,7 @@ export function NavDrawer() {
   const { unreadCount } = useNotifCount();
   const [location, navigate] = useLocation();
   const [open, setOpen] = useState(false);
+  const { canInstall, install, isStandalone } = usePwaInstall();
 
   const isOwnerView = location.startsWith("/mis-canchas");
 
@@ -193,7 +196,20 @@ export function NavDrawer() {
             </div>
           </div>
 
-          <div className="border-t px-3 py-4">
+          <div className="border-t px-3 py-4 space-y-1">
+            {!isStandalone && canInstall && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20 md:hidden"
+                onClick={async () => {
+                  await install();
+                  setOpen(false);
+                }}
+              >
+                <Download className="size-4 shrink-0" />
+                Instalar App
+              </Button>
+            )}
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/5"

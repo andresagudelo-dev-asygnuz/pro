@@ -1,10 +1,11 @@
 import { Link } from "wouter";
-import { Zap, Bookmark, Bell, Users, Shield, ChevronRight } from "lucide-react";
+import { Zap, Bookmark, Bell, Users, Shield, ChevronRight, Trophy } from "lucide-react";
 
 export function ProfileActivityNav() {
   const items = [
     { href: "/mis-partidos",   icon: <Zap className="size-4" />,      bg: "bg-violet-100 dark:bg-violet-900/30",  color: "text-violet-600",  label: "Mis partidos" },
     { href: "/mis-reservas",   icon: <Bookmark className="size-4" />,  bg: "bg-emerald-100 dark:bg-emerald-900/30", color: "text-emerald-600", label: "Mis reservas" },
+    { href: "/ranking",        icon: <Trophy className="size-4" />,    bg: "bg-orange-100 dark:bg-orange-900/30",  color: "text-orange-600",  label: "Ranking Local" },
     { href: "/notificaciones", icon: <Bell className="size-4" />,      bg: "bg-amber-100 dark:bg-amber-900/30",    color: "text-amber-600",   label: "Notificaciones" },
     { href: "/amigos",         icon: <Users className="size-4" />,     bg: "bg-blue-100 dark:bg-blue-900/30",      color: "text-blue-600",    label: "Amigos" },
     { href: "/equipos",        icon: <Shield className="size-4" />,    bg: "bg-violet-100 dark:bg-violet-900/30",  color: "text-violet-600",  label: "Equipos" },

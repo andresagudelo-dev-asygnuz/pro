@@ -174,7 +174,7 @@ export default function CanchasPage() {
   const [geoStatus, setGeoStatus] = useState<"idle" | "checking" | "needs_permission" | "loading" | "ready" | "denied">("idle");
   const [geoSkipped, setGeoSkipped] = useState(() => localStorage.getItem("geo_skipped") === "1");
 
-  const venueMap = new globalThis.Map<string, Venue>(allVenues.map((v): [string, Venue] => [v.id, v]));
+  const venueMap = new Map<string, Venue>(allVenues.map((v): [string, Venue] => [v.id, v]));
 
   // Venue combobox: only show suggestions when city is typed OR location is active
   // Prevents showing all venues when neither filter is active

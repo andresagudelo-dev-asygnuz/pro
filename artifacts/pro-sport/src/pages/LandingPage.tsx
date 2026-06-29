@@ -1,3 +1,7 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/context/AuthContext";
+import { getLastRoute } from "@/hooks/useLastRoute";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { ChallengeSection } from "@/components/landing/ChallengeSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
@@ -7,6 +11,19 @@ import { RegistrationForm } from "@/components/landing/RegistrationForm";
 import { LaunchBanner } from "@/components/landing/LaunchBanner";
 
 export default function LandingPage() {
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // If already logged in (e.g. opened PWA from home screen), redirect to last route
+  useEffect(() => {
+    if (!loading && user) {
+      const last = getLastRoute();
+      setLocation(last ?? "/feed");
+    }
+  }, [user, loading, setLocation]);
+
+  if (loading || user) return null; // Avoid flash of landing while redirecting
+
   return (
     <div className="min-h-screen">
       <LaunchBanner />

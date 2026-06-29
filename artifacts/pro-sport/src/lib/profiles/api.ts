@@ -24,6 +24,42 @@ export async function getProfileById(
   return { data: data as Profile | null, error: null };
 }
 
+export async function searchProfilesByUsername(
+  supabase: SupabaseClient,
+  query: string,
+): Promise<ApiResult<Profile[]>> {
+  if (!query || query.trim().length < 3) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .ilike("username", `%${query}%`)
+    .limit(10);
+
+  if (error) return { data: null, error: mapDbError(error, "searchProfilesByUsername") };
+  return { data: (data ?? []) as Profile[], error: null };
+}
+
+// ── getTopPlayers — Fetch top players by rating or matches played ────────────
+export async function getTopPlayers(
+  supabase: SupabaseClient,
+  metric: "rating" | "matches",
+  limit: number = 50
+): Promise<ApiResult<Profile[]>> {
+  let query = supabase.from("profiles").select("*");
+  
+  if (metric === "rating") {
+    // Only consider players with at least 1 rating
+    query = query.gt("rating_count", 0).order("rating_avg", { ascending: false }).order("rating_count", { ascending: false });
+  } else if (metric === "matches") {
+    query = query.order("matches_played", { ascending: false });
+  }
+
+  const { data, error } = await query.limit(limit);
+
+  if (error) return { data: null, error: mapDbError(error, "getTopPlayers") };
+  return { data: (data ?? []) as Profile[], error: null };
+}
+
 export async function getProfilesByIds(
   supabase: SupabaseClient,
   ids: string[],

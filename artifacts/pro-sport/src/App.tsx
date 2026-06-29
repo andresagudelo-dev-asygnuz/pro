@@ -6,6 +6,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { NotifProvider } from "@/context/NotifContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useLastRoute } from "@/hooks/useLastRoute";
+import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 // Eager — first visible pages, keep small
 import LandingPage from "@/pages/LandingPage";
@@ -31,6 +33,7 @@ const NewMatchPage               = lazy(() => import("@/pages/NewMatchPage"));
 const EditMatchPage              = lazy(() => import("@/pages/EditMatchPage"));
 const MatchDetailPage            = lazy(() => import("@/pages/MatchDetailPage"));
 const MisPartidosPage            = lazy(() => import("@/pages/MisPartidosPage"));
+const LeaderboardPage            = lazy(() => import("@/pages/LeaderboardPage"));
 
 const TournamentsPage            = lazy(() => import("@/pages/TournamentsPage"));
 const NewTournamentPage          = lazy(() => import("@/pages/NewTournamentPage"));
@@ -79,6 +82,7 @@ import { PageLoader } from "@/components/ui/PageLoader";
 const queryClient = new QueryClient();
 
 function Router() {
+  useLastRoute(); // Persist current route for session restore
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
@@ -179,6 +183,9 @@ function Router() {
         </Route>
         <Route path="/mis-reservas">
           <ErrorBoundary><ProtectedRoute component={MisReservasPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/ranking">
+          <ErrorBoundary><ProtectedRoute component={LeaderboardPage} layout="player" /></ErrorBoundary>
         </Route>
 
         {/* Canchas management — specific sub-routes before /:id */}
@@ -286,6 +293,7 @@ function App() {
             <Router />
           </WouterRouter>
           <Toaster richColors position="top-right" />
+          <PwaInstallBanner />
         </NotifProvider>
       </AuthProvider>
     </QueryClientProvider>

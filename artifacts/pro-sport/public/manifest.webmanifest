@@ -1,0 +1,64 @@
+{
+  "name": "PRO. — Plataforma Deportiva",
+  "short_name": "PRO.",
+  "description": "Encontrá y organizá partidos en tu ciudad. La plataforma deportiva de tu comunidad.",
+  "start_url": "/feed",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#18181b",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["sports", "lifestyle", "social"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Feed de partidos"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nuevo partido",
+      "short_name": "Crear",
+      "description": "Crear un nuevo partido",
+      "url": "/matches/new",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mis partidos",
+      "short_name": "Partidos",
+      "description": "Ver mis partidos",
+      "url": "/mis-partidos",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -18,22 +18,12 @@ interface Props {
   chatInputRef: RefObject<HTMLInputElement | null>;
   onChatMessageChange: (val: string) => void;
   onSendMessage: (e: React.FormEvent) => void;
-  showRating: boolean;
-  othersToRate: MatchParticipant[];
-  myRatings: Record<string, number>;
-  submittingRatings: boolean;
-  ratingsSubmitted: boolean;
-  isCompleted: boolean;
-  onSetRating: (userId: string, rating: number) => void;
-  onSubmitRatings: () => void;
 }
 
 export function MatchChatSection({
   messages, profilesById, userId, canChat,
   chatMessage, sendingMsg, chatBottomRef, chatInputRef,
   onChatMessageChange, onSendMessage,
-  showRating, othersToRate, myRatings, submittingRatings, ratingsSubmitted, isCompleted,
-  onSetRating, onSubmitRatings,
 }: Props) {
   return (
     <>
@@ -132,57 +122,6 @@ export function MatchChatSection({
         )}
       </div>
 
-      {/* Post-match rating */}
-      {showRating && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-amber-200 dark:border-amber-800 overflow-hidden shadow-sm">
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 px-5 py-4 border-b border-amber-200/60 dark:border-amber-800/40">
-            <div className="flex items-center gap-2">
-              <Star className="size-5 text-amber-500 fill-amber-500" />
-              <h2 className="text-sm font-bold text-amber-900 dark:text-amber-200">Calificá a tus compañeros</h2>
-            </div>
-            <p className="text-xs text-amber-700/70 dark:text-amber-400/60 mt-0.5">Tu opinión construye la comunidad PRO.</p>
-          </div>
-          <div className="p-5">
-            <ul className="flex flex-col divide-y divide-border/40">
-              {othersToRate.map((p) => {
-                const pp = profilesById.get(p.user_id);
-                const currentRating = myRatings[p.user_id] ?? 0;
-                return (
-                  <li key={p.user_id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar className="size-9">
-                        {pp?.avatar_url && <AvatarImage src={pp.avatar_url} />}
-                        <AvatarFallback className="text-xs bg-muted">{initialsFromName(pp?.full_name ?? null)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{pp?.full_name ?? pp?.username ?? "Jugador"}</p>
-                        {(pp?.rating_count ?? 0) > 0 && <p className="text-xs text-muted-foreground">★ {pp?.rating_avg?.toFixed(1)}</p>}
-                      </div>
-                    </div>
-                    <div className="flex gap-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button key={star} type="button" onClick={() => onSetRating(p.user_id, star)} className="p-0.5 transition-transform active:scale-90">
-                          <Star className={`size-6 transition-colors ${star <= currentRating ? "text-amber-400 fill-amber-400" : "text-zinc-200 dark:text-zinc-700"}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            <Button className="mt-4 w-full rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold" disabled={submittingRatings || Object.keys(myRatings).length === 0} onClick={onSubmitRatings}>
-              {submittingRatings ? "Guardando…" : "Enviar calificaciones"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {isCompleted && ratingsSubmitted && (
-        <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-center gap-3 text-emerald-800 dark:text-emerald-300">
-          <CheckCircle2 className="size-5 shrink-0" />
-          <p className="text-sm font-medium">Ya enviaste tus calificaciones para este partido.</p>
-        </div>
-      )}
     </>
   );
 }

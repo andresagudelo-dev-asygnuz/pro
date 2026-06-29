@@ -63,6 +63,12 @@ function BookingCard({
   const cancha = booking.canchas;
   const canCancel = !!onCancel && (booking.status === "pendiente" || booking.status === "confirmada");
 
+  let expirationText = "";
+  if (booking.status === "pendiente" && booking.payment_status === "sin_anticipo" && booking.created_at) {
+    const expirationTime = new Date(new Date(booking.created_at).getTime() + 2 * 60 * 60 * 1000);
+    expirationText = expirationTime.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  }
+
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm hover:shadow-md hover:border-violet-200 dark:hover:border-violet-800 transition-all duration-200 overflow-hidden">
       <Link href={`/canchas/${booking.cancha_id}`}>
@@ -110,9 +116,9 @@ function BookingCard({
               📝 {booking.notes}
             </p>
           )}
-          {booking.status === "pendiente" && booking.payment_status === "sin_anticipo" && (booking as any).created_at && (
+          {expirationText && (
             <div className="mt-2 text-xs text-amber-700 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1.5 rounded-md flex items-center gap-1.5">
-              <span>Falta comprobante (vence a las {new Date(new Date((booking as any).created_at).getTime() + 2 * 60 * 60 * 1000).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })})</span>
+              <span>Falta comprobante (vence a las {expirationText})</span>
             </div>
           )}
         </div>

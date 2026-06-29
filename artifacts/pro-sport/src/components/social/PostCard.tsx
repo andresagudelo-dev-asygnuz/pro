@@ -3,7 +3,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName, formatRelativeTime } from "@/lib/format";
 import { MessageCircle, MapPin, Trash2 } from "lucide-react";
 import { FistBumpButton } from "./FistBumpButton";
+import { PostCommentsInline } from "./PostCommentsInline";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,12 +22,14 @@ interface PostCardProps {
   post: PostWithDetails;
   currentUserId?: string;
   onLikeToggle: (postId: string) => void;
-  onCommentClick: (post: PostWithDetails) => void;
+  onCommentAdded: (postId: string) => void;
   onLocationClick?: (canchaId: string) => void;
   onDeleteClick?: (postId: string) => void;
 }
 
-export function PostCard({ post, currentUserId, onLikeToggle, onCommentClick, onLocationClick, onDeleteClick }: PostCardProps) {
+export function PostCard({ post, currentUserId, onLikeToggle, onCommentAdded, onLocationClick, onDeleteClick }: PostCardProps) {
+  const [showComments, setShowComments] = useState(false);
+
   return (
     <div className="bg-card border-y sm:border sm:rounded-2xl border-border/50 overflow-hidden mb-4 sm:mb-6 flex flex-col">
       {/* Header */}
@@ -110,7 +114,7 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentClick, on
             onClick={() => onLikeToggle(post.id)} 
           />
           <button 
-            onClick={() => onCommentClick(post)}
+            onClick={() => setShowComments(!showComments)}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full"
           >
             <MessageCircle className="size-5" />
@@ -126,6 +130,10 @@ export function PostCard({ post, currentUserId, onLikeToggle, onCommentClick, on
           </p>
         )}
       </div>
+
+      {showComments && (
+        <PostCommentsInline post={post} onCommentAdded={onCommentAdded} />
+      )}
     </div>
   );
 }

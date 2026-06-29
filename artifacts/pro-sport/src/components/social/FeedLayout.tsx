@@ -7,12 +7,12 @@ interface FeedLayoutProps {
   currentUserId?: string;
   isLoading: boolean;
   onLikeToggle: (postId: string) => void;
-  onCommentClick: (post: PostWithDetails) => void;
+  onCommentAdded: (postId: string) => void;
   onLocationClick?: (canchaId: string) => void;
   onDeleteClick?: (postId: string) => void;
 }
 
-export function FeedLayout({ posts, currentUserId, isLoading, onLikeToggle, onCommentClick, onLocationClick, onDeleteClick }: FeedLayoutProps) {
+export function FeedLayout({ posts, currentUserId, isLoading, onLikeToggle, onCommentAdded, onLocationClick, onDeleteClick }: FeedLayoutProps) {
   if (isLoading) {
     return (
       <div className="w-full flex items-center justify-center py-12">
@@ -41,7 +41,7 @@ export function FeedLayout({ posts, currentUserId, isLoading, onLikeToggle, onCo
           post={post} 
           currentUserId={currentUserId}
           onLikeToggle={onLikeToggle}
-          onCommentClick={onCommentClick}
+          onCommentAdded={onCommentAdded}
           onLocationClick={onLocationClick}
           onDeleteClick={onDeleteClick}
         />

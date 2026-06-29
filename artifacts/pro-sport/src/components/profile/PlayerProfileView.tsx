@@ -10,6 +10,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { PlayerCard } from "@/components/PlayerCard";
 import { Button } from "@/components/ui/button";
 import { canViewBlock, type ViewerContext } from "@/lib/profiles/visibility";
+import { NotificationPermissionCard } from "@/components/NotificationPermissionCard";
 import {
   LogOut, Pencil, Shield, Trophy, Zap, Building2, Bell, Users,
   Calendar, Bookmark, ChevronRight, Star, MapPin, Target, Flame,
@@ -481,6 +482,7 @@ export function PlayerProfileView({
             {[
               { href: "/mis-partidos",   icon: <Zap className="size-4" />,      bg: "bg-violet-100 dark:bg-violet-900/30",  color: "text-violet-600",  label: "Mis partidos"   },
               { href: "/mis-reservas",   icon: <Bookmark className="size-4" />,  bg: "bg-emerald-100 dark:bg-emerald-900/30", color: "text-emerald-600", label: "Mis reservas"   },
+              { href: "/ranking",        icon: <Trophy className="size-4" />,    bg: "bg-orange-100 dark:bg-orange-900/30",  color: "text-orange-600",  label: "Ranking Local" },
               { href: "/notificaciones", icon: <Bell className="size-4" />,      bg: "bg-amber-100 dark:bg-amber-900/30",    color: "text-amber-600",   label: "Notificaciones" },
               { href: "/amigos",         icon: <Users className="size-4" />,     bg: "bg-blue-100 dark:bg-blue-900/30",      color: "text-blue-600",    label: "Amigos"         },
               { href: "/equipos",        icon: <Shield className="size-4" />,    bg: "bg-violet-100 dark:bg-violet-900/30",  color: "text-violet-600",  label: "Equipos"        },
@@ -500,6 +502,9 @@ export function PlayerProfileView({
               </Link>
             ))}
           </nav>
+          <div className="px-3 pb-3">
+            <NotificationPermissionCard />
+          </div>
         </div>
 
         {/* ── GESTIÓN (promoter / cancha) ── */}

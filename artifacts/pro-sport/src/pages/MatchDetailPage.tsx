@@ -17,6 +17,7 @@ import { MatchActionsPanel } from "@/components/matches/MatchActionsPanel";
 import { MatchPlayersSection } from "@/components/matches/MatchPlayersSection";
 import { MatchChatSection } from "@/components/matches/MatchChatSection";
 import { PaymentPendingModal } from "@/components/canchas/PaymentPendingModal";
+import { PostMatchModal } from "@/components/matches/PostMatchModal";
 
 export default function MatchDetailPage() {
   const { user, profile } = useAuth();
@@ -27,7 +28,7 @@ export default function MatchDetailPage() {
     match, sport, organizer, participants, profilesById, canchaBooking,
     loading, error, messages, sendingMsg, myInvitation, pendingInvitations, waitlist,
     sendMessage, leaveMatch, requestJoin, confirmAttendance, cancelMatch,
-    joinWaitlist, acceptJoinRequest, rejectJoinRequest, respondInvitation,
+    joinWaitlist, acceptJoinRequest, rejectJoinRequest, respondInvitation, updateAttendance,
   } = useMatchDetail(id!, user?.id);
 
   const [chatMessage, setChatMessage]             = useState("");
@@ -49,9 +50,9 @@ export default function MatchDetailPage() {
   const [friendsLoaded, setFriendsLoaded]         = useState(false);
 
   const [joiningWaitlist, setJoiningWaitlist]     = useState(false);
-  const [myRatings, setMyRatings]                 = useState<Record<string, number>>({});
   const [submittingRatings, setSubmittingRatings] = useState(false);
   const [ratingsSubmitted, setRatingsSubmitted]   = useState(false);
+  const [showRatingModal, setShowRatingModal]     = useState(false);
 
   useEffect(() => { chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -118,10 +119,10 @@ export default function MatchDetailPage() {
     setRequesting(false);
   }
 
-  async function handleSubmitRatings() {
+  async function handleSubmitRatings(ratings: Record<string, number>) {
     if (!user || !match) return;
     setSubmittingRatings(true);
-    const rows = Object.entries(myRatings)
+    const rows = Object.entries(ratings)
       .filter(([, r]) => r > 0)
       .map(([rated_id, rating]) => ({ match_id: match.id, rater_id: user.id, rated_id, rating }));
     if (rows.length === 0) {
@@ -292,6 +293,13 @@ export default function MatchDetailPage() {
   const canInvite       = (isJoined || isOrganizer) && spotsLeft > 0 && match.status === "open";
   const canChat         = isJoined || isOrganizer;
 
+  // Auto-open rating modal if eligible
+  useEffect(() => {
+    if (showRating && !showRatingModal && !ratingsSubmitted) {
+      setShowRatingModal(true);
+    }
+  }, [showRating, showRatingModal, ratingsSubmitted]);
+
   return (
     <>
       <div className="flex flex-col gap-3 max-w-2xl mx-auto">
@@ -363,6 +371,7 @@ export default function MatchDetailPage() {
           spotsLeft={spotsLeft}
           isOrganizer={isOrganizer}
           matchPassed={matchPassed}
+          isCompleted={isCompleted}
           canJoinWaitlist={canJoinWaitlist}
           isOnWaitlist={isOnWaitlist}
           myWaitPosition={myWaitPosition}
@@ -381,6 +390,7 @@ export default function MatchDetailPage() {
           })}
           onSendInvites={handleSendInvites}
           onJoinWaitlist={handleJoinWaitlist}
+          onUpdateAttendance={updateAttendance}
         />
 
         <MatchChatSection
@@ -394,14 +404,15 @@ export default function MatchDetailPage() {
           chatInputRef={chatInputRef}
           onChatMessageChange={setChatMessage}
           onSendMessage={handleSendMessage}
-          showRating={showRating}
+        />
+
+        <PostMatchModal 
+          open={showRatingModal}
+          onOpenChange={setShowRatingModal}
           othersToRate={othersToRate}
-          myRatings={myRatings}
-          submittingRatings={submittingRatings}
-          ratingsSubmitted={ratingsSubmitted}
-          isCompleted={isCompleted}
-          onSetRating={(uid, rating) => setMyRatings((prev) => ({ ...prev, [uid]: rating }))}
-          onSubmitRatings={handleSubmitRatings}
+          profilesById={profilesById}
+          onSubmit={handleSubmitRatings}
+          submitting={submittingRatings}
         />
 
         {canchaBooking && (

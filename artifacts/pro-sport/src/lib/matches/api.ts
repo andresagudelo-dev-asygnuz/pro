@@ -323,6 +323,27 @@ export async function upsertMatchRatings(
     .from("match_ratings")
     .upsert(rows, { onConflict: "match_id,rater_id,rated_id" });
   if (error) return { data: null, error: mapDbError(error, "upsertMatchRatings") };
+
+  // Recalculate ratings for affected users
+  const uniqueRatedIds = [...new Set(rows.map(r => r.rated_id))];
+  for (const userId of uniqueRatedIds) {
+    const { data: ratingsData } = await supabase
+      .from("match_ratings")
+      .select("rating")
+      .eq("rated_id", userId);
+    
+    if (ratingsData && ratingsData.length > 0) {
+      const count = ratingsData.length;
+      const sum = ratingsData.reduce((acc, row) => acc + row.rating, 0);
+      const avg = sum / count;
+
+      await supabase
+        .from("profiles")
+        .update({ rating_avg: avg, rating_count: count })
+        .eq("id", userId);
+    }
+  }
+
   return { data: null, error: null };
 }
 
@@ -394,6 +415,40 @@ export async function confirmMatchAttendance(
     .eq("match_id", matchId)
     .eq("user_id", userId);
   if (error) return { data: null, error: mapDbError(error, "confirmMatchAttendance") };
+  return { data: null, error: null };
+}
+
+// ── updateParticipantAttendance — set final attendance status (attended/no_show) ──
+export async function updateParticipantAttendance(
+  supabase: SupabaseClient,
+  matchId: string,
+  participantUserId: string,
+  status: "attended" | "no_show",
+): Promise<ApiResult<null>> {
+  const { error: updateErr } = await supabase
+    .from("match_participants")
+    .update({ status })
+    .eq("match_id", matchId)
+    .eq("user_id", participantUserId);
+
+  if (updateErr) return { data: null, error: mapDbError(updateErr, "updateParticipantAttendance") };
+
+  // Auto-increment matches_played if attended
+  if (status === "attended") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("matches_played")
+      .eq("id", participantUserId)
+      .single();
+
+    if (profile) {
+      await supabase
+        .from("profiles")
+        .update({ matches_played: (profile.matches_played || 0) + 1 })
+        .eq("id", participantUserId);
+    }
+  }
+
   return { data: null, error: null };
 }
 
