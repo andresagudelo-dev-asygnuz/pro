@@ -15,6 +15,7 @@ export type TournamentRow = {
     | "borrador"
     | "abierto_inscripciones"
     | "cerrado_inscripciones"
+    | "in_progress"
     | "cancelado"
     | "finalizado";
   categories: unknown;
@@ -69,14 +70,34 @@ export async function getTournamentById(supabase: SupabaseClient, id: string) {
   return { error: null, data };
 }
 
-export async function getTournaments(supabase: SupabaseClient) {
-  const { data, error } = await supabase
+export async function getTournaments(
+  supabase: SupabaseClient,
+  options: { cursor?: string; limit?: number } = {},
+): Promise<{ data: TournamentRow[] | null; error: string | null; nextCursor: string | null }> {
+  const limit = options.limit ?? 20;
+
+  let query = supabase
     .from("tournaments")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(limit + 1);
 
-  if (error) return { error: mapDbError(error), data: null };
-  return { error: null, data };
+  if (options.cursor) {
+    query = query.lt("created_at", options.cursor);
+  }
+
+  const { data, error } = await query;
+
+  if (error) return { error: mapDbError(error), data: null, nextCursor: null };
+
+  const rows = (data ?? []) as TournamentRow[];
+
+  if (rows.length > limit) {
+    const nextCursor = rows[limit - 1].created_at;
+    return { error: null, data: rows.slice(0, limit), nextCursor };
+  }
+
+  return { error: null, data: rows, nextCursor: null };
 }
 
 export async function getMyTournaments(supabase: SupabaseClient, userId: string) {
@@ -114,16 +135,58 @@ export async function getRegisteredTournaments(
   return { error: null, data: tournaments };
 }
 
-export async function publishTournament(supabase: SupabaseClient, id: string, userId: string) {
+type ApiResult<T> = { data: T | null; error: string | null };
+
+async function transitionTournamentStatus(
+  supabase: SupabaseClient,
+  id: string,
+  from: TournamentRow["status"],
+  to: TournamentRow["status"],
+  userId: string,
+): Promise<ApiResult<TournamentRow>> {
   const { data, error } = await supabase
     .from("tournaments")
-    .update({ status: "abierto_inscripciones" })
+    .update({ status: to, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("owner_id", userId)
-    .eq("status", "borrador")
+    .eq("status", from)
     .select()
     .single();
+  if (error) return { data: null, error: mapDbError(error, "tournament_transition") };
+  if (!data) return { data: null, error: "No se pudo actualizar el torneo. Refrescá la página." };
+  return { data: data as TournamentRow, error: null };
+}
 
-  if (error) return { error: mapDbError(error), data: null };
-  return { error: null, data };
+export async function publishTournament(
+  supabase: SupabaseClient, id: string, userId: string,
+): Promise<ApiResult<TournamentRow>> {
+  return transitionTournamentStatus(supabase, id, "borrador", "abierto_inscripciones", userId);
+}
+
+export async function closeRegistrations(
+  supabase: SupabaseClient, id: string, userId: string,
+): Promise<ApiResult<TournamentRow>> {
+  return transitionTournamentStatus(supabase, id, "abierto_inscripciones", "cerrado_inscripciones", userId);
+}
+
+export async function startTournament(
+  supabase: SupabaseClient, id: string, userId: string,
+): Promise<ApiResult<TournamentRow>> {
+  return transitionTournamentStatus(supabase, id, "cerrado_inscripciones", "in_progress", userId);
+}
+
+export async function finalizeTournament(
+  supabase: SupabaseClient, id: string, userId: string,
+): Promise<ApiResult<TournamentRow>> {
+  const { data, error } = await supabase
+    .from("tournaments")
+    .update({ status: "finalizado", updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("owner_id", userId)
+    .in("status", ["cerrado_inscripciones", "in_progress"])
+    .select()
+    .single();
+  if (error) return { data: null, error: mapDbError(error, "tournament_transition") };
+  if (!data) return { data: null, error: "No se pudo actualizar el torneo. Refrescá la página." };
+  return { data: data as TournamentRow, error: null };
 }

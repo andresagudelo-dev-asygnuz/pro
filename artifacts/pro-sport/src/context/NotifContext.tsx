@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "./AuthContext";
 
 interface NotifContextValue {
@@ -88,8 +88,6 @@ export function NotifProvider({ children }: { children: React.ReactNode }) {
       setUnreadCount(0);
       return;
     }
-
-    const supabase = createClient();
 
     supabase
       .from("notifications")

@@ -118,6 +118,16 @@ export async function sendFriendRequest(
     .select()
     .single();
   if (error) return { error: mapDbError(error), data: null };
+
+  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", requesterId).single();
+  if (profile) {
+    const { notifyFriendRequest } = await import("@/lib/notifications/api");
+    await notifyFriendRequest(supabase, addresseeId, {
+      from_id: requesterId,
+      from_name: profile.full_name || "Un usuario"
+    });
+  }
+
   return { error: null, data: data as Friendship };
 }
 
@@ -132,6 +142,16 @@ export async function acceptFriendRequest(
     .select()
     .single();
   if (error) return { error: mapDbError(error), data: null };
+
+  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", data.addressee_id).single();
+  if (profile) {
+    const { notifyFriendAccepted } = await import("@/lib/notifications/api");
+    await notifyFriendAccepted(supabase, data.requester_id, {
+      from_id: data.addressee_id,
+      from_name: profile.full_name || "Un usuario"
+    });
+  }
+
   return { error: null, data: data as Friendship };
 }
 
@@ -176,6 +196,22 @@ export async function sendMatchInvitations(
     .insert(rows)
     .select();
   if (error) return { error: mapDbError(error), data: null };
+
+  const { data: match } = await supabase.from("matches").select("title").eq("id", matchId).single();
+  const { data: inviter } = await supabase.from("profiles").select("full_name").eq("id", inviterId).single();
+  
+  if (match && inviter) {
+    const { sendNotification } = await import("@/lib/notifications/api");
+    for (const inviteeId of inviteeIds) {
+      await sendNotification(supabase, inviteeId, "match_invite", {
+        match_id: matchId,
+        match_title: match.title || "un partido",
+        inviter_id: inviterId,
+        inviter_name: inviter.full_name || "Un usuario"
+      });
+    }
+  }
+
   return { error: null, data: (data ?? []) as MatchInvitation[] };
 }
 
@@ -233,5 +269,6 @@ export async function getPendingMatchInvitations(
     .eq("status", "pending")
     .order("created_at", { ascending: false });
   if (error) return { error: mapDbError(error), data: null };
-  return { error: null, data: (data ?? []) as any };
+  type Row = MatchInvitation & { matches: { title: string; starts_at: string } | null };
+  return { error: null, data: (data ?? []) as Row[] };
 }

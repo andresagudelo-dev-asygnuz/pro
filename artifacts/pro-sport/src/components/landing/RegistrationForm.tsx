@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabase";
+import { checkWaitlistEmail, registerToWaitlist } from "@/lib/waitlist/api";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,7 +26,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { GlassContainer } from "./GlassContainer";
 import { CheckCircle2, Copy, Share2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 
 const formSchema = z.object({
@@ -52,38 +53,33 @@ export function RegistrationForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const supabase = createClient();
 
     try {
-      const { data: existing } = await supabase
-        .from("market_validation_responses")
-        .select("id")
-        .eq("email", values.email)
-        .single();
+      const { data: alreadyExists, error: checkError } = await checkWaitlistEmail(supabase, values.email);
 
-      if (existing) {
+      if (checkError) throw new Error(checkError);
+
+      if (alreadyExists) {
         toast.info("Ya estás en la lista de espera. ¡Pronto tendrás noticias!");
         setIsSubmitted(true);
         return;
       }
 
-      const { error } = await supabase.from("market_validation_responses").insert([
-        {
-          name: values.name,
-          email: values.email,
-          main_sport: values.sport,
-          beta_interest: true,
-          signals: { source: "waitlist_form" },
-        },
-      ]);
+      const { error } = await registerToWaitlist(supabase, {
+        name: values.name,
+        email: values.email,
+        main_sport: values.sport,
+        beta_interest: true,
+        signals: { source: "waitlist_form" },
+      });
 
       if (error) {
-        if (error.code === "23505") {
+        if (error.includes("23505")) {
           toast.info("Ya estás en la lista de espera. ¡Pronto tendrás noticias!");
           setIsSubmitted(true);
           return;
         }
-        throw error;
+        throw new Error(error);
       }
 
       trackEvent("registration_submit", { sport: values.sport });

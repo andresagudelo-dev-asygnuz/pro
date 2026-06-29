@@ -12,7 +12,6 @@ export function CanchaOwnerTabs({ canchaId, canchaName }: Props) {
   const tabs = [
     { href: `/canchas/${canchaId}/agenda`,   label: "Agenda",  Icon: Calendar  },
     { href: `/canchas/${canchaId}/clientes`, label: "Clientes", Icon: Users    },
-    { href: `/canchas/${canchaId}/equipo`,   label: "Equipo",  Icon: Shield    },
     { href: `/canchas/${canchaId}/stats`,    label: "Stats",   Icon: BarChart2 },
   ];
 

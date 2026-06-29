@@ -1,7 +1,9 @@
+import { useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, User } from "lucide-react";
 import { initialsFromName } from "@/lib/format";
 import type { Profile } from "@/lib/types/db";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 
 /* ─── Level styles ──────────────────────────────────────────────────────── */
 const CARD_STYLES = {
@@ -45,17 +47,17 @@ const CARD_STYLES = {
     badge:      "bg-amber-900/15 text-amber-900 border-amber-700/30",
   },
   pro: {
-    bg:         "from-violet-400 via-violet-700 to-purple-950",
-    shimmer:    "from-violet-200/30 via-violet-300/10 to-transparent",
-    highlight:  "from-violet-200/20 to-transparent",
+    bg:         "from-[#0df59d] via-[#16a085] to-[#8e44ad]",
+    shimmer:    "from-[#a29bfe]/40 via-white/20 to-transparent",
+    highlight:  "from-white/30 to-transparent",
     text:       "text-white",
-    subtext:    "text-violet-200/90",
-    border:     "border-violet-300/30",
-    ring:       "ring-violet-300/40",
-    divider:    "border-violet-300/20",
-    barBg:      "bg-violet-900/40",
-    barFill:    "bg-violet-100",
-    badge:      "bg-violet-300/20 text-violet-50 border-violet-300/30",
+    subtext:    "text-emerald-50",
+    border:     "border-[#0df59d]/50",
+    ring:       "ring-[#0df59d]/60",
+    divider:    "border-white/20",
+    barBg:      "bg-black/30",
+    barFill:    "bg-white",
+    badge:      "bg-white/20 text-white border-white/30",
   },
 } as const;
 
@@ -86,130 +88,279 @@ function SkillRow({
   barBg: string; barFill: string; text: string; subtext: string;
 }) {
   return (
-    <div className="flex items-center gap-1">
-      <span className={`text-[13px] font-black w-7 leading-none tabular-nums ${text}`}>{value}</span>
-      <span className={`text-[9px] font-black uppercase tracking-widest w-6 ${subtext}`}>{label}</span>
-      <div className={`flex-1 h-[3px] rounded-full ${barBg}`}>
+    <div className={`flex items-center justify-between ${text}`}>
+      <div className="flex items-baseline gap-1">
+        <span className="font-black text-[14px] leading-none drop-shadow-sm">{value}</span>
+        <span className={`font-bold text-[10px] leading-none ${subtext}`}>{label}</span>
+      </div>
+      <div className={`flex-1 h-[4px] rounded-full ml-2 ${barBg}`}>
         <div className={`h-full rounded-full ${barFill}`} style={{ width: `${value}%` }} />
       </div>
     </div>
   );
 }
 
-/* ─── Props ─────────────────────────────────────────────────────────────── */
+interface CardStyleConfig {
+  src: string;
+  text: string;
+  subtext: string;
+  barBg: string;
+  barFill: string;
+  avatarRing: string;
+  layout: {
+    topPadding: string;
+    avatarMargin: string;
+    avatarSize: string;
+    bottomPadding: string;
+    ovrSize: string;
+    posSize: string;
+    nameSize: string;
+    ballSize: string;
+    proSize: string;
+  };
+  bgFilter?: string;
+}
+
+function getCardConfig(ovr: number, size: "default" | "sm" = "default"): CardStyleConfig {
+  const isSm = size === "sm";
+  const commonLayout = {
+    topPadding: "px-[16%] pt-[22%]",
+    avatarMargin: "-mt-[6%]",
+    avatarSize: "w-[45%]",
+    bottomPadding: "pb-[16%]",
+    ovrSize: isSm ? "text-[38px]" : "text-[56px]",
+    posSize: isSm ? "text-[8px]" : "text-[12px]",
+    nameSize: isSm ? "text-[14px]" : "text-[20px]",
+    ballSize: isSm ? "text-[16px]" : "text-[24px]",
+    proSize: isSm ? "text-[6px]" : "text-[8px]",
+  };
+
+  if (ovr < 50) {
+    return {
+      src: "/images/image-3.png",
+      bgFilter: "brightness-[0.7] contrast-125 saturate-[1.2] hue-rotate-[-15deg] sepia-[0.3]",
+      text: "text-orange-50",
+      subtext: "text-orange-100/80",
+      barBg: "bg-orange-950/40",
+      barFill: "bg-orange-200",
+      avatarRing: "ring-orange-300/40",
+      layout: commonLayout
+    };
+  } else if (ovr < 85) {
+    return {
+      src: "/images/image-3.png",
+      bgFilter: "grayscale brightness-[1.15] contrast-110",
+      text: "text-zinc-900",
+      subtext: "text-zinc-900/80",
+      barBg: "bg-zinc-900/20",
+      barFill: "bg-zinc-900",
+      avatarRing: "ring-zinc-400/50",
+      layout: commonLayout
+    };
+  } else {
+    // 85+ Gold Card
+    return {
+      src: "/images/image-3.png",
+      bgFilter: "",
+      text: "text-[#3f2a05]",
+      subtext: "text-[#3f2a05]/80",
+      barBg: "bg-[#3f2a05]/20",
+      barFill: "bg-[#3f2a05]",
+      avatarRing: "ring-[#3f2a05]/30",
+      layout: commonLayout
+    };
+  }
+}
+
 interface PlayerCardProps {
   profile:     Profile | null;
   onPhotoClick?: () => void;
   uploading?:  boolean;
   editable?:   boolean;
+  showSkills?: boolean;
+  size?:       "default" | "sm";
 }
 
-export function PlayerCard({ profile, onPhotoClick, uploading = false, editable = false }: PlayerCardProps) {
-  const level   = (profile?.primary_skill_level ?? "principiante") as keyof typeof CARD_STYLES;
-  const s       = CARD_STYLES[level] ?? CARD_STYLES.principiante;
+export function PlayerCard({ profile, onPhotoClick, uploading = false, editable = false, showSkills = true, size = "default" }: PlayerCardProps) {
   const ovr     = computeOvr(profile);
   const initials = initialsFromName(profile?.full_name ?? profile?.username);
   const position = POSITION_ABBR[profile?.position ?? "mediocampista"] ?? "MED";
+  const cfg = getCardConfig(ovr, size);
+
+  /* ─── 3D Interaction Hooks ────────────────────────────────────────────── */
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  // Smooth springs for 3D tilt
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [15, -15]), { stiffness: 300, damping: 30 });
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-15, 15]), { stiffness: 300, damping: 30 });
+
+  // Glare effect movement
+  const glareX = useSpring(useTransform(x, [-0.5, 0.5], [100, -100]), { stiffness: 300, damping: 30 });
+  const glareY = useSpring(useTransform(y, [-0.5, 0.5], [100, -100]), { stiffness: 300, damping: 30 });
+  const glareOpacity = useSpring(useTransform(y, [-0.5, 0.5], [0, 0.6]), { stiffness: 300, damping: 30 });
+
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const xPct = (mouseX / width) - 0.5;
+    const yPct = (mouseY / height) - 0.5;
+    x.set(xPct);
+    y.set(yPct);
+  }
+
+  function handlePointerLeave() {
+    x.set(0);
+    y.set(0);
+  }
+
 
   return (
-    <div
-      className={`relative w-full max-w-[272px] mx-auto bg-gradient-to-br ${s.bg} rounded-[28px] shadow-2xl overflow-hidden select-none`}
-      style={{ aspectRatio: "5/7" }}
+    <>
+      <div 
+        className="relative w-full max-w-[340px] mx-auto select-none"
+      style={{ perspective: "1000px" }}
     >
-      {/* Shimmer — top-left diagonal */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${s.shimmer} pointer-events-none`} />
-      {/* Top highlight */}
-      <div className={`absolute top-0 left-0 right-0 h-2/5 bg-gradient-to-b ${s.highlight} pointer-events-none`} />
-      {/* Bottom vignette */}
-      <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/25 to-transparent pointer-events-none" />
+      <motion.div
+        ref={ref}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+        style={{
+          rotateX,
+          rotateY,
+          transformStyle: "preserve-3d",
+          aspectRatio: "5/7",
+        }}
+        className="relative w-full cursor-pointer transition-transform duration-75"
+      >
+        {/* ── BACKGROUND IMAGE ── */}
+        <img 
+          src={cfg.src} 
+          alt="Card Background" 
+          className={`absolute inset-0 w-full h-full object-fill pointer-events-none drop-shadow-2xl z-0 ${cfg.bgFilter || ""}`} 
+        />
 
-      {/* Inner frame */}
-      <div className={`absolute inset-[7px] rounded-[22px] border ${s.border} flex flex-col`}>
-
-        {/* ── Top row ── */}
-        <div className="flex items-start justify-between px-3.5 pt-3">
-          <div>
-            <p className={`text-[56px] font-black leading-none tracking-tight ${s.text}`}>{ovr}</p>
-            <p className={`text-[10px] font-black uppercase tracking-[0.3em] -mt-0.5 ${s.subtext}`}>{position}</p>
-          </div>
-          <div className="flex flex-col items-center pt-1 gap-0.5">
-            <span className="text-[22px] leading-none drop-shadow-md">⚽</span>
-            <span className={`text-[8px] font-black uppercase tracking-widest ${s.subtext}`}>PRO.</span>
-          </div>
+        {/* ── GLARE REFLECTION ── */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            WebkitMaskImage: `url(${cfg.src})`,
+            WebkitMaskSize: "100% 100%",
+            maskImage: `url(${cfg.src})`,
+            maskSize: "100% 100%",
+            transform: "translateZ(1px)",
+            zIndex: 1,
+          }}
+        >
+          <motion.div
+            className="absolute w-[200%] h-[200%] -left-[50%] -top-[50%]"
+            style={{
+              opacity: glareOpacity,
+              x: glareX,
+              y: glareY,
+              background: "radial-gradient(circle at center, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 50%)",
+              mixBlendMode: "overlay"
+            }}
+          />
         </div>
 
-        {/* ── Avatar ── */}
-        <div className="flex justify-center mt-1 flex-1 items-center">
-          {editable ? (
-            <button
-              type="button"
-              onClick={onPhotoClick}
-              disabled={uploading}
-              className="relative group outline-none"
-              aria-label="Cambiar foto"
-            >
-              <Avatar className={`size-[120px] ring-[3px] ${s.ring} shadow-xl`}>
-                {profile?.avatar_url && (
-                  <AvatarImage src={profile.avatar_url} alt="Avatar" className="object-cover" />
+        {/* 3D Content Layers */}
+        <div 
+          className="absolute inset-0 flex flex-col z-10"
+          style={{ transform: "translateZ(40px)" }} // Pushes content out in 3D
+        >
+          {/* ── Top row (Rating & Position) ── */}
+          <div className={`flex items-start justify-between ${cfg.layout.topPadding} relative z-10 pointer-events-none`}>
+            <div>
+              <p className={`${cfg.layout.ovrSize} font-black leading-[0.8] tracking-tighter ${cfg.text} drop-shadow-sm`}>{ovr}</p>
+              <p className={`${cfg.layout.posSize} font-black uppercase tracking-[0.4em] mt-1 ${cfg.subtext}`}>{position}</p>
+            </div>
+            <div className="flex flex-col items-center pt-1 gap-1">
+              <span className={`${cfg.layout.ballSize} leading-none drop-shadow-sm`}>⚽</span>
+              <span className={`${cfg.layout.proSize} font-black uppercase tracking-widest ${cfg.subtext}`}>PRO.</span>
+            </div>
+          </div>
+
+          {/* ── Avatar (3D Pop) ── */}
+          <div 
+            className={`flex justify-center ${cfg.layout.avatarMargin} relative z-0 pointer-events-auto`}
+            style={{ transform: "translateZ(50px)" }} // Pops the avatar even further!
+          >
+            {editable ? (
+              <button
+                type="button"
+                onClick={onPhotoClick}
+                disabled={uploading}
+                className="relative group outline-none"
+                aria-label="Cambiar foto"
+              >
+                <div className={`${cfg.layout.avatarSize} h-auto aspect-square mx-auto relative overflow-hidden rounded-2xl`}>
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover object-bottom" />
+                  ) : (
+                    <div className="w-full h-full bg-black/10 flex items-center justify-center">
+                       <User className={`w-1/2 h-1/2 ${cfg.text} opacity-20`} />
+                    </div>
+                  )}
+                </div>
+                <div className={`absolute inset-0 rounded-2xl bg-black/55 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity ${cfg.layout.avatarSize} mx-auto`}>
+                  {uploading
+                    ? <Loader2 className="size-10 text-white animate-spin" />
+                    : <Camera className="size-10 text-white drop-shadow-md" />}
+                </div>
+              </button>
+            ) : (
+              <div className={`${cfg.layout.avatarSize} h-auto aspect-square mx-auto relative overflow-hidden rounded-2xl`}>
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover object-bottom" />
+                ) : (
+                  <div className="w-full h-full bg-black/10 flex items-center justify-center">
+                     <User className={`w-1/2 h-1/2 ${cfg.text} opacity-20`} />
+                  </div>
                 )}
-                <AvatarFallback className="bg-black/20 text-3xl font-black" style={{ color: "inherit" }}>
-                  <span className={s.text}>{initials}</span>
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute inset-0 rounded-full bg-black/55 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                {uploading
-                  ? <Loader2 className="size-8 text-white animate-spin" />
-                  : <Camera className="size-8 text-white drop-shadow-md" />}
               </div>
-            </button>
-          ) : (
-            <Avatar className={`size-[120px] ring-[3px] ${s.ring} shadow-xl`}>
-              {profile?.avatar_url && (
-                <AvatarImage src={profile.avatar_url} alt="Avatar" className="object-cover" />
-              )}
-              <AvatarFallback className="bg-black/20 text-3xl font-black">
-                <span className={s.text}>{initials}</span>
-              </AvatarFallback>
-            </Avatar>
+            )}
+          </div>
+
+          {/* ── Name & City ── */}
+          <div className="text-center px-[12%] mt-[6%] relative z-10 w-full overflow-hidden">
+            <p className={`${cfg.layout.nameSize} font-black uppercase tracking-widest leading-tight truncate ${cfg.text} drop-shadow-sm`}>
+              {profile?.full_name ?? "Jugador"}
+            </p>
+          </div>
+
+          {/* ── Skills grid ── */}
+          {showSkills && (
+            <div className={`px-[15%] py-[1%] mt-[2%] grid grid-cols-2 gap-x-[5%] gap-y-[2%] ${cfg.layout.bottomPadding} relative z-10`}>
+              {[
+                ["PAC", profile?.skill_pace      ?? 50],
+                ["TIR", profile?.skill_shooting  ?? 50],
+                ["PAS", profile?.skill_passing   ?? 50],
+                ["REG", profile?.skill_dribbling ?? 50],
+                ["DEF", profile?.skill_defending ?? 50],
+                ["FIS", profile?.skill_physical  ?? 50],
+              ].map(([label, val]) => (
+                <SkillRow
+                  key={label}
+                  label={label}
+                  value={val}
+                  barBg={cfg.barBg}
+                  barFill={cfg.barFill}
+                  text={cfg.text}
+                  subtext={cfg.subtext}
+                />
+              ))}
+            </div>
           )}
+
         </div>
-
-        {/* ── Name & City ── */}
-        <div className="text-center px-3 mt-1">
-          <p className={`text-[16px] font-black uppercase tracking-wider leading-tight truncate ${s.text} drop-shadow-sm`}>
-            {profile?.full_name ?? "Jugador"}
-          </p>
-          {profile?.city && (
-            <p className={`text-[10px] font-semibold mt-0.5 truncate ${s.subtext}`}>{profile.city}</p>
-          )}
-        </div>
-
-        {/* ── Divider ── */}
-        <div className={`mx-4 mt-2.5 border-t ${s.divider}`} />
-
-        {/* ── Skills grid ── */}
-        <div className="px-3.5 py-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5">
-          {[
-            ["PAC", profile?.skill_pace      ?? 50],
-            ["TIR", profile?.skill_shooting  ?? 50],
-            ["PAS", profile?.skill_passing   ?? 50],
-            ["REG", profile?.skill_dribbling ?? 50],
-            ["DEF", profile?.skill_defending ?? 50],
-            ["FIS", profile?.skill_physical  ?? 50],
-          ].map(([label, val]) => (
-            <SkillRow
-              key={label as string}
-              label={label as string}
-              value={val as number}
-              barBg={s.barBg}
-              barFill={s.barFill}
-              text={s.text}
-              subtext={s.subtext}
-            />
-          ))}
-        </div>
-
-      </div>
+      </motion.div>
     </div>
+    </>
   );
 }

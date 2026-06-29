@@ -1,25 +1,13 @@
-import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { Link } from "wouter";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
-import { Plus, Trophy, Users, Calendar, MapPin } from "lucide-react";
-
-interface Tournament {
-  id: string;
-  name: string;
-  format: string;
-  slots: number;
-  slots_filled: number;
-  location: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  created_at: string;
-}
+import { InfiniteScrollSentinel } from "@/components/ui/InfiniteScrollSentinel";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { getTournaments } from "@/lib/tournaments/api";
+import { Plus, Users, Calendar, MapPin, Loader2 } from "lucide-react";
+import { TournamentCardSkeleton } from "@/components/ui/skeletons";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_LABELS: Record<string, string> = {
   borrador: "Borrador",
@@ -48,27 +36,28 @@ const FORMAT_LABELS: Record<string, string> = {
 
 export default function TournamentsPage() {
   const { roles } = useAuth();
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
-  useEffect(() => {
-    supabase
-      .from("tournaments")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(30)
-      .then(({ data }: { data: Tournament[] | null }) => {
-        setTournaments(data || []);
-        setLoading(false);
-      });
-  }, []);
+  const {
+    data,
+    isLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["tournaments"],
+    queryFn: ({ pageParam }) =>
+      getTournaments(supabase, { cursor: pageParam, limit: 20 }),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
+  });
+
+  const tournaments = data?.pages.flatMap((p) => p.data ?? []) ?? [];
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title="Torneos"
-        actions={<>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Torneos</h1>
+        <div className="flex items-center gap-2">
           {roles?.is_promoter && (
             <Link href="/tournaments/mine">
               <Button variant="outline" size="sm" className="rounded-xl text-xs">Mis torneos</Button>
@@ -81,37 +70,26 @@ export default function TournamentsPage() {
               </Button>
             </Link>
           )}
-        </>}
-      />
+        </div>
+      </div>
 
       <main className="container mx-auto px-4 py-4 max-w-2xl">
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
+        {isLoading ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <TournamentCardSkeleton key={i} />
+            ))}
           </div>
+        ) : tournaments.length === 0 && roles?.is_promoter ? (
+          <EmptyState
+            title="No hay torneos disponibles"
+            cta={{ label: "Crear torneo", href: "/tournaments/new" }}
+          />
         ) : tournaments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-              <Trophy className="size-7 text-muted-foreground/40" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground mb-1">
-                No hay torneos disponibles
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {roles?.is_promoter
-                  ? "Creá el primero."
-                  : "Pronto habrá torneos disponibles."}
-              </p>
-            </div>
-            {roles?.is_promoter && (
-              <Link href="/tournaments/new">
-                <Button size="sm" className="rounded-xl">
-                  Crear torneo
-                </Button>
-              </Link>
-            )}
-          </div>
+          <EmptyState
+            title="No hay torneos disponibles"
+            description="Aún no hay torneos creados en tu zona"
+          />
         ) : (
           <div className="flex flex-col gap-3">
             {tournaments.map((t) => {
@@ -178,11 +156,20 @@ export default function TournamentsPage() {
                 </Link>
               );
             })}
+
+            <InfiniteScrollSentinel
+              enabled={hasNextPage && !isFetchingNextPage}
+              onIntersect={fetchNextPage}
+            />
+            {isFetchingNextPage && (
+              <div className="py-4 text-center">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+              </div>
+            )}
           </div>
         )}
       </main>
 
-      <BottomNav />
     </div>
   );
 }

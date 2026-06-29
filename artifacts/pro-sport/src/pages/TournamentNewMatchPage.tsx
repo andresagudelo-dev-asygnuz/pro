@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import { listRegistrations, type RegistrationRow } from "@/lib/tournaments/registrations";
@@ -8,9 +8,7 @@ import { createMatch } from "@/lib/tournaments/matches";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AppLayout } from "@/components/AppLayout";
 
-const supabase = createClient();
 
 export default function TournamentNewMatchPage() {
   const { user } = useAuth();
@@ -82,7 +80,7 @@ export default function TournamentNewMatchPage() {
   );
 
   return (
-    <AppLayout>
+    <>
     <div className="container py-8 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Nuevo partido — {tournament.name}</h1>
@@ -142,6 +140,6 @@ export default function TournamentNewMatchPage() {
         </form>
       )}
     </div>
-    </AppLayout>
+    </>
   );
 }

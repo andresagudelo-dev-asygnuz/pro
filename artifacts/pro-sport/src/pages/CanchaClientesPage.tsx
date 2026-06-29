@@ -1,19 +1,18 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getCanchaById } from "@/lib/canchas/api";
 import { getCanchaClients, upsertClientTag, removeClientTag, CLIENT_TAG_CONFIG, type CanchaClient, type ClientTag } from "@/lib/canchas/clients-api";
 import { getOrCreateConversation } from "@/lib/chat/api";
 import { CanchaOwnerTabs } from "@/components/CanchaOwnerTabs";
-import { BottomNav } from "@/components/BottomNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import { MessageCircle, ExternalLink, Star, Tag, X, Search, TrendingUp, AlertTriangle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import type { Cancha } from "@/lib/types/db";
 
-const supabase = createClient();
 
 type FilterType = "all" | "vip" | "frecuente" | "bloqueado";
 
@@ -30,27 +29,31 @@ export default function CanchaClientesPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const [cancha, setCancha]           = useState<Cancha | null>(null);
-  const [clients, setClients]         = useState<CanchaClient[]>([]);
-  const [loading, setLoading]         = useState(true);
+  const queryClient = useQueryClient();
   const [filter, setFilter]           = useState<FilterType>("all");
   const [search, setSearch]           = useState("");
   const [taggingId, setTaggingId]     = useState<string | null>(null);
   const [openingChat, setOpeningChat] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    const [canchaRes, clientsRes] = await Promise.all([
-      getCanchaById(supabase, id),
-      getCanchaClients(supabase, id),
-    ]);
-    if (canchaRes.data) setCancha(canchaRes.data);
-    setClients(clientsRes.data ?? []);
-    setLoading(false);
-  }, [id]);
+  const { data: cancha, isLoading: loadingCancha } = useQuery({
+    queryKey: ["cancha", id],
+    queryFn: async () => {
+      const { data } = await getCanchaById(supabase, id!);
+      return data ?? null;
+    },
+    enabled: !!id
+  });
 
-  useEffect(() => { load(); }, [load]);
+  const { data: clients = [], isLoading: loadingClients } = useQuery({
+    queryKey: ["cancha-clients", id],
+    queryFn: async () => {
+      const { data } = await getCanchaClients(supabase, id!);
+      return data ?? [];
+    },
+    enabled: !!id
+  });
+
+  const loading = loadingCancha || loadingClients;
 
   async function handleTag(client: CanchaClient, tag: ClientTag | null) {
     if (!id || !user) return;
@@ -64,9 +67,10 @@ export default function CanchaClientesPage() {
       toast.success(`Cliente marcado como ${CLIENT_TAG_CONFIG[tag].label}.`);
     }
     setTaggingId(null);
-    setClients(prev => prev.map(c =>
-      c.user_id === client.user_id ? { ...c, tag } : c
-    ));
+    queryClient.setQueryData(["cancha-clients", id], (old: CanchaClient[] | undefined) => {
+      if (!old) return old;
+      return old.map(c => c.user_id === client.user_id ? { ...c, tag } : c);
+    });
   }
 
   async function openChat(client: CanchaClient) {
@@ -110,7 +114,7 @@ export default function CanchaClientesPage() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
+    <>
       <CanchaOwnerTabs canchaId={id!} canchaName={cancha?.name} />
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
@@ -250,9 +254,9 @@ export default function CanchaClientesPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 px-3 pb-3 border-t border-border/30 pt-2.5">
-                    <Link href={`/profile/${client.user_id}`}>
+                    <Link href={`/canchas/${id}/clientes/${client.user_id}`}>
                       <button className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                        <ExternalLink className="size-3" /> Perfil
+                        <ExternalLink className="size-3" /> Administrar Reservas
                       </button>
                     </Link>
 
@@ -307,7 +311,6 @@ export default function CanchaClientesPage() {
         )}
       </div>
 
-      <BottomNav />
-    </div>
+    </>
   );
 }

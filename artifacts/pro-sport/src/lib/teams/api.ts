@@ -1,13 +1,13 @@
-import { createClient } from "@/lib/supabase/client";
-import type { Team, TeamMember, Profile } from "@/lib/types/db";
-
-const supabase = createClient();
+import { supabase } from "@/lib/supabase";
+import type { Team, Profile, TeamMember } from "@/lib/types/db";
 
 export type TeamWithCount = Team & { member_count: number };
 export type TeamMemberWithProfile = TeamMember & { profile: Pick<Profile, "id" | "full_name" | "username" | "avatar_url" | "city" | "primary_skill_level" | "position" | "skill_pace" | "skill_shooting" | "skill_passing" | "skill_dribbling" | "skill_defending" | "skill_physical"> | null };
 export type TeamWithMembers = Team & { team_members: TeamMemberWithProfile[] };
 
-function isMissingTable(error: any): boolean {
+type DbError = { code?: string; message?: string; details?: string } | null | undefined;
+
+function isMissingTable(error: DbError): boolean {
   const msg: string = error?.message ?? error?.details ?? "";
   return (
     msg.includes("schema cache") ||
@@ -19,7 +19,7 @@ function isMissingTable(error: any): boolean {
   );
 }
 
-function friendlyError(error: any): string {
+function friendlyError(error: DbError): string {
   if (!error) return "Error desconocido";
   if (error.code === "23505") return "Ya existe un equipo con ese nombre o slug.";
   if (error.code === "23503") return "Error de referencia en la base de datos.";
@@ -37,9 +37,10 @@ export async function getMyTeams(userId: string): Promise<TeamWithCount[]> {
     if (isMissingTable(error)) return [];
     throw error;
   }
-  return (data ?? []).map((row: any) => {
+  type Row = { teams: Team & { team_members: { count: number }[] } };
+  return (data as unknown as Row[]).map((row) => {
     const t = row.teams;
-    return { ...t, member_count: t.team_members?.[0]?.count ?? 0 };
+    return { ...t, member_count: t.team_members?.[0]?.count ?? 0 } as TeamWithCount;
   });
 }
 
@@ -56,7 +57,8 @@ export async function getPublicTeams(city?: string): Promise<TeamWithCount[]> {
     if (isMissingTable(error)) return [];
     throw error;
   }
-  return (data ?? []).map((t: any) => ({ ...t, member_count: t.team_members?.[0]?.count ?? 0 }));
+  type Row = Team & { team_members: { count: number }[] };
+  return (data as unknown as Row[]).map((t) => ({ ...t, member_count: t.team_members?.[0]?.count ?? 0 } as TeamWithCount));
 }
 
 export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
@@ -81,24 +83,29 @@ export async function getTeamById(id: string): Promise<TeamWithMembers | null> {
   if (membersErr) {
     console.error("[getTeamById] members query error:", membersErr);
   }
-  const memberRows: any[] = members ?? [];
+  type RawMember = { role: string; joined_at: string; user_id: string };
+  const memberRows: RawMember[] = (members ?? []) as RawMember[];
 
   // 3. Fetch profiles for each member
-  const userIds: string[] = memberRows.map((m: any) => m.user_id);
-  let profileMap: Record<string, any> = {};
+  type MemberProfile = TeamMemberWithProfile["profile"];
+  const userIds = memberRows.map((m) => m.user_id);
+  const profileMap: Record<string, MemberProfile> = {};
   if (userIds.length > 0) {
     const { data: profiles, error: profErr } = await supabase
       .from("profiles")
       .select("id, full_name, username, avatar_url, city, primary_skill_level, position, skill_pace, skill_shooting, skill_passing, skill_dribbling, skill_defending, skill_physical")
       .in("id", userIds);
     if (profErr) console.error("[getTeamById] profiles query error:", profErr);
-    for (const p of profiles ?? []) profileMap[p.id] = p;
+    for (const p of (profiles ?? []) as NonNullable<MemberProfile>[]) profileMap[p.id] = p;
   }
 
   return {
-    ...(teamData as any),
-    team_members: memberRows.map((m: any) => ({
-      ...m,
+    ...(teamData as Team),
+    team_members: memberRows.map((m) => ({
+      team_id: (teamData as Team).id,
+      user_id: m.user_id,
+      role: m.role,
+      joined_at: m.joined_at,
       profile: profileMap[m.user_id] ?? null,
     })),
   } as TeamWithMembers;
@@ -129,6 +136,20 @@ export async function createTeam(payload: {
   return data as Team;
 }
 
+export async function updateTeam(teamId: string, payload: {
+  name: string;
+  description: string | null;
+  sport_type: string;
+  city: string;
+  max_members: number;
+}): Promise<void> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
 export async function joinTeam(teamId: string, userId: string): Promise<void> {
   const { error } = await supabase.from("team_members").insert({ team_id: teamId, user_id: userId, role: "player" });
   if (error) throw new Error(friendlyError(error));
@@ -156,6 +177,14 @@ export async function updateTeamColors(teamId: string, headerColor: string, jers
   const { error } = await supabase
     .from("teams")
     .update({ header_color: headerColor, jersey_color: jerseyColor, updated_at: new Date().toISOString() })
+    .eq("id", teamId);
+  if (error) throw new Error(friendlyError(error));
+}
+
+export async function updateTeamPrivacy(teamId: string, isPublic: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ is_public: isPublic, updated_at: new Date().toISOString() })
     .eq("id", teamId);
   if (error) throw new Error(friendlyError(error));
 }

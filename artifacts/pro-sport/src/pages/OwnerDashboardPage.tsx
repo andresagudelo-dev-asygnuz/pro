@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getMyCanchas } from "@/lib/canchas/api";
+import { getVenueByOwner } from "@/lib/venues/api";
 import { getCanchaStats, type CanchaStats, type StatsPeriod } from "@/lib/canchas/stats-api";
-import { AppLayout } from "@/components/AppLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import {
@@ -12,9 +13,8 @@ import {
   CheckCircle2, XCircle, Clock, ChevronRight,
 } from "lucide-react";
 import { SPORT_TYPE_ICONS } from "@/lib/types/db";
-import type { Cancha } from "@/lib/types/db";
+import type { Cancha, Venue } from "@/lib/types/db";
 
-const supabase = createClient();
 
 const PERIOD_LABELS: Record<StatsPeriod, string> = {
   week:  "Esta semana",
@@ -35,45 +35,56 @@ interface CanchaWithStats {
 
 export default function OwnerDashboardPage() {
   const { user } = useAuth();
-  const [rows, setRows]     = useState<CanchaWithStats[]>([]);
   const [period, setPeriod] = useState<StatsPeriod>("month");
-  const [loading, setLoading] = useState(true);
+  const [selectedCanchaId, setSelectedCanchaId] = useState<string | "all">("all");
 
-  const load = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data: canchas } = await getMyCanchas(supabase, user.id);
-    if (!canchas || canchas.length === 0) { setRows([]); setLoading(false); return; }
+  const { data: ownerVenue, isLoading: loadingVenue } = useQuery<Venue | null>({
+    queryKey: ["owner-venue", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await getVenueByOwner(supabase, user.id);
+      return data ?? null;
+    },
+    enabled: !!user,
+  });
 
-    const statsResults = await Promise.all(
-      canchas.map(c => getCanchaStats(supabase, c.id, period)),
-    );
+  const { data: rows = [], isLoading: loading } = useQuery({
+    queryKey: ["owner-dashboard-stats", user?.id, period],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data: canchas } = await getMyCanchas(supabase, user.id);
+      if (!canchas || canchas.length === 0) return [];
 
-    setRows(canchas.map((c, i) => ({ cancha: c, stats: statsResults[i].data })));
-    setLoading(false);
-  }, [user, period]);
+      const statsResults = await Promise.all(
+        canchas.map(c => getCanchaStats(supabase, c.id, period)),
+      );
 
-  useEffect(() => { load(); }, [load]);
+      return canchas.map((c, i) => ({ cancha: c, stats: statsResults[i].data }));
+    },
+    enabled: !!user
+  });
 
   // ── Aggregated KPIs ──
-  const totalRevenue   = rows.reduce((s, r) => s + (r.stats?.revenue           ?? 0), 0);
-  const totalBookings  = rows.reduce((s, r) => s + (r.stats?.total_bookings    ?? 0), 0);
-  const totalConfirmed = rows.reduce((s, r) => s + (r.stats?.confirmed         ?? 0), 0);
-  const totalCancelled = rows.reduce((s, r) => s + (r.stats?.cancelled         ?? 0), 0);
-  const totalPending   = rows.reduce((s, r) => s + (r.stats?.pending           ?? 0), 0);
-  const avgCancel      = totalBookings > 0 ? Math.round((totalCancelled / totalBookings) * 100) : 0;
-  const activeCanchas  = rows.filter(r => r.cancha.is_active).length;
+  const filteredRows = selectedCanchaId === "all" ? rows : rows.filter(r => r.cancha.id === selectedCanchaId);
 
-  const sorted    = [...rows].sort((a, b) => (b.stats?.revenue ?? 0) - (a.stats?.revenue ?? 0));
+  const totalRevenue   = filteredRows.reduce((s, r) => s + (r.stats?.revenue           ?? 0), 0);
+  const totalBookings  = filteredRows.reduce((s, r) => s + (r.stats?.total_bookings    ?? 0), 0);
+  const totalConfirmed = filteredRows.reduce((s, r) => s + (r.stats?.confirmed         ?? 0), 0);
+  const totalCancelled = filteredRows.reduce((s, r) => s + (r.stats?.cancelled         ?? 0), 0);
+  const totalPending   = filteredRows.reduce((s, r) => s + (r.stats?.pending           ?? 0), 0);
+  const avgCancel      = totalBookings > 0 ? Math.round((totalCancelled / totalBookings) * 100) : 0;
+  const activeCanchas  = filteredRows.filter(r => r.cancha.is_active).length;
+
+  const sorted    = [...filteredRows].sort((a, b) => (b.stats?.revenue ?? 0) - (a.stats?.revenue ?? 0));
   const starRow   = sorted[0] ?? null;
-  const maxRevenue = Math.max(1, ...rows.map(r => r.stats?.revenue ?? 0));
+  const maxRevenue = Math.max(1, ...filteredRows.map(r => r.stats?.revenue ?? 0));
 
   // Global top clients (merge across canchas)
   const globalClientMap = new Map<string, {
     full_name: string | null; username: string | null; avatar_url: string | null;
     total: number; revenue: number; cancelled: number;
   }>();
-  for (const { stats } of rows) {
+  for (const { stats } of filteredRows) {
     for (const c of (stats?.top_clients ?? [])) {
       if (!globalClientMap.has(c.user_id)) {
         globalClientMap.set(c.user_id, { full_name: c.full_name, username: c.username, avatar_url: c.avatar_url, total: 0, revenue: 0, cancelled: 0 });
@@ -91,7 +102,7 @@ export default function OwnerDashboardPage() {
 
   // Global popular slots (sum counts)
   const globalSlotMap = new Map<string, number>();
-  for (const { stats } of rows) {
+  for (const { stats } of filteredRows) {
     for (const s of (stats?.popular_slots ?? [])) {
       globalSlotMap.set(s.start_time, (globalSlotMap.get(s.start_time) ?? 0) + s.count);
     }
@@ -104,7 +115,7 @@ export default function OwnerDashboardPage() {
   const maxSlot = Math.max(1, ...globalSlots.map(s => s.count));
 
   return (
-    <AppLayout>
+    <>
       <div className="container py-6 max-w-4xl mx-auto space-y-5 pb-24">
 
         {/* Header */}
@@ -112,9 +123,9 @@ export default function OwnerDashboardPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <BarChart2 className="size-6 text-violet-600" />
-              Dashboard
+              Estadísticas
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Vista consolidada de todas tus canchas.</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Vista consolidada de desempeño y finanzas.</p>
           </div>
           <Link href="/mis-canchas">
             <button className="flex items-center gap-1.5 text-sm text-violet-600 hover:underline">
@@ -123,21 +134,35 @@ export default function OwnerDashboardPage() {
           </Link>
         </div>
 
-        {/* Period */}
-        <div className="flex gap-2">
-          {(["week","month","year"] as StatsPeriod[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
-                period === p
-                  ? "bg-violet-600 text-white border-violet-600 shadow-sm"
-                  : "bg-white dark:bg-zinc-900 border-border/60 text-muted-foreground hover:border-violet-400"
-              }`}
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <select
+              value={selectedCanchaId}
+              onChange={(e) => setSelectedCanchaId(e.target.value)}
+              className="w-full bg-white dark:bg-zinc-900 border border-border/60 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
-              {PERIOD_LABELS[p]}
-            </button>
-          ))}
+              <option value="all">Todas mis canchas (Consolidado)</option>
+              {rows.map(r => (
+                <option key={r.cancha.id} value={r.cancha.id}>{r.cancha.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            {(["week","month","year"] as StatsPeriod[]).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
+                  period === p
+                    ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                    : "bg-white dark:bg-zinc-900 border-border/60 text-muted-foreground hover:border-violet-400"
+                }`}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
@@ -186,8 +211,8 @@ export default function OwnerDashboardPage() {
               </div>
             </div>
 
-            {/* ── Star Cancha ── */}
-            {starRow && (starRow.stats?.revenue ?? 0) > 0 && (
+            {/* ── Star Cancha (Only show on 'all') ── */}
+            {selectedCanchaId === "all" && starRow && (starRow.stats?.revenue ?? 0) > 0 && (
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/10 border border-amber-200 dark:border-amber-700/60 rounded-2xl p-4 flex items-center gap-4">
                 <div className="size-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0 text-xl">
                   {SPORT_TYPE_ICONS[starRow.cancha.sport_type]}
@@ -202,27 +227,25 @@ export default function OwnerDashboardPage() {
                     {formatMoney(starRow.stats?.revenue ?? 0)} · {starRow.stats?.total_bookings} reservas
                   </p>
                 </div>
-                <Link href={`/canchas/${starRow.cancha.id}/stats`}>
-                  <button className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 hover:underline shrink-0 font-medium">
-                    Detalle <ArrowRight className="size-3" />
-                  </button>
-                </Link>
+                <button onClick={() => setSelectedCanchaId(starRow.cancha.id)} className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 hover:underline shrink-0 font-medium">
+                  Detalle <ArrowRight className="size-3" />
+                </button>
               </div>
             )}
 
-            {/* ── Per-cancha comparison ── */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
-                <div>
-                  <h3 className="text-sm font-semibold">Comparativa de canchas</h3>
-                  <p className="text-[11px] text-muted-foreground">{PERIOD_LABELS[period]}</p>
+            {/* ── Per-cancha comparison (Only show on 'all') ── */}
+            {selectedCanchaId === "all" && rows.length > 1 && (
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+                  <div>
+                    <h3 className="text-sm font-semibold">Comparativa de canchas</h3>
+                    <p className="text-[11px] text-muted-foreground">{PERIOD_LABELS[period]}</p>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{rows.length} canchas</span>
                 </div>
-                <span className="text-[10px] text-muted-foreground">{rows.length} canchas</span>
-              </div>
-              <div className="divide-y divide-border/30">
-                {sorted.map(({ cancha, stats }, idx) => (
-                  <Link key={cancha.id} href={`/canchas/${cancha.id}/stats`}>
-                    <div className="px-4 py-3.5 hover:bg-muted/30 transition-colors cursor-pointer">
+                <div className="divide-y divide-border/30">
+                  {sorted.map(({ cancha, stats }, idx) => (
+                    <div key={cancha.id} onClick={() => setSelectedCanchaId(cancha.id)} className="px-4 py-3.5 hover:bg-muted/30 transition-colors cursor-pointer">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 min-w-0">
                           {idx === 0 && (stats?.revenue ?? 0) > 0 && (
@@ -269,17 +292,19 @@ export default function OwnerDashboardPage() {
                         <span className="text-[10px] text-muted-foreground ml-auto">{stats?.top_clients.length ?? 0} clientes</span>
                       </div>
                     </div>
-                  </Link>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* ── Global top clients ── */}
             {globalTopClients.length > 0 && (
               <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-border/40">
                   <h3 className="text-sm font-semibold">Mejores clientes</h3>
-                  <p className="text-[11px] text-muted-foreground">Consolidado de todas tus canchas</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {selectedCanchaId === "all" ? "Consolidado de todas tus canchas" : "Para esta cancha"}
+                  </p>
                 </div>
                 <div className="divide-y divide-border/30">
                   {globalTopClients.map((c, i) => (
@@ -314,7 +339,7 @@ export default function OwnerDashboardPage() {
             {/* ── Popular slots (global) ── */}
             {globalSlots.length > 0 && (
               <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm p-4">
-                <h3 className="text-sm font-semibold mb-3">Horarios más demandados (todas las canchas)</h3>
+                <h3 className="text-sm font-semibold mb-3">Horarios más demandados {selectedCanchaId === "all" ? "(todas las canchas)" : ""}</h3>
                 <div className="space-y-2">
                   {globalSlots.map(slot => (
                     <div key={slot.start_time} className="flex items-center gap-3">
@@ -334,6 +359,66 @@ export default function OwnerDashboardPage() {
           </>
         )}
       </div>
-    </AppLayout>
+
+      {/* ── Centro Deportivo card ── */}
+      <div className="container py-0 pb-6 max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-border/60 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+            <div className="flex items-center gap-2">
+              <Building2 className="size-4 text-violet-500" />
+              <h3 className="text-sm font-semibold">Centro Deportivo</h3>
+            </div>
+            <Link href="/mis-canchas/centro">
+              <button className="text-xs text-violet-600 hover:underline underline-offset-2">
+                Gestionar
+              </button>
+            </Link>
+          </div>
+
+          {loadingVenue ? (
+            <div className="flex justify-center py-8">
+              <div className="w-6 h-6 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : ownerVenue ? (
+            <div className="flex items-center gap-4 p-4">
+              {/* Mini banner */}
+              <div className="w-16 h-12 rounded-xl overflow-hidden shrink-0">
+                {ownerVenue.banner_url ? (
+                  <img src={ownerVenue.banner_url} alt="Banner" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-violet-900 to-indigo-900" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{ownerVenue.name}</p>
+                <p className="text-xs text-muted-foreground">{ownerVenue.city}</p>
+              </div>
+              <Link href="/mis-canchas/centro">
+                <button className="flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-700 border border-violet-300 dark:border-violet-700 rounded-xl px-3 py-1.5 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all shrink-0">
+                  <ArrowRight className="size-3" /> Gestionar
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                  <Building2 className="size-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Sin perfil de centro</p>
+                  <p className="text-xs text-muted-foreground">Crea tu perfil público</p>
+                </div>
+              </div>
+              <Link href="/mis-canchas/centro/editar">
+                <button className="flex items-center gap-1 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl px-3 py-1.5 transition-colors shrink-0">
+                  <Plus className="size-3" /> Crear
+                </button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

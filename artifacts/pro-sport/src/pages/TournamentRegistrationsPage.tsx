@@ -1,20 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import {
-  listRegistrations,
-  type RegistrationRow,
+  listRegistrationsWithNames,
+  type RegistrationWithNames,
 } from "@/lib/tournaments/registrations";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { initialsFromName } from "@/lib/format";
 import type { Profile } from "@/lib/types/db";
 import { Users, Clock } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
-const supabase = createClient();
 
 const STATUS_CONFIG: Record<
   string,
@@ -40,13 +39,13 @@ function RegistrationCard({
   reg,
   profilesMap,
 }: {
-  reg: RegistrationRow;
+  reg: RegistrationWithNames;
   profilesMap: Map<string, Profile>;
 }) {
   const profile = reg.user_id ? profilesMap.get(reg.user_id) : null;
   const displayName = reg.team_id
-    ? `Equipo · ${reg.team_id.slice(0, 8)}`
-    : profile?.full_name ?? profile?.username ?? reg.user_id?.slice(0, 8) ?? "—";
+    ? (reg.team_name ?? `Equipo · ${reg.team_id.slice(0, 8)}`)
+    : reg.player_name ?? profile?.full_name ?? profile?.username ?? "—";
 
   const initials = profile
     ? initialsFromName(profile.full_name ?? profile.username)
@@ -82,7 +81,7 @@ function Section({
   statusKey,
 }: {
   title: string;
-  rows: RegistrationRow[];
+  rows: RegistrationWithNames[];
   profilesMap: Map<string, Profile>;
   statusKey: string;
 }) {
@@ -118,54 +117,45 @@ export default function TournamentRegistrationsPage() {
   const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
-  const [tournament, setTournament] = useState<TournamentRow | null>(null);
-  const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
-  const [profilesMap, setProfilesMap] = useState<Map<string, Profile>>(
-    new Map(),
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
+  const { data, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ["tournament-registrations", id, user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("No autenticado");
       const { data: t } = await getTournamentById(supabase, id);
-      if (!t) {
-        setError("Torneo no encontrado");
-        setLoading(false);
-        return;
-      }
+      if (!t) throw new Error("Torneo no encontrado");
       const tRow = t as TournamentRow;
 
       if (tRow.owner_id !== user.id) {
-        setError("Solo el promotor del torneo puede ver las inscripciones.");
-        setTournament(tRow);
-        setLoading(false);
-        return;
+        throw new Error("Solo el promotor del torneo puede ver las inscripciones.");
       }
-      setTournament(tRow);
 
-      const { data: regs, error: err } = await listRegistrations(supabase, id);
-      if (err) setError(err);
-      const regList = (regs ?? []) as RegistrationRow[];
-      setRegistrations(regList);
+      const { data: regs, error: err } = await listRegistrationsWithNames(supabase, id!);
+      if (err) throw new Error("Error cargando inscripciones");
+      const regList = (regs ?? []) as RegistrationWithNames[];
 
       const userIds = [
         ...new Set(regList.map((r) => r.user_id).filter(Boolean)),
       ] as string[];
+      
+      const map = new Map<string, Profile>();
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, full_name, username, avatar_url")
           .in("id", userIds);
-        const map = new Map<string, Profile>();
         ((profiles ?? []) as Profile[]).forEach((p) => map.set(p.id, p));
-        setProfilesMap(map);
       }
 
-      setLoading(false);
-    })();
-  }, [id, navigate]);
+      return { tournament: tRow, registrations: regList, profilesMap: map };
+    },
+    enabled: !!user && !!id,
+    retry: false,
+  });
+
+  const error = queryError?.message;
+  const tournament = data?.tournament;
+  const registrations: RegistrationWithNames[] = data?.registrations ?? [];
+  const profilesMap = data?.profilesMap ?? new Map<string, Profile>();
 
   if (loading)
     return (
@@ -192,7 +182,7 @@ export default function TournamentRegistrationsPage() {
   );
 
   return (
-    <AppLayout>
+    <>
       <div className="container py-6 max-w-4xl mx-auto space-y-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -257,6 +247,6 @@ export default function TournamentRegistrationsPage() {
           />
         )}
       </div>
-    </AppLayout>
+    </>
   );
 }

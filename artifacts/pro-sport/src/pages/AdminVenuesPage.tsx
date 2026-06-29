@@ -1,31 +1,25 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { getOwnerVenuesWithCourts, addVenueCourt, createVenue, type VenueWithCourts, type VenueCourt } from "@/lib/venues/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AppLayout } from "@/components/AppLayout";
-
-const supabase = createClient();
-
-type Court = { id: string; name: string; capacity_players: number };
-type Venue = { id: string; name: string; address: string; city: string; venue_courts?: Court[] };
 
 export default function AdminVenuesPage() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
-  const [venues, setVenues] = useState<Venue[]>([]);
+  const [venues, setVenues] = useState<VenueWithCourts[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    (async () => {
-      const { data } = await supabase.from("venues").select("*, venue_courts(*)").eq("owner_id", user.id);
-      setVenues((data ?? []) as Venue[]);
+    getOwnerVenuesWithCourts(supabase, user.id).then(({ data }) => {
+      setVenues(data ?? []);
       setLoading(false);
-    })();
+    });
   }, [navigate]);
 
   async function handleCreateVenue(e: React.FormEvent<HTMLFormElement>) {
@@ -34,27 +28,25 @@ export default function AdminVenuesPage() {
     setCreating(true);
     setError(null);
     const fd = new FormData(e.currentTarget);
-    const { data, error: err } = await supabase.from("venues").insert({
-      owner_id: user.id,
+    const { data, error: err } = await createVenue(supabase, {
       name: fd.get("name") as string,
       city: fd.get("city") as string,
       address: fd.get("address") as string,
-    }).select("*, venue_courts(*)").single();
+    }, user.id);
     if (err) { setError("Error al crear el complejo."); }
-    else { setVenues((prev) => [...prev, data as Venue]); (e.target as HTMLFormElement).reset(); }
+    else if (data) { setVenues((prev) => [...prev, { ...data, venue_courts: [] }]); (e.target as HTMLFormElement).reset(); }
     setCreating(false);
   }
 
   async function handleAddCourt(venueId: string, e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const { data, error: err } = await supabase.from("venue_courts").insert({
-      venue_id: venueId,
+    const { data } = await addVenueCourt(supabase, venueId, {
       name: fd.get("name") as string,
       capacity_players: parseInt(fd.get("capacity") as string),
-    }).select().single();
-    if (!err && data) {
-      setVenues((prev) => prev.map((v) => v.id === venueId ? { ...v, venue_courts: [...(v.venue_courts ?? []), data as Court] } : v));
+    });
+    if (data) {
+      setVenues((prev) => prev.map((v) => v.id === venueId ? { ...v, venue_courts: [...(v.venue_courts ?? []), data as VenueCourt] } : v));
       (e.target as HTMLFormElement).reset();
     }
   }
@@ -62,7 +54,7 @@ export default function AdminVenuesPage() {
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
 
   return (
-    <AppLayout>
+    <>
     <div className="flex flex-col gap-8 max-w-4xl mx-auto px-4 py-6">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Administración de Canchas</h1>
@@ -116,6 +108,6 @@ export default function AdminVenuesPage() {
         )}
       </div>
     </div>
-    </AppLayout>
+    </>
   );
 }

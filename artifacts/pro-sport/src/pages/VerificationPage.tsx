@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { getUserVerification, submitVerification, uploadVerificationDocument } from "@/lib/verifications/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/AppLayout";
 import type { AgeVerification, AgeVerificationStatus } from "@/lib/types/db";
 
-const supabase = createClient();
 
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
@@ -49,8 +48,8 @@ export default function VerificationPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("age_verifications").select("*").eq("user_id", user.id).maybeSingle();
-      setAv(data as AgeVerification | null);
+      const { data } = await getUserVerification(supabase, user.id);
+      setAv(data);
       setLoading(false);
     })();
   }, [navigate, uploadSuccess]);
@@ -68,20 +67,14 @@ export default function VerificationPage() {
 
     if (!user) { setUploadError("No autenticado."); setUploading(false); return; }
 
-    const ext = file.name.split(".").pop() ?? "bin";
-    const path = `${user.id}/${Date.now()}.${ext}`;
+    const { path, error: storageErr } = await uploadVerificationDocument(supabase, user.id, file);
+    if (storageErr || !path) { setUploadError(storageErr ?? "Error al subir el archivo."); setUploading(false); return; }
 
-    const { error: storageErr } = await supabase.storage.from("age-verifications").upload(path, file, { upsert: true });
-    if (storageErr) { setUploadError("Error al subir el archivo. Intentá de nuevo."); setUploading(false); return; }
-
-    const { error: dbErr } = await supabase.from("age_verifications").upsert({
-      user_id: user.id,
+    const { error: dbErr } = await submitVerification(supabase, user.id, {
       storage_path: path,
       mime_type: file.type,
       file_size_bytes: file.size,
-      status: "pendiente",
-      uploaded_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
+    });
 
     if (dbErr) { setUploadError("Error al registrar el documento."); setUploading(false); return; }
 
@@ -92,7 +85,7 @@ export default function VerificationPage() {
   if (loading) return <div className="flex items-center justify-center p-12 text-muted-foreground">Cargando…</div>;
 
   return (
-    <AppLayout>
+    <>
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Verificación de edad</h1>
@@ -155,6 +148,6 @@ export default function VerificationPage() {
         </div>
       )}
     </div>
-    </AppLayout>
+    </>
   );
 }

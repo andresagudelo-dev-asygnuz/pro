@@ -9,8 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { CANCHAS_SPORT_OPTIONS, ENABLED_CITIES } from "@/lib/types/db";
 import { toast } from "sonner";
 
@@ -54,8 +52,10 @@ export default function NewTeamPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader title="Crear equipo" backHref="/equipos" />
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="container mx-auto px-4 pt-5 pb-2 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Crear equipo</h1>
+      </div>
 
       <main className="container mx-auto px-4 py-6 max-w-lg">
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -161,7 +161,6 @@ export default function NewTeamPage() {
         </form>
       </main>
 
-      <BottomNav />
     </div>
   );
 }

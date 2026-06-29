@@ -3,10 +3,10 @@ import { Link } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { getMyTeams, getPublicTeams, type TeamWithCount } from "@/lib/teams/api";
 import { Button } from "@/components/ui/button";
-import { BottomNav } from "@/components/BottomNav";
-import { PageHeader } from "@/components/PageHeader";
 import { Plus, Users, MapPin, Shield, Globe, Lock } from "lucide-react";
 import { SPORT_TYPE_LABELS } from "@/lib/types/db";
+import { AppNav } from "@/components/AppNav";
+import { BottomNav } from "@/components/BottomNav";
 
 const SPORT_EMOJIS: Record<string, string> = {
   futbol_5: "⚽", futbol_9: "⚽", futbol_11: "⚽", futbol_sala: "⚽",
@@ -73,19 +73,18 @@ export default function TeamsPage() {
   }, [user, profile?.city]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-24">
-      <PageHeader
-        title="Equipos"
-        actions={
-          <Link href="/equipos/nuevo">
-            <Button size="sm" className="gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700">
-              <Plus className="size-3.5" /> Crear
-            </Button>
-          </Link>
-        }
-      />
+    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
+      <AppNav />
+      <div className="container mx-auto px-4 pt-4 pb-1 max-w-2xl flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Equipos</h1>
+        <Link href="/equipos/nuevo">
+          <Button size="sm" className="gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700">
+            <Plus className="size-3.5" /> Crear
+          </Button>
+        </Link>
+      </div>
 
-      <main className="container mx-auto px-4 py-5 max-w-2xl space-y-5">
+      <main className="flex-1 container mx-auto px-4 pt-2 pb-24 max-w-2xl space-y-4">
         {!teamsSupported ? (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-5 text-center">
             <Shield className="size-8 text-amber-500 mx-auto mb-2" />
@@ -141,8 +140,8 @@ export default function TeamsPage() {
           </>
         )}
       </main>
-
       <BottomNav />
+
     </div>
   );
 }

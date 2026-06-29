@@ -1,41 +1,75 @@
 import { Link, useLocation } from "wouter";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { initialsFromName } from "@/lib/format";
-
-const supabase = createClient();
+import { NavDrawer } from "@/components/NavDrawer";
+import { Home, MessageCircle, Building2, User, Plus } from "lucide-react";
 
 export function AppNav() {
-  const { profile } = useAuth();
-  const [, navigate] = useLocation();
+  const { profile, roles } = useAuth();
+  const [location] = useLocation();
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    navigate("/");
+  const isOwnerContext = location.startsWith("/mis-canchas") || location.startsWith("/canchas/");
+  const profileLink = isOwnerContext ? "/mis-canchas/perfil" : (profile ? `/profile/${profile.id}` : "#");
+
+  const desktopNavItems = [
+    { href: "/feed", label: "Feed", Icon: Home, matchPaths: ["/feed", "/matches", "/tournaments"] },
+    { href: "/chat", label: "Chat", Icon: MessageCircle, matchPaths: ["/chat"] },
+    { href: "/matches/new", label: "Crear", Icon: Plus, isAction: true },
+    { href: roles?.is_cancha ? "/mis-canchas" : "/canchas", label: "Canchas", Icon: Building2, matchPaths: ["/canchas", "/mis-canchas"] },
+    { href: "/perfil", label: "Perfil", Icon: User, matchPaths: ["/perfil", "/amigos", "/notificaciones", "/mis-partidos", "/mis-reservas"] },
+  ];
+
+  function isActive(item: any): boolean {
+    if (item.isAction) return false;
+    if (item.matchPaths) {
+      return item.matchPaths.some((p: string) => {
+        if (p === "/matches") {
+          return location.startsWith("/matches") && !location.startsWith("/matches/new");
+        }
+        return location === p || location.startsWith(p + "/");
+      });
+    }
+    return location === item.href;
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-background">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-5">
+    <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 relative">
+        <div className="flex items-center gap-3 w-1/3">
+          <NavDrawer />
           <Link href="/feed" className="text-base font-semibold tracking-tight">
             PRO<span className="text-brand-primary">.</span>
           </Link>
-          <nav className="hidden sm:flex items-center gap-4 text-sm">
-            <Link href="/feed" className="text-muted-foreground hover:text-foreground transition-colors">Feed</Link>
-            <Link href="/tournaments" className="text-muted-foreground hover:text-foreground transition-colors">Torneos</Link>
-            <Link href="/matches/new" className="text-muted-foreground hover:text-foreground transition-colors">Crear partido</Link>
-            <Link href="/amigos" className="text-muted-foreground hover:text-foreground transition-colors">Amigos</Link>
-            <Link href="/perfil" className="text-muted-foreground hover:text-foreground transition-colors">Mi perfil</Link>
-          </nav>
         </div>
 
-        <div className="flex items-center gap-2">
-          {profile ? (
-            <Link href={`/profile/${profile.id}`} className="flex items-center gap-2">
-              <span className="hidden text-sm text-foreground sm:inline">
+        {/* Desktop Centered Nav */}
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-3">
+          {desktopNavItems.map((item) => {
+            const active = isActive(item);
+            if (item.isAction) {
+              return (
+                <Link key={item.href} href={item.href} className="px-1">
+                  <div className="size-9 rounded-full bg-brand-primary flex items-center justify-center text-white shadow-sm hover:scale-105 transition-transform">
+                    <item.Icon className="size-5" />
+                  </div>
+                </Link>
+              );
+            }
+            return (
+              <Link key={item.href} href={item.href}>
+                <div className={`flex items-center justify-center size-9 rounded-full transition-colors hover:bg-zinc-100/80 dark:hover:bg-zinc-800/80 ${active ? "text-brand-primary" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"}`}>
+                  <item.Icon className={`size-5 ${active ? "stroke-[2.5px]" : "stroke-2"}`} />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-1 justify-end w-1/3">
+          {profile && (
+            <Link href={profileLink} className="flex items-center gap-2">
+              <span className="hidden text-sm text-foreground lg:inline">
                 {profile.full_name ?? profile.username ?? "Perfil"}
               </span>
               <Avatar className="size-8">
@@ -43,8 +77,7 @@ export function AppNav() {
                 <AvatarFallback>{initialsFromName(profile.full_name ?? profile.username)}</AvatarFallback>
               </Avatar>
             </Link>
-          ) : null}
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>Salir</Button>
+          )}
         </div>
       </div>
     </header>

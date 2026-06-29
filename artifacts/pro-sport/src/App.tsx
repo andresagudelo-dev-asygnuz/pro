@@ -1,215 +1,285 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
 import { NotifProvider } from "@/context/NotifContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useLastRoute } from "@/hooks/useLastRoute";
+import { PwaInstallBanner } from "@/components/PwaInstallBanner";
+
+// Eager — first visible pages, keep small
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
-import FeedPage from "@/pages/FeedPage";
-import ProfilePage from "@/pages/ProfilePage";
-import ProfileEditPage from "@/pages/ProfileEditPage";
-import OnboardingPage from "@/pages/OnboardingPage";
-import NotificationsPage from "@/pages/NotificationsPage";
-import TournamentsPage from "@/pages/TournamentsPage";
-import NewMatchPage from "@/pages/NewMatchPage";
-import MatchDetailPage from "@/pages/MatchDetailPage";
-import TournamentDetailPage from "@/pages/TournamentDetailPage";
-import NewTournamentPage from "@/pages/NewTournamentPage";
-import MyTournamentsPage from "@/pages/MyTournamentsPage";
-import TournamentMatchesPage from "@/pages/TournamentMatchesPage";
-import TournamentNewMatchPage from "@/pages/TournamentNewMatchPage";
-import TournamentMatchResultPage from "@/pages/TournamentMatchResultPage";
-import TournamentStandingsPage from "@/pages/TournamentStandingsPage";
-import TournamentRegisterPage from "@/pages/TournamentRegisterPage";
-import TournamentRegistrationsPage from "@/pages/TournamentRegistrationsPage";
-import VerificationPage from "@/pages/VerificationPage";
-import AdminVenuesPage from "@/pages/AdminVenuesPage";
-import AdminVerificationsPage from "@/pages/AdminVerificationsPage";
-import UserProfilePage from "@/pages/UserProfilePage";
-import PublicProfilePage from "@/pages/PublicProfilePage";
-import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
-import ResetPasswordPage from "@/pages/ResetPasswordPage";
-import FeedbackPage from "@/pages/FeedbackPage";
+import OwnerBookingsPage from "@/pages/OwnerBookingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
-import CanchasPage from "@/pages/CanchasPage";
-import CanchaDetailPage from "@/pages/CanchaDetailPage";
-import MisCanchasPage from "@/pages/MisCanchasPage";
-import NuevaCanchaPage from "@/pages/NuevaCanchaPage";
-import CanchaAgendaPage from "@/pages/CanchaAgendaPage";
-import FriendsPage from "@/pages/FriendsPage";
-import MisPartidosPage from "@/pages/MisPartidosPage";
-import MisReservasPage from "@/pages/MisReservasPage";
-import EditCanchaPage from "@/pages/EditCanchaPage";
-import TeamsPage from "@/pages/TeamsPage";
-import NewTeamPage from "@/pages/NewTeamPage";
-import TeamDetailPage from "@/pages/TeamDetailPage";
-import EditMatchPage from "@/pages/EditMatchPage";
-import ChatListPage from "@/pages/ChatListPage";
-import ChatDetailPage from "@/pages/ChatDetailPage";
-import CanchaClientesPage from "@/pages/CanchaClientesPage";
-import CanchaStatsPage from "@/pages/CanchaStatsPage";
-import CanchaEquipoPage from "@/pages/CanchaEquipoPage";
-import OwnerDashboardPage from "@/pages/OwnerDashboardPage";
-import OwnerProfilePage from "@/pages/OwnerProfilePage";
-import OwnerProfileEditPage from "@/pages/OwnerProfileEditPage";
+
+// Lazy — loaded on demand
+const FeedPage                   = lazy(() => import("@/pages/FeedPage"));
+const ProfilePage                = lazy(() => import("@/pages/ProfilePage"));
+const ProfileEditPage            = lazy(() => import("@/pages/ProfileEditPage"));
+const OnboardingPage             = lazy(() => import("@/pages/OnboardingPage"));
+const NotificationsPage          = lazy(() => import("@/pages/NotificationsPage"));
+const VerificationPage           = lazy(() => import("@/pages/VerificationPage"));
+const ForgotPasswordPage         = lazy(() => import("@/pages/ForgotPasswordPage"));
+const ResetPasswordPage          = lazy(() => import("@/pages/ResetPasswordPage"));
+const FeedbackPage               = lazy(() => import("@/pages/FeedbackPage"));
+const PublicProfilePage          = lazy(() => import("@/pages/PublicProfilePage"));
+const UserProfilePage            = lazy(() => import("@/pages/UserProfilePage"));
+
+const NewMatchPage               = lazy(() => import("@/pages/NewMatchPage"));
+const EditMatchPage              = lazy(() => import("@/pages/EditMatchPage"));
+const MatchDetailPage            = lazy(() => import("@/pages/MatchDetailPage"));
+const MisPartidosPage            = lazy(() => import("@/pages/MisPartidosPage"));
+const LeaderboardPage            = lazy(() => import("@/pages/LeaderboardPage"));
+
+const TournamentsPage            = lazy(() => import("@/pages/TournamentsPage"));
+const NewTournamentPage          = lazy(() => import("@/pages/NewTournamentPage"));
+const MyTournamentsPage          = lazy(() => import("@/pages/MyTournamentsPage"));
+const TournamentDetailPage       = lazy(() => import("@/pages/TournamentDetailPage"));
+const TournamentMatchesPage      = lazy(() => import("@/pages/TournamentMatchesPage"));
+const TournamentNewMatchPage     = lazy(() => import("@/pages/TournamentNewMatchPage"));
+const TournamentMatchResultPage  = lazy(() => import("@/pages/TournamentMatchResultPage"));
+const TournamentStandingsPage    = lazy(() => import("@/pages/TournamentStandingsPage"));
+const TournamentRegisterPage     = lazy(() => import("@/pages/TournamentRegisterPage"));
+const TournamentRegistrationsPage = lazy(() => import("@/pages/TournamentRegistrationsPage"));
+
+const CanchasPage                = lazy(() => import("@/pages/CanchasPage"));
+const VenueDetailPage            = lazy(() => import("@/pages/VenueDetailPage"));
+const CanchaDetailPage           = lazy(() => import("@/pages/CanchaDetailPage"));
+const MisCanchasPage             = lazy(() => import("@/pages/MisCanchasPage"));
+const NuevaCanchaPage            = lazy(() => import("@/pages/NuevaCanchaPage"));
+const CanchaAgendaPage           = lazy(() => import("@/pages/CanchaAgendaPage"));
+const EditCanchaPage             = lazy(() => import("@/pages/EditCanchaPage"));
+const CanchaClientesPage         = lazy(() => import("@/pages/CanchaClientesPage"));
+const CanchaClienteDetallePage   = lazy(() => import("@/pages/CanchaClienteDetallePage"));
+const OwnerDashboardPage         = lazy(() => import("@/pages/OwnerDashboardPage"));
+const OwnerVenuePage             = lazy(() => import("@/pages/OwnerVenuePage"));
+const OwnerVenueEditPage         = lazy(() => import("@/pages/OwnerVenueEditPage"));
+const OwnerEquipoPage            = lazy(() => import("@/pages/OwnerEquipoPage"));
+const OwnerPendingPage           = lazy(() => import("@/pages/OwnerPendingPage"));
+const OwnerProfilePage           = lazy(() => import("@/pages/OwnerProfilePage"));
+const OwnerProfileEditPage       = lazy(() => import("@/pages/OwnerProfileEditPage"));
+const MisReservasPage            = lazy(() => import("@/pages/MisReservasPage"));
+
+const ChatPage                   = lazy(() => import("@/pages/ChatPage"));
+
+const FriendsPage                = lazy(() => import("@/pages/FriendsPage"));
+const JugadoresPage              = lazy(() => import("@/pages/JugadoresPage"));
+const TeamsPage                  = lazy(() => import("@/pages/TeamsPage"));
+const NewTeamPage                = lazy(() => import("@/pages/NewTeamPage"));
+const TeamDetailPage             = lazy(() => import("@/pages/TeamDetailPage"));
+
+const AdminVenuesPage            = lazy(() => import("@/pages/AdminVenuesPage"));
+const AdminVerificationsPage     = lazy(() => import("@/pages/AdminVerificationsPage"));
+const CanchaStatsPage            = lazy(() => import("@/pages/CanchaStatsPage"));
+
+import { PageLoader } from "@/components/ui/PageLoader";
 
 const queryClient = new QueryClient();
 
 function Router() {
+  useLastRoute(); // Persist current route for session restore
   return (
-    <Switch>
-      {/* Public routes */}
-      <Route path="/" component={LandingPage} />
-      <Route path="/login" component={LoginPage} />
-      <Route path="/signup" component={SignupPage} />
-      <Route path="/registro" component={SignupPage} />
-      <Route path="/recuperar-contrasena" component={ForgotPasswordPage} />
-      <Route path="/nueva-contrasena" component={ResetPasswordPage} />
-      <Route path="/feedback" component={FeedbackPage} />
-      <Route path="/u/:slug" component={PublicProfilePage} />
-      <Route path="/canchas" component={CanchasPage} />
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        {/* Public routes */}
+        <Route path="/">
+          <ErrorBoundary><LandingPage /></ErrorBoundary>
+        </Route>
+        <Route path="/login">
+          <ErrorBoundary><LoginPage /></ErrorBoundary>
+        </Route>
+        <Route path="/signup">
+          <ErrorBoundary><SignupPage /></ErrorBoundary>
+        </Route>
+        <Route path="/registro">
+          <ErrorBoundary><SignupPage /></ErrorBoundary>
+        </Route>
+        <Route path="/recuperar-contrasena">
+          <ErrorBoundary><ForgotPasswordPage /></ErrorBoundary>
+        </Route>
+        <Route path="/nueva-contrasena">
+          <ErrorBoundary><ResetPasswordPage /></ErrorBoundary>
+        </Route>
+        <Route path="/feedback">
+          <ErrorBoundary><FeedbackPage /></ErrorBoundary>
+        </Route>
+        <Route path="/u/:slug">
+          <ErrorBoundary><PublicProfilePage /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas">
+          <ErrorBoundary><CanchasPage /></ErrorBoundary>
+        </Route>
 
-      {/* Protected routes */}
-      <Route path="/feed">
-        <ProtectedRoute component={FeedPage} />
-      </Route>
-      <Route path="/perfil">
-        <ProtectedRoute component={ProfilePage} />
-      </Route>
-      <Route path="/perfil/editar">
-        <ProtectedRoute component={ProfileEditPage} />
-      </Route>
-      <Route path="/onboarding">
-        <ProtectedRoute component={OnboardingPage} />
-      </Route>
-      <Route path="/notificaciones">
-        <ProtectedRoute component={NotificationsPage} />
-      </Route>
-      <Route path="/verificacion">
-        <ProtectedRoute component={VerificationPage} />
-      </Route>
+        {/* Protected routes */}
+        <Route path="/feed">
+          <ErrorBoundary><ProtectedRoute component={FeedPage} /></ErrorBoundary>
+        </Route>
+        <Route path="/perfil">
+          <ErrorBoundary>
+            <ProtectedRoute component={ProfilePage} layout="none" />
+          </ErrorBoundary>
+        </Route>
+        <Route path="/perfil/editar">
+          <ErrorBoundary><ProtectedRoute component={ProfileEditPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/onboarding">
+          <ErrorBoundary><ProtectedRoute component={OnboardingPage} /></ErrorBoundary>
+        </Route>
+        <Route path="/notificaciones">
+          <ErrorBoundary><ProtectedRoute component={NotificationsPage} layout="none" /></ErrorBoundary>
+        </Route>
+        <Route path="/verificacion">
+          <ErrorBoundary><ProtectedRoute component={VerificationPage} layout="player" /></ErrorBoundary>
+        </Route>
 
-      <Route path="/matches/new">
-        <ProtectedRoute component={NewMatchPage} />
-      </Route>
-      <Route path="/matches/:id/edit">
-        <ProtectedRoute component={EditMatchPage} />
-      </Route>
-      <Route path="/matches/:id">
-        <ProtectedRoute component={MatchDetailPage} />
-      </Route>
+        <Route path="/matches/new">
+          <ErrorBoundary><ProtectedRoute component={NewMatchPage} /></ErrorBoundary>
+        </Route>
+        <Route path="/matches/:id/edit">
+          <ErrorBoundary><ProtectedRoute component={EditMatchPage} /></ErrorBoundary>
+        </Route>
+        <Route path="/matches/:id">
+          <ErrorBoundary><ProtectedRoute component={MatchDetailPage} layout="player" /></ErrorBoundary>
+        </Route>
 
-      <Route path="/tournaments">
-        <ProtectedRoute component={TournamentsPage} />
-      </Route>
-      <Route path="/tournaments/new">
-        <ProtectedRoute component={NewTournamentPage} />
-      </Route>
-      <Route path="/tournaments/mine">
-        <ProtectedRoute component={MyTournamentsPage} />
-      </Route>
-      <Route path="/tournaments/:id">
-        <ProtectedRoute component={TournamentDetailPage} />
-      </Route>
-      <Route path="/tournaments/:id/matches">
-        <ProtectedRoute component={TournamentMatchesPage} />
-      </Route>
-      <Route path="/tournaments/:id/matches/new">
-        <ProtectedRoute component={TournamentNewMatchPage} />
-      </Route>
-      <Route path="/tournaments/:id/matches/:matchId">
-        <ProtectedRoute component={TournamentMatchResultPage} />
-      </Route>
-      <Route path="/tournaments/:id/standings">
-        <ProtectedRoute component={TournamentStandingsPage} />
-      </Route>
-      <Route path="/tournaments/:id/register">
-        <ProtectedRoute component={TournamentRegisterPage} />
-      </Route>
-      <Route path="/tournaments/:id/registrations">
-        <ProtectedRoute component={TournamentRegistrationsPage} />
-      </Route>
+        <Route path="/tournaments">
+          <ErrorBoundary><ProtectedRoute component={TournamentsPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/new">
+          <ErrorBoundary><ProtectedRoute component={NewTournamentPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/mine">
+          <ErrorBoundary><ProtectedRoute component={MyTournamentsPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/:id">
+          <ErrorBoundary><ProtectedRoute component={TournamentDetailPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/:id/matches">
+          <ErrorBoundary><ProtectedRoute component={TournamentMatchesPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/:id/matches/new">
+          <ErrorBoundary><ProtectedRoute component={TournamentNewMatchPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/:id/matches/:matchId">
+          <ErrorBoundary><ProtectedRoute component={TournamentMatchResultPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/:id/standings">
+          <ErrorBoundary><ProtectedRoute component={TournamentStandingsPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/:id/register">
+          <ErrorBoundary><ProtectedRoute component={TournamentRegisterPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/tournaments/:id/registrations">
+          <ErrorBoundary><ProtectedRoute component={TournamentRegistrationsPage} requireRole="is_promoter" layout="player" /></ErrorBoundary>
+        </Route>
 
-      {/* Mis actividades */}
-      <Route path="/mis-partidos">
-        <ProtectedRoute component={MisPartidosPage} />
-      </Route>
-      <Route path="/mis-reservas">
-        <ProtectedRoute component={MisReservasPage} />
-      </Route>
+        <Route path="/mis-partidos">
+          <ErrorBoundary><ProtectedRoute component={MisPartidosPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-reservas">
+          <ErrorBoundary><ProtectedRoute component={MisReservasPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/ranking">
+          <ErrorBoundary><ProtectedRoute component={LeaderboardPage} layout="player" /></ErrorBoundary>
+        </Route>
 
-      {/* Canchas (protected management) */}
-      <Route path="/mis-canchas/perfil/editar">
-        <ProtectedRoute component={OwnerProfileEditPage} />
-      </Route>
-      <Route path="/mis-canchas/perfil">
-        <ProtectedRoute component={OwnerProfilePage} />
-      </Route>
-      <Route path="/mis-canchas/dashboard">
-        <ProtectedRoute component={OwnerDashboardPage} />
-      </Route>
-      <Route path="/mis-canchas">
-        <ProtectedRoute component={MisCanchasPage} />
-      </Route>
-      <Route path="/canchas/nueva">
-        <ProtectedRoute component={NuevaCanchaPage} />
-      </Route>
-      <Route path="/canchas/:id/agenda">
-        <ProtectedRoute component={CanchaAgendaPage} />
-      </Route>
-      <Route path="/canchas/:id/editar">
-        <ProtectedRoute component={EditCanchaPage} />
-      </Route>
-      <Route path="/canchas/:id/clientes">
-        <ProtectedRoute component={CanchaClientesPage} />
-      </Route>
-      <Route path="/canchas/:id/stats">
-        <ProtectedRoute component={CanchaStatsPage} />
-      </Route>
-      <Route path="/canchas/:id/equipo">
-        <ProtectedRoute component={CanchaEquipoPage} />
-      </Route>
+        {/* Canchas management — specific sub-routes before /:id */}
+        <Route path="/mis-canchas/centro/editar">
+          <ErrorBoundary><ProtectedRoute component={OwnerVenueEditPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/centro">
+          <ErrorBoundary><ProtectedRoute component={OwnerVenuePage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/perfil/editar">
+          <ErrorBoundary><ProtectedRoute component={OwnerProfileEditPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/perfil">
+          <ErrorBoundary><ProtectedRoute component={OwnerProfilePage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/dashboard">
+          <ErrorBoundary><ProtectedRoute component={OwnerDashboardPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/equipo">
+          <ErrorBoundary><ProtectedRoute component={OwnerEquipoPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/pendientes">
+          <ErrorBoundary><ProtectedRoute component={OwnerPendingPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas/reservas">
+          <ErrorBoundary><ProtectedRoute component={OwnerBookingsPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/mis-canchas">
+          <ErrorBoundary><ProtectedRoute component={MisCanchasPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas/nueva">
+          <ErrorBoundary><ProtectedRoute component={NuevaCanchaPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas/:id/agenda">
+          <ErrorBoundary><ProtectedRoute component={CanchaAgendaPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas/:id/editar">
+          <ErrorBoundary><ProtectedRoute component={EditCanchaPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas/:id/clientes">
+          <ErrorBoundary><ProtectedRoute component={CanchaClientesPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas/:id/clientes/:userId">
+          <ErrorBoundary><ProtectedRoute component={CanchaClienteDetallePage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas/:id/stats">
+          <ErrorBoundary><ProtectedRoute component={CanchaStatsPage} requireRole="is_cancha" layout="owner" /></ErrorBoundary>
+        </Route>
+        <Route path="/canchas/:id">
+          <ErrorBoundary><ProtectedRoute component={CanchaDetailPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/venues/:id">
+          <ErrorBoundary><Suspense fallback={null}><VenueDetailPage /></Suspense></ErrorBoundary>
+        </Route>
 
-      {/* Public cancha detail — must come AFTER specific sub-routes */}
-      <Route path="/canchas/:id" component={CanchaDetailPage} />
+        {/* Chat */}
+        <Route path="/chat/:id">
+          <ErrorBoundary><ProtectedRoute component={ChatPage} /></ErrorBoundary>
+        </Route>
+        <Route path="/chat">
+          <ErrorBoundary><ProtectedRoute component={ChatPage} /></ErrorBoundary>
+        </Route>
 
-      {/* Chat */}
-      <Route path="/chat/:id">
-        <ProtectedRoute component={ChatDetailPage} />
-      </Route>
-      <Route path="/chat">
-        <ProtectedRoute component={ChatListPage} />
-      </Route>
+        <Route path="/jugadores">
+          <ErrorBoundary><ProtectedRoute component={JugadoresPage} layout="none" /></ErrorBoundary>
+        </Route>
 
-      <Route path="/amigos">
-        <ProtectedRoute component={FriendsPage} />
-      </Route>
+        <Route path="/amigos">
+          <ErrorBoundary><ProtectedRoute component={FriendsPage} layout="none" /></ErrorBoundary>
+        </Route>
 
-      <Route path="/equipos/nuevo">
-        <ProtectedRoute component={NewTeamPage} />
-      </Route>
-      <Route path="/equipos/:id">
-        <ProtectedRoute component={TeamDetailPage} />
-      </Route>
-      <Route path="/equipos">
-        <ProtectedRoute component={TeamsPage} />
-      </Route>
+        <Route path="/equipos/nuevo">
+          <ErrorBoundary><ProtectedRoute component={NewTeamPage} layout="player" /></ErrorBoundary>
+        </Route>
+        <Route path="/equipos/:id">
+          <ErrorBoundary><ProtectedRoute component={TeamDetailPage} layout="none" /></ErrorBoundary>
+        </Route>
+        <Route path="/equipos">
+          <ErrorBoundary><ProtectedRoute component={TeamsPage} layout="none" /></ErrorBoundary>
+        </Route>
 
-      <Route path="/profile/:id">
-        <ProtectedRoute component={UserProfilePage} />
-      </Route>
+        <Route path="/profile/:id">
+          <ErrorBoundary><ProtectedRoute component={UserProfilePage} layout="none" /></ErrorBoundary>
+        </Route>
 
-      <Route path="/admin/venues">
-        <ProtectedRoute component={AdminVenuesPage} />
-      </Route>
-      <Route path="/admin/verificaciones">
-        <ProtectedRoute component={AdminVerificationsPage} />
-      </Route>
+        <Route path="/admin/venues">
+          <ErrorBoundary><ProtectedRoute component={AdminVenuesPage} requireRole="is_admin" layout="none" /></ErrorBoundary>
+        </Route>
+        <Route path="/admin/verificaciones">
+          <ErrorBoundary><ProtectedRoute component={AdminVerificationsPage} requireRole="is_admin" layout="none" /></ErrorBoundary>
+        </Route>
 
-      <Route component={NotFoundPage} />
-    </Switch>
+        <Route component={NotFoundPage} />
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -222,6 +292,7 @@ function App() {
             <Router />
           </WouterRouter>
           <Toaster richColors position="top-right" />
+          <PwaInstallBanner />
         </NotifProvider>
       </AuthProvider>
     </QueryClientProvider>

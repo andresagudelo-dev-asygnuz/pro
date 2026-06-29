@@ -1,4 +1,12 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="180" height="180" rx="36" fill="#18181b"/>
-  <text x="90" y="130" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="110" fill="#ffffff">P</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@1,900&amp;display=swap');
+    text {
+      font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+      font-weight: 900;
+      font-style: italic;
+      font-size: 210px;
+    }
+  </style>
+  <text x="115" y="205" fill="#18181b" text-anchor="middle">P<tspan fill="#7c3aed">.</tspan></text>
 </svg>

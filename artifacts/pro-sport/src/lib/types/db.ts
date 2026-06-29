@@ -222,6 +222,7 @@ export interface ProfileMorpho {
   wingspan_m: number | null;
   laterality: Laterality | null;
   somatotype: Somatotype | null;
+  visibility: VisibilityLevel;
   created_at: string;
   updated_at: string;
 }
@@ -236,16 +237,18 @@ export interface ProfileConditional {
   endurance_notes: string | null;
   flexibility_tags: string[];
   flexibility_notes: string | null;
+  visibility: VisibilityLevel;
   created_at: string;
   updated_at: string;
 }
 
 export interface ProfileTechnicalFootball {
   user_id: string;
-  position: FootballPosition;
-  dominant_foot: DominantFoot;
+  position: FootballPosition | null;
+  dominant_foot: DominantFoot | null;
   performance_notes: string | null;
   tactical_role_notes: string | null;
+  visibility: VisibilityLevel;
   created_at: string;
   updated_at: string;
 }
@@ -287,7 +290,8 @@ export type CanchaSportType =
   | "futbol_11" | "futbol_9" | "futbol_5" | "futbol_sala"
   | "padel" | "tenis" | "basket" | "voleibol" | "otro";
 
-export type BookingStatus = "pendiente" | "confirmada" | "cancelada";
+export type BookingStatus = "pendiente" | "en_validacion" | "confirmada" | "finalizada" | "cancelada";
+export type PaymentStatus = "sin_anticipo" | "anticipo_pagado" | "pagado_total" | "rechazado";
 
 export interface Cancha {
   id: string;
@@ -303,6 +307,42 @@ export interface Cancha {
   is_active: boolean;
   phone: string | null;
   whatsapp: string | null;
+  venue_id: string | null;
+  lat: number | null;
+  lng: number | null;
+  image_url: string | null;
+  payment_nequi: string | null;
+  payment_instructions: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VenuePaymentMethod {
+  id: string;
+  bank_name: string;
+  account_number: string;
+  account_name?: string;
+  qr_url?: string;
+}
+
+export interface Venue {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  lat: number | null;
+  lng: number | null;
+  description: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  owner_id: string | null;
+  banner_url: string | null;
+  logo_url: string | null;
+  payment_instructions: string | null;
+  payment_methods: VenuePaymentMethod[];
+  rating_avg: number;
+  rating_count: number;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }
@@ -324,9 +364,15 @@ export interface CanchaBooking {
   start_time: string;
   end_time: string;
   status: BookingStatus;
+  payment_status: PaymentStatus;
   match_id: string | null;
   total_price: number;
+  paid_amount: number | null;
   notes: string | null;
+  expires_at: string | null;
+  receipt_url: string | null;
+  receipt_uploaded_at: string | null;
+  rejected_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -377,6 +423,8 @@ export const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 export type RecurringBookingStatus = "pendiente" | "confirmada" | "cancelada" | "pausada";
 
+export type RecurringBookingFrequency = "weekly" | "biweekly" | "monthly";
+
 export interface RecurringBooking {
   id: string;
   cancha_id: string;
@@ -385,13 +433,28 @@ export interface RecurringBooking {
   start_time: string;
   end_time: string;
   start_date: string;
-  end_date: string;
+  end_date: string | null; // null = indefinite (no end date)
+  frequency: RecurringBookingFrequency;
   status: RecurringBookingStatus;
   price_per_session: number;
   notes: string | null;
   confirmed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type RecurringExceptionAction = "cancelled" | "modified";
+
+export interface RecurringException {
+  id: string;
+  recurring_id: string;
+  original_date: string; // "YYYY-MM-DD"
+  action: RecurringExceptionAction;
+  new_start: string | null;
+  new_end: string | null;
+  new_price: number | null;
+  notes: string | null;
+  created_at: string;
 }
 
 export type ClientTagType = "vip" | "frecuente" | "bloqueado";
@@ -464,6 +527,35 @@ export interface MatchInvitation {
   inviter_id: string;
   invitee_id: string;
   status: MatchInvitationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Social Feed (El Tercer Tiempo) ──────────────────────────────────────────
+
+export interface Post {
+  id: string;
+  author_id: string;
+  match_id: string | null;
+  cancha_id: string | null;
+  content: string | null;
+  media_urls: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PostLike {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
   created_at: string;
   updated_at: string;
 }

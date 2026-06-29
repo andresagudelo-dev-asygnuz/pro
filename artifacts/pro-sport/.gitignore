@@ -1,0 +1,18 @@
+# Build output
+dist/
+node_modules/
+
+# Logs and debug artifacts
+typecheck_output.txt
+*.log
+
+# Scratch files
+scratch/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# System
+.DS_Store

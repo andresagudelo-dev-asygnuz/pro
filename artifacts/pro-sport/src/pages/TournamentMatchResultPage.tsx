@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "wouter";
-import { createClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { getTournamentById, type TournamentRow } from "@/lib/tournaments/api";
 import {
   getMatchById, recordResult, listMatchEvents, addMatchEvent,
   type MatchRow, type MatchEventRow, type MatchEventType,
 } from "@/lib/tournaments/matches";
-import { listRegistrations, type RegistrationRow } from "@/lib/tournaments/registrations";
+import { listRegistrationsWithNames, type RegistrationWithNames } from "@/lib/tournaments/registrations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AppLayout } from "@/components/AppLayout";
 
-const supabase = createClient();
 
 const eventLabels: Record<MatchEventType, string> = {
   gol: "Gol", auto_gol: "Auto-gol", amarilla: "Amarilla", roja: "Roja", sustitucion: "Sustitución",
@@ -25,7 +23,7 @@ export default function TournamentMatchResultPage() {
 
   const [tournament, setTournament] = useState<TournamentRow | null>(null);
   const [match, setMatch] = useState<MatchRow | null>(null);
-  const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
+  const [registrations, setRegistrations] = useState<RegistrationWithNames[]>([]);
   const [events, setEvents] = useState<MatchEventRow[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,7 +44,7 @@ export default function TournamentMatchResultPage() {
       const [{ data: t }, { data: m }, { data: regs }, { data: evs }] = await Promise.all([
         getTournamentById(supabase, id),
         getMatchById(supabase, matchId),
-        listRegistrations(supabase, id),
+        listRegistrationsWithNames(supabase, id),
         listMatchEvents(supabase, matchId),
       ]);
       if (!t || !m) { setError("Partido no encontrado"); setLoading(false); return; }
@@ -54,7 +52,7 @@ export default function TournamentMatchResultPage() {
       const mRow = m as MatchRow;
       setTournament(tRow);
       setMatch(mRow);
-      setRegistrations((regs ?? []) as RegistrationRow[]);
+      setRegistrations((regs ?? []) as RegistrationWithNames[]);
       setEvents((evs ?? []) as MatchEventRow[]);
       setIsOwner(!!user && user.id === tRow.owner_id);
       setHomeScore(mRow.home_score ?? 0);
@@ -66,10 +64,10 @@ export default function TournamentMatchResultPage() {
   const regLabel = (regId: string | null) => {
     if (!regId) return "TBD";
     const r = registrations.find((x) => x.id === regId);
-    if (!r) return regId.slice(0, 8);
-    if (r.team_id) return `Equipo ${r.team_id.slice(0, 8)}`;
-    if (r.user_id) return `Jugador ${r.user_id.slice(0, 8)}`;
-    return regId.slice(0, 8);
+    if (!r) return "Participante";
+    if (r.team_id) return r.team_name ?? `Equipo`;
+    if (r.user_id) return r.player_name ?? "Jugador";
+    return "Participante";
   };
 
   async function handleRecord(e: React.FormEvent) {
@@ -101,7 +99,7 @@ export default function TournamentMatchResultPage() {
   );
 
   return (
-    <AppLayout>
+    <>
     <div className="container py-8 max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -176,6 +174,6 @@ export default function TournamentMatchResultPage() {
         )}
       </section>
     </div>
-    </AppLayout>
+    </>
   );
 }

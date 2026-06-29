@@ -1,12 +1,28 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/context/AuthContext";
+import { getLastRoute } from "@/hooks/useLastRoute";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { ChallengeSection } from "@/components/landing/ChallengeSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { LocalFocusSection } from "@/components/landing/LocalFocusSection";
-import { RegistrationForm } from "@/components/landing/RegistrationForm";
 import { LaunchBanner } from "@/components/landing/LaunchBanner";
 
 export default function LandingPage() {
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // If already logged in (e.g. opened PWA from home screen), redirect to last route
+  useEffect(() => {
+    if (!loading && user) {
+      const last = getLastRoute();
+      setLocation(last ?? "/feed");
+    }
+  }, [user, loading, setLocation]);
+
+  if (loading || user) return null; // Avoid flash of landing while redirecting
+
   return (
     <div className="min-h-screen">
       <LaunchBanner />
@@ -15,7 +31,6 @@ export default function LandingPage() {
       <SolutionSection />
       <FeaturesSection />
       <LocalFocusSection />
-      <RegistrationForm />
 
       <footer className="bg-zinc-100 dark:bg-zinc-950 py-16 border-t border-zinc-200 dark:border-white/5 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-30" />

@@ -41,6 +41,9 @@ export default defineConfig({
     },
     dedupe: ["react", "react-dom"],
   },
+  optimizeDeps: {
+    include: ["react-leaflet-cluster", "leaflet.markercluster"],
+  },
   root: path.resolve(import.meta.dirname),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
@@ -50,6 +53,15 @@ export default defineConfig({
         if (warning.code === "SOURCEMAP_ERROR") return;
         warn(warning);
       },
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'wouter'],
+          'vendor-supabase': ['@supabase/supabase-js', '@supabase/ssr'],
+          'vendor-leaflet': ['leaflet', 'react-leaflet'],
+          'vendor-charts': ['recharts'],
+          'vendor-query': ['@tanstack/react-query'],
+        }
+      }
     },
   },
   server: {

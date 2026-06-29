@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { listRecurringByCancha, listExceptionsByRecurring, expandToBookings } from "./recurring-api";
+import { mapDbError } from "../errors/map-db-error";
 
 type ApiResult<T> = { error: string | null; data: T | null };
 
@@ -124,4 +126,91 @@ export async function getCanchaStats(
     error: null,
     data: { period, total_bookings: bks.length, confirmed, cancelled, pending, revenue, cancellation_rate, top_clients, popular_slots, daily_summary },
   };
+}
+
+// ─── Revenue Series ──────────────────────────────────────────────────────────
+
+export type RevenueDatum = {
+  period: string;    // "YYYY-MM"
+  collected: number; // ad-hoc bookings confirmed
+  scheduled: number; // recurring occurrences active
+};
+
+/** Returns "YYYY-MM-DD" for the first day of a "YYYY-MM" month string */
+function firstDayOfMonth(month: string): string {
+  return `${month}-01`;
+}
+
+/** Returns "YYYY-MM-DD" for the last day of a "YYYY-MM" month string */
+function lastDayOfMonth(month: string): string {
+  const [year, mon] = month.split("-").map(Number);
+  const last = new Date(Date.UTC(year, mon, 0)); // day 0 of next month = last day of this month
+  return last.toISOString().split("T")[0];
+}
+
+/** Enumerate all "YYYY-MM" strings between fromMonth and toMonth inclusive */
+function monthRange(fromMonth: string, toMonth: string): string[] {
+  const months: string[] = [];
+  const [fy, fm] = fromMonth.split("-").map(Number);
+  const [ty, tm] = toMonth.split("-").map(Number);
+  let year = fy;
+  let month = fm;
+  while (year < ty || (year === ty && month <= tm)) {
+    months.push(`${year}-${String(month).padStart(2, "0")}`);
+    month++;
+    if (month > 12) { month = 1; year++; }
+  }
+  return months;
+}
+
+export async function getRevenueSeries(
+  supabase: SupabaseClient,
+  canchaId: string,
+  fromMonth: string,
+  toMonth: string,
+): Promise<{ data: RevenueDatum[] | null; error: string | null }> {
+  const fromDate = firstDayOfMonth(fromMonth);
+  const toDate = lastDayOfMonth(toMonth);
+
+  // ── 1. Collected revenue from ad-hoc bookings ─────────────────────────────
+  const { data: bookings, error: bErr } = await supabase
+    .from("cancha_bookings")
+    .select("booking_date, total_price")
+    .eq("cancha_id", canchaId)
+    .eq("status", "confirmada")
+    .gte("booking_date", fromDate)
+    .lte("booking_date", toDate);
+
+  if (bErr) return { data: null, error: mapDbError(bErr, "revenue_series_bookings") };
+
+  const collectedMap = new Map<string, number>();
+  for (const b of (bookings ?? []) as Array<{ booking_date: string; total_price: number }>) {
+    const period = b.booking_date.substring(0, 7);
+    collectedMap.set(period, (collectedMap.get(period) ?? 0) + Number(b.total_price));
+  }
+
+  // ── 2. Scheduled revenue from recurring bookings ──────────────────────────
+  const scheduledMap = new Map<string, number>();
+
+  const { data: recurrings, error: rErr } = await listRecurringByCancha(supabase, canchaId);
+  if (rErr) return { data: null, error: rErr };
+
+  for (const recurring of recurrings ?? []) {
+    const { data: exceptions } = await listExceptionsByRecurring(supabase, recurring.id);
+    const occurrences = expandToBookings(recurring, exceptions ?? [], fromDate, toDate);
+    for (const occ of occurrences) {
+      const period = occ.date.substring(0, 7);
+      scheduledMap.set(period, (scheduledMap.get(period) ?? 0) + occ.price);
+    }
+  }
+
+  // ── 3. Combine into sorted array ──────────────────────────────────────────
+  const periods = monthRange(fromMonth, toMonth);
+  const data: RevenueDatum[] = periods.map(period => ({
+    period,
+    collected: collectedMap.get(period) ?? 0,
+    scheduled: scheduledMap.get(period) ?? 0,
+  }));
+
+  return { data, error: null };
 }
