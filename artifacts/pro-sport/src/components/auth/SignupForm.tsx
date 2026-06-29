@@ -66,7 +66,7 @@ export function SignupForm() {
       email,
       password,
       options: {
-        emailRedirectTo: "https://pro-sport.app/login",
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           full_name,
           is_player: is_player || (!is_promoter && !is_cancha),
