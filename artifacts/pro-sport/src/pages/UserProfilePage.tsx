@@ -194,7 +194,10 @@ export default function UserProfilePage() {
       {/* ══ HERO ══════════════════════════════════════════════════════════ */}
       <div
         className="relative overflow-hidden rounded-b-[36px] pb-8"
-        style={{ background: "linear-gradient(160deg, #2e1065 0%, #1e1b4b 35%, #312e81 65%, #1a1a2e 100%)" }}
+        style={{
+          background:
+            "linear-gradient(160deg, #c79a2e 0%, #a67b1e 35%, #e8c35a 65%, #8f6511 100%)",
+        }}
       >
         {/* Ambient glow */}
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
@@ -202,7 +205,7 @@ export default function UserProfilePage() {
         </div>
 
         {/* ── Back + Friend button row ── */}
-        <div className="relative z-10 flex items-center justify-between px-4 pt-4 pb-1">
+        <div className="relative z-10 flex items-center justify-between px-4 pt-4 pb-2">
           <button
             onClick={() => window.history.back()}
             className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors rounded-xl px-2 py-1.5 hover:bg-white/10"
@@ -212,47 +215,9 @@ export default function UserProfilePage() {
           {!isMe && <FriendButton />}
         </div>
 
-        {/* ── Stats row (glassmorphism) ── */}
-        <div className="relative z-10 px-4 pt-3 pb-4">
-          <div className="grid grid-cols-4 divide-x divide-white/10 bg-white/15 rounded-2xl border border-white/15 overflow-hidden">
-            {[
-              { value: ovr,                                             label: "OVR",      icon: <Star className="size-3" />,   color: "text-violet-200" },
-              { value: profile.matches_played ?? 0,                     label: "Partidos", icon: <Zap className="size-3" />,   color: "text-white" },
-              { value: profile.rating_count > 0 ? (profile.rating_avg as number).toFixed(1) : "—", label: "Rating", icon: <Flame className="size-3" />, color: "text-amber-300" },
-              { value: profile.tournament_goals ?? 0,                   label: "Goles",    icon: <Target className="size-3" />,color: "text-emerald-300" },
-            ].map(({ value, label, icon, color }) => (
-              <div key={label} className="flex flex-col items-center py-3 px-1 gap-0.5">
-                <p className={`text-xl font-black tabular-nums ${color}`}>{value}</p>
-                <div className={`${color} opacity-60`}>{icon}</div>
-                <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* ── Player card (FIFA style, read-only) ── */}
-        <div className="relative z-10">
+        <div className="relative z-10 pt-4">
           <PlayerCard profile={profile} editable={false} />
-        </div>
-
-        {/* ── Level + Position badges ── */}
-        <div className="flex justify-center gap-2 mt-5 z-10 relative flex-wrap px-4">
-          <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest ${lvlCfg.badge}`}>
-            <span className="size-1.5 rounded-full bg-current opacity-70" />
-            {lvlCfg.label}
-          </span>
-          {positionInfo && (
-            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-white text-xs font-bold uppercase tracking-widest">
-              <span className="text-white/50 text-[10px] font-black">{positionInfo.abbr}</span>
-              {positionInfo.label}
-            </span>
-          )}
-          {footLabel && (
-            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 text-white text-xs font-bold uppercase tracking-widest">
-              <Footprints className="size-3.5 text-white/50" />
-              {footLabel}
-            </span>
-          )}
         </div>
       </div>
 
