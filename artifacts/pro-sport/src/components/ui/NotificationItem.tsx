@@ -24,7 +24,7 @@ export function NotificationItem({
 }: NotificationItemProps) {
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+      className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${
         !n.read_at ? "bg-violet-50/60 dark:bg-violet-900/10" : "bg-background"
       } ${isClickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
       onClick={() => isClickable && onNavigate(n)}

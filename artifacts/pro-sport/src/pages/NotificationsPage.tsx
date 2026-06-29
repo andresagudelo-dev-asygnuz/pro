@@ -196,10 +196,10 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      <main className="container mx-auto px-4 py-4 max-w-2xl space-y-4">
+      <main className="container mx-auto py-4 max-w-2xl space-y-6">
         {/* Filtros */}
         {notifications.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-4">
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
               {(Object.keys(FILTER_LABELS) as Filter[]).map((f) => {
                 const count = countFor(f);
@@ -240,12 +240,12 @@ export default function NotificationsPage() {
             {/* Solicitudes de amistad */}
             {friendRequests.length > 0 && (
               <section>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-4 flex items-center gap-1.5">
                   <UserPlus className="size-3.5" /> Solicitudes de amistad
                 </p>
-                <div className="flex flex-col border border-border/60 rounded-2xl divide-y divide-border/50 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-y border-border/60">
                   {friendRequests.map((f) => (
-                    <div key={f.id} className="flex items-center gap-3 p-4 bg-violet-50/50 dark:bg-violet-900/10">
+                    <div key={f.id} className="flex items-center gap-3 px-4 py-3 bg-violet-50/50 dark:bg-violet-900/10">
                       <Link href={`/profile/${f.requester_id}`}>
                         <Avatar className="size-10 cursor-pointer shrink-0">
                           {f.profile.avatar_url && <AvatarImage src={f.profile.avatar_url} />}
@@ -273,12 +273,12 @@ export default function NotificationsPage() {
             {/* Invitaciones a partidos */}
             {matchInvitations.length > 0 && (
               <section>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-4 flex items-center gap-1.5">
                   <Mail className="size-3.5" /> Invitaciones a partidos
                 </p>
-                <div className="flex flex-col border border-border/60 rounded-2xl divide-y divide-border/50 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-y border-border/60">
                   {matchInvitations.map((inv) => (
-                    <div key={inv.id} className="flex items-start gap-3 p-4 bg-violet-50/50 dark:bg-violet-900/10">
+                    <div key={inv.id} className="flex items-start gap-3 px-4 py-3 bg-violet-50/50 dark:bg-violet-900/10">
                       <Avatar className="size-10 shrink-0 mt-0.5">
                         {inv.inviterProfile?.avatar_url && <AvatarImage src={inv.inviterProfile.avatar_url} />}
                         <AvatarFallback className="text-xs">{initialsFromName(inv.inviterProfile?.full_name ?? inv.inviterProfile?.username ?? null)}</AvatarFallback>
@@ -327,11 +327,11 @@ export default function NotificationsPage() {
             ) : (
               <section>
                 {hasActionable && (
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-4 flex items-center gap-1.5">
                     <Bell className="size-3.5" /> Actividad reciente
                   </p>
                 )}
-                <div className="flex flex-col border border-border/60 rounded-2xl divide-y divide-border/50 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="flex flex-col divide-y divide-border/50 bg-white dark:bg-zinc-900 border-y border-border/60">
                   {filtered.map((n) => {
                     const link = getNotifLink(n);
                     const isClickable = link !== "#";
